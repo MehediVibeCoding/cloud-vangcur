@@ -1,5 +1,5 @@
 {
-  "name": "vangcur",
+  "name": "cloud-vangcur",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-10-12",
   "compatibility_flags": ["nodejs_compat"],
