@@ -3,21 +3,23 @@ import { createClient } from '@/lib/supabase/server';
 import { fetchFullOrder } from '@/lib/orderStatus';
 import { mapSupabaseOrderRow } from '@/lib/orderMapping';
 import { DEFAULT_FOOTER } from '@/lib/footerData';
-import { renderInvoiceHtmlDocument, INVOICE_CARD_ELEMENT_ID } from '@/lib/invoice/renderInvoiceHtml';
-import { launchInvoiceBrowser } from '@/lib/invoice/browser';
-import { logError, logWarn } from '@/lib/logger';
+import { buildInvoiceViewModel } from '@/lib/invoice/invoiceViewModel';
+import { renderInvoiceSvg } from '@/lib/invoice/renderInvoiceSvg';
+import { ensureResvgWasm } from '@/lib/invoice/satoriAssets';
+import { logError } from '@/lib/logger';
 import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
 
-// 🖨️ এই রুটটা headless Chromium চালায় (Puppeteer) — এটা তুলনামূলক ভারী একটা
-// অপারেশন, তাই এখানে সাধারণ API রুটের চেয়ে কড়া রেট-লিমিট রাখা হয়েছে।
-export const runtime = 'nodejs';
+// 🖨️ এই রুট আগে headless Chromium (Puppeteer) চালাত — Cloudflare Workers-এ
+// সেটা চালানো সম্ভব না বলে satori (JSX → SVG) + @resvg/resvg-wasm
+// (SVG → PNG, pure WASM, কোনো native binary না) দিয়ে rewrite করা হয়েছে।
+// রেট-লিমিট আগের মতোই রাখা হয়েছে, যদিও এই নতুন পাইপলাইন আগের চেয়ে
+// অনেক হালকা।
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30; // Hosting প্ল্যান অনুযায়ী প্রয়োজনে বাড়ান।
+export const maxDuration = 30;
 
 export async function GET(req: NextRequest) {
   const clientIp = getClientIp(req.headers);
 
-  // শেয়ার্ড স্লাইডিং-উইন্ডো: প্রতি মিনিটে সর্বোচ্চ ৮টি (প্রতিটায় headless Chromium চলে — ভারী কাজ)
   const rl = await slidingWindowLimit(`invoice:${clientIp}`, 8, 60);
   if (!rl.allowed) {
     return NextResponse.json(
@@ -33,8 +35,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Missing order id' }, { status: 400 });
   }
 
-  let browser: Awaited<ReturnType<typeof launchInvoiceBrowser>> | null = null;
-
   try {
     const supabase = await createClient();
     const row = await fetchFullOrder(supabase, String(orderId), phone);
@@ -44,57 +44,48 @@ export async function GET(req: NextRequest) {
     }
 
     const order = mapSupabaseOrderRow(row);
+    const { ds, advancePaid, balanceDue, isFreeShipping, dueMsg } = buildInvoiceViewModel(order);
 
     const contact = {
       phoneLabel: DEFAULT_FOOTER.contact.phoneLabel,
       email: DEFAULT_FOOTER.contact.email,
     };
 
-    const html = await renderInvoiceHtmlDocument({
+    const assetBaseUrl = req.nextUrl.origin;
+
+    const { svg, fontBuffers } = await renderInvoiceSvg({
       order,
+      ds,
       contact,
-      assetBaseUrl: req.nextUrl.origin,
+      dueMsg,
+      advancePaid,
+      balanceDue,
+      isFreeShipping,
+      assetBaseUrl,
     });
 
-    browser = await launchInvoiceBrowser();
-    const page = await browser.newPage();
+    await ensureResvgWasm(assetBaseUrl);
+    const { Resvg } = await import('@resvg/resvg-wasm');
 
-    // scale 3x রাখা হয়েছে যাতে পুরনো html2canvas আউটপুটের মতোই sharp/retina
-    // কোয়ালিটির ছবি পাওয়া যায়।
-    await page.setViewport({ width: 480, height: 800, deviceScaleFactor: 3 });
-    await page.setContent(html, { waitUntil: 'load' });
+    // scale 3x — আগের Puppeteer পাইপলাইনেও deviceScaleFactor: 3 ব্যবহার
+    // হতো, যাতে html2canvas যুগের মতোই sharp/retina কোয়ালিটি বজায় থাকে।
+    const resvg = new Resvg(svg, {
+      font: { fontBuffers, loadSystemFonts: false },
+      background: '#FFFFFF',
+      fitTo: { mode: 'zoom', value: 3 },
+    });
 
-    // ফন্ট (Google Fonts) সম্পূর্ণ লোড না হওয়া পর্যন্ত অপেক্ষা — নাহলে
-    // প্রথম ফ্রেমে fallback ফন্ট দিয়ে বাংলা টেক্সট আঁকা হয়ে যেতে পারে।
-    await page.evaluate(() => (document as unknown as { fonts: { ready: Promise<unknown> } }).fonts.ready);
-
-    // 🖼️ প্রোডাক্টের ছবিসহ সব <img> পুরোপুরি লোড (বা ব্যর্থ) না হওয়া পর্যন্ত অপেক্ষা (সর্বোচ্চ ৮ সেকেন্ড)
-    await page.evaluate(
-      (maxMs: number) =>
-        Promise.race([
-          Promise.all(
-            Array.from(document.images).map((img) =>
-              img.complete
-                ? Promise.resolve()
-                : new Promise<void>((res) => {
-                    img.addEventListener('load', () => res(), { once: true });
-                    img.addEventListener('error', () => res(), { once: true });
-                  })
-            )
-          ),
-          new Promise<void>((res) => setTimeout(res, maxMs)),
-        ]),
-      8000
-    );
-
-    const cardHandle = await page.$(`#${INVOICE_CARD_ELEMENT_ID}`);
-    if (!cardHandle) {
-      throw new Error('Invoice card element not found in rendered page');
+    // satori একটা বড়, ফিক্সড-হাইট ক্যানভাসে (renderInvoiceSvg.ts দেখুন)
+    // রেন্ডার করে — আসল কন্টেন্ট তার চেয়ে ছোট, তাই নিচের ফাঁকা অংশ বাদ
+    // দিতে bounding-box অনুযায়ী crop করা হচ্ছে (আগের Puppeteer পাইপলাইনে
+    // যেভাবে শুধু কার্ড এলিমেন্টের screenshot নেওয়া হতো, সমমানের ফলাফল)।
+    const bbox = resvg.innerBBox();
+    if (bbox) {
+      resvg.cropByBBox(bbox);
     }
 
-    const pngBuffer = await cardHandle.screenshot({ type: 'png' });
-    await browser.close();
-    browser = null;
+    const rendered = resvg.render();
+    const pngBuffer = rendered.asPng();
 
     const fileName = `Vangcur_Invoice_${String(order.orderNum || orderId).replace('#', '')}.png`;
 
@@ -109,13 +100,5 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     logError('[InvoicePNG] generation failed:', err);
     return NextResponse.json({ ok: false, error: 'Failed to generate invoice image' }, { status: 500 });
-  } finally {
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (closeErr) {
-        logWarn('[InvoicePNG] browser close failed:', closeErr);
-      }
-    }
   }
 }
