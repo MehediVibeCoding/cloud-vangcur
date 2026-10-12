@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cf:preview": "opennextjs-cloudflare build && wrangler dev",
+    "cf:deploy": "opennextjs-cloudflare build && wrangler deploy"
   },
   "browserslist": [
     "chrome >= 100",
@@ -34,6 +36,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.10",
     "@types/dompurify": "^3.0.5",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
@@ -43,7 +46,8 @@
     "eslint-config-next": "^15.5.18",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "wrangler": "^4.149.0"
   },
   "allowScripts": {
     "sharp": true,
