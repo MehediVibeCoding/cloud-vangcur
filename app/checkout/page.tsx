@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { createOrder } from '@/app/actions/checkout';
@@ -29,9 +29,16 @@ import {
 } from '@/lib/couponData';
 import { getLegendaryVoucherStatus } from '@/lib/membershipData';
 
-const LoginModal = dynamic(() => import('@/app/components/auth/LoginModal'), { ssr: false });
-const PreConfirmLoginModal = dynamic(() => import('@/app/components/checkout/PreConfirmLoginModal'), { ssr: false });
-const PolicyModal = dynamic(() => import('@/app/components/checkout/PolicyModal'), { ssr: false });
+const LoginModal = nextDynamic(() => import('@/app/components/auth/LoginModal'), { ssr: false });
+const PreConfirmLoginModal = nextDynamic(() => import('@/app/components/checkout/PreConfirmLoginModal'), { ssr: false });
+const PolicyModal = nextDynamic(() => import('@/app/components/checkout/PolicyModal'), { ssr: false });
+
+// 🛠️ বিল্ড-টাইম ফিক্স: এই পেজ static prerender করতে গেলে Supabase ক্লায়েন্ট
+// বানানোর সময় এরর হচ্ছিল, কারণ build environment-এ Supabase URL/Key থাকে না।
+// Checkout পেজ এমনিতেই user-specific/dynamic ডেটা নিয়ে কাজ করে — static হওয়ার
+// দরকার নেই — তাই এখানে এটাকে force-dynamic করে দেওয়া হলো, যাতে build-এর সময়
+// prerender না করে।
+export const dynamic = 'force-dynamic';
 
 import {
   DISTRICTS,
