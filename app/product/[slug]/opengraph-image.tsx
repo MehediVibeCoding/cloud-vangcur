@@ -2,7 +2,11 @@ import { ImageResponse } from 'next/og';
 import { createClient } from '@supabase/supabase-js';
 import { idFromSlug } from '@/lib/productData';
 
-export const runtime = 'edge';
+// 🛠️ বিল্ড-ফিক্স: @opennextjs/cloudflare এখনো Next.js-এর 'edge' runtime
+// সাপোর্ট করে না (সব রুট Node.js runtime-এই চলে Cloudflare Workers-এর উপর,
+// যেটা পূর্ণাঙ্গ Node API সাপোর্ট করে) — তাই `export const runtime = 'edge'`
+// থাকলে build-ই ফেল করে ("cannot use the edge runtime")। এই লাইন বাদ দিলে
+// next/og-এর ImageResponse Node.js runtime-এই স্বাভাবিকভাবে কাজ করে।
 export const revalidate = 300;
 export const alt = 'Vangcur Product';
 export const size = { width: 1200, height: 630 };
