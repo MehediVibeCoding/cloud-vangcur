@@ -31,7 +31,22 @@ function ArrowRightIcon() {
   );
 }
 
-const brandCtaBtnClass = 'inline-flex items-center gap-2 rounded-full border-none bg-gradient-to-r from-info to-brand-light px-7 py-3 font-body text-sm font-bold text-white shadow-sh2 transition-brand duration-brand hover:brightness-[1.03]';
+// "সকল প্রোডাক্ট দেখুন" CTA — হোমপেজের "অর্ডার করুন" বাটনের একই মেইন-অ্যাকশন কালার সিস্টেম (.order-btn-glow:
+// হালকা নীল রেডিয়াল-গ্লো + #44A7FC) ব্যবহার করে, তাই দুই বাটন একই পরিবারের দেখায়। লিকুইড-গ্লাস ফিনিশ:
+// সাদা বর্ডার, ভেতরে উপরের হাইলাইট, নরম নীল শ্যাডো, আর শেষে সলিড ব্র্যান্ড-ব্লু তীর-চিপ।
+const viewAllBtnClass =
+  'order-btn-glow group relative inline-flex h-12 cursor-pointer items-center gap-3 overflow-hidden whitespace-nowrap rounded-full border border-white/90 py-1.5 pl-6 pr-1.5 font-body text-[15px] font-extrabold tracking-[0.1px] no-underline shadow-[0_10px_26px_rgba(68,167,252,.28),0_2px_6px_rgba(68,167,252,.18),inset_0_1px_0_rgba(255,255,255,.95)] transition-[transform,box-shadow] duration-300 ease-brand hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(68,167,252,.36),0_3px_8px_rgba(68,167,252,.22),inset_0_1px_0_rgba(255,255,255,.95)] active:translate-y-0 active:scale-[0.98]';
+
+function ViewAllLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <span className="relative z-[1]">{children}</span>
+      <span className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-light text-white shadow-[0_4px_12px_rgba(68,167,252,.5),inset_0_1px_0_rgba(255,255,255,.35)] transition-transform duration-300 ease-brand group-hover:translate-x-0.5">
+        <ArrowRightIcon />
+      </span>
+    </>
+  );
+}
 
 interface ProductGridProps {
   initialProducts: Product[];
@@ -244,8 +259,8 @@ export default function ProductGrid({ initialProducts, initialCategory, initialH
             <EmptyBoxIcon />
           </div>
           <p className="text-sm text-muted">{t('এই ক্যাটাগরিতে এখন কোনো পণ্য নেই')}</p>
-          <button onClick={handleShowAll} className={brandCtaBtnClass}>
-            {t('সব পণ্য দেখুন')} <ArrowRightIcon />
+          <button onClick={handleShowAll} className={viewAllBtnClass}>
+            <ViewAllLabel>{t('সব পণ্য দেখুন')}</ViewAllLabel>
           </button>
         </div>
       ) : (
@@ -258,8 +273,8 @@ export default function ProductGrid({ initialProducts, initialCategory, initialH
               <p className="font-body text-[13.5px] font-medium text-muted">
                 {t('এই ক্যাটাগরিতে আর কোনো প্রোডাক্ট নেই')}
               </p>
-              <button onClick={handleShowAll} className={brandCtaBtnClass}>
-                {t('ওয়েবসাইটের সকল প্রোডাক্ট দেখুন')} <ArrowRightIcon />
+              <button onClick={handleShowAll} className={viewAllBtnClass}>
+                <ViewAllLabel>{t('ওয়েবসাইটের সকল প্রোডাক্ট দেখুন')}</ViewAllLabel>
               </button>
             </div>
           )}
@@ -267,9 +282,11 @@ export default function ProductGrid({ initialProducts, initialCategory, initialH
       )}
 
       {showViewAllCta && (
-        <div className="mt-7 flex flex-col items-center gap-2 text-center">
-          <Link href={viewAllHref} className={`${brandCtaBtnClass} no-underline`}>
-            {activeCat === 'all' ? t('সব প্রোডাক্ট দেখুন') : t('এই ক্যাটাগরির সব প্রোডাক্ট দেখুন')} <ArrowRightIcon />
+        <div className="mt-8 flex flex-col items-center gap-2 text-center">
+          <Link href={viewAllHref} className={viewAllBtnClass}>
+            <ViewAllLabel>
+              {activeCat === 'all' ? t('সকল প্রোডাক্ট দেখুন') : t('এই ক্যাটাগরির সকল প্রোডাক্ট দেখুন')}
+            </ViewAllLabel>
           </Link>
         </div>
       )}

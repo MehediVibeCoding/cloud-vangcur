@@ -196,6 +196,8 @@ export const staticDictionary: Record<string, string> = {
   'সব পণ্য দেখুন': 'View All Products',
   'সব প্রোডাক্ট দেখুন': 'View All Products',
   'এই ক্যাটাগরির সব প্রোডাক্ট দেখুন': 'View All in This Category',
+  'সকল প্রোডাক্ট দেখুন': 'View All Products',
+  'এই ক্যাটাগরির সকল প্রোডাক্ট দেখুন': 'View All in This Category',
   'এই ক্যাটাগরিতে আর কোনো প্রোডাক্ট নেই': 'No more products in this category',
   'ওয়েবসাইটের সকল প্রোডাক্ট দেখুন': 'View All Products on the Site',
   'লোড হচ্ছে...': 'Loading...',

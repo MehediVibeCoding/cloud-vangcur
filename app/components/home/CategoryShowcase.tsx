@@ -11,7 +11,7 @@ import ScrollReveal from '@/app/components/ui/ScrollReveal';
  *  • হেডিং: গোল পিল ব্যাজ → মেইন হেডিং (মাঝ বরাবর), সাবটাইটেল নেই।
  *      - পিল = heading.hl ("কিউরেটেড কালেকশন"), মেইন হেডিং = heading.lead (অ্যাডমিন থেকে বদলায়), শেষ ১–২ শব্দ নীল।
  *  • মোবাইলে ২×২, ট্যাবলেট/ল্যাপটপে এক সারিতে ৪টা। কার্ড লম্বা (৫:৮), গোল কোণা (সাইটের কার্ডের মতো)।
- *  • কার্ডে শুধু নিচে-মাঝে একটা চিকন গ্লাস বাটন (নাম + ছোট তীর) — ছবি যেন পুরো পরিষ্কার দেখা যায়।
+ *  • কার্ডে কোনো বাটন/তীর নেই — শুধু প্রায় ৭০% উচ্চতায়, মাঝ বরাবর, বড় ইটালিক (বাঁকা) নাম। পুরো কার্ডই ক্লিকযোগ্য।
  *  • ক্লিক করলে সরাসরি /collection/<id> পেজে যায় (ক্যাটাগরি সিস্টেম থেকে সম্পূর্ণ আলাদা)।
  *  • ডেটা আসে অ্যাডমিন প্যানেলের "হোম শোকেস" পেজ থেকে (lib/showcaseData.ts দেখুন)।
  */
@@ -40,14 +40,6 @@ function SparkIcon() {
   return (
     <svg {...SVG} width={14} height={14}>
       <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z" />
-    </svg>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg {...SVG} width={12} height={12} strokeWidth={2.8} className="transition-transform duration-brand ease-brand group-hover:translate-x-0.5">
-      <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   );
 }
@@ -104,16 +96,13 @@ export default function CategoryShowcase({ heading, cards }: Props) {
                   className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-[1200ms] ease-brand group-hover:scale-[1.06]"
                 />
 
-                {/* শুধু নিচে হালকা শেড — ছবি যেন পরিষ্কার দেখা যায়, বাটনের লেখাও পড়া যায় */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-black/45 to-transparent" aria-hidden="true" />
+                {/* নিচের অর্ধেকে নরম শেড — ছবি পরিষ্কার থাকে, কিন্তু ৭০% উচ্চতার লেখা সব ছবিতেই পড়া যায় */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/60 via-black/25 to-transparent" aria-hidden="true" />
 
-                {/* চিকন, ছোট, মাঝ-বরাবর গ্লাস বাটন: নাম + ছোট তীর */}
-                <div className="absolute inset-x-0 bottom-2.5 flex justify-center px-2 sm:bottom-4">
-                  <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/50 bg-white/20 py-1 pl-3.5 pr-1 text-white shadow-[0_6px_18px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-colors duration-500 ease-brand group-hover:border-white group-hover:bg-white group-hover:text-ink sm:gap-2.5 sm:py-1.5 sm:pl-5 sm:pr-1.5">
-                    <span className="truncate font-body text-[12px] font-bold leading-none sm:text-[14px]">{title}</span>
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-brand-light transition-colors duration-500 ease-brand group-hover:bg-brand-light group-hover:text-white sm:h-7 sm:w-7">
-                      <ArrowIcon />
-                    </span>
+                {/* শুধু লেখা: বড়, ইটালিক, মাঝ-বরাবর, ~৭০% উচ্চতায় — বাটন/তীর/চিহ্ন নেই */}
+                <div className="pointer-events-none absolute inset-x-0 top-[70%] -translate-y-1/2 px-3 text-center sm:px-4">
+                  <span className="inline-block font-body text-[21px] font-extrabold italic leading-[1.2] tracking-[0.2px] text-white transition-transform duration-500 ease-brand [text-shadow:0_2px_14px_rgba(0,0,0,.55),0_1px_3px_rgba(0,0,0,.4)] [text-wrap:balance] group-hover:scale-[1.05] sm:text-[27px] lg:text-[30px]">
+                    {title}
                   </span>
                 </div>
               </Link>
