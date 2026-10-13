@@ -12,5 +12,19 @@
       "binding": "NEXT_INC_CACHE_KV",
       "id": "61a2a76be19045868b53e10b0cf2444f"
     }
-  ]
+  ],
+  // 🛠️ এই vars গুলো শুধুই রানটাইমে (সার্ভার সাইড: middleware.ts, server.ts,
+  // serviceClient.ts ইত্যাদি) Worker-এর env অবজেক্টে পাওয়া যায়। প্রতিটা
+  // `wrangler deploy`-তে এই ফাইলটাই সোর্স অফ ট্রুথ হিসেবে কাজ করে, তাই
+  // Cloudflare Dashboard-এ ম্যানুয়ালি বসানো non-secret ভ্যারিয়েবল পরের ডিপ্লয়ে
+  // (CLI হোক বা Workers Builds/CI) মুছে যেতে পারে — এখানে কমিট করে রাখলে সেটা
+  // আর হবে না। এই দুটো পাবলিক anon key/URL, কমিট করা নিরাপদ।
+  //
+  // ⚠️ এগুলো দিয়ে ব্রাউজার বান্ডলের ক্র্যাশ ঠিক হবে না — সেটা `next build`
+  // সময়ে বেক হয়, যা Cloudflare Dashboard → Settings → Builds-এর "Build
+  // variables"-এ সেট করতে হয় (আলাদা জায়গা)।
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://dlzgfgcqabsawhmekcbg.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsemdmZ2NxYWJzYXdobWVrY2JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3MTE5MDgsImV4cCI6MjEwMTI4NzkwOH0.KkiQ_6EJuHntEMtVZvaYW1P6JL3DLyBC2zi4Fbgwe0g"
+  }
 }
