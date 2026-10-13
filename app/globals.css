@@ -958,7 +958,9 @@ body,
   .vc-press, .vc-press:active:not(:disabled) { transition: none; transform: none; }
 }
 
-/* ক্যাটাগরি আইকন — ডার্ক মোডে আউটলাইন/স্ক্রিন হালকা স্কাই-ব্লু (lib/categoryData.ts: VC_ICON_LINE / VC_ICON_SCREEN) */
-.dark .vc-cat-icon svg [stroke="#2E8BEA"] { stroke: #7CC4FF; }
-.dark .vc-cat-icon svg [fill="#2E8BEA"] { fill: #7CC4FF; }
-.dark .vc-cat-icon svg [fill="#2674D0"] { fill: #4C9DF0; }
+/* ক্যাটাগরি আইকন — ডার্ক মোড (lib/categoryData.ts: VC_ICON_THEME)
+   'trust' থিম: ব্র্যান্ড-ব্লু আউটলাইন ডার্ক সার্কেলে নিজেই ফোটে — আলাদা নিয়ম লাগে না।
+   'slate' থিম: হালকা বডির চারপাশে গাঢ় আউটলাইন, যাতে ডার্কেও আকৃতি আলাদা বোঝা যায়। */
+.dark .vc-cat-icon svg [stroke="#3B6FA8"] { stroke: #12203A; }
+.dark .vc-cat-icon svg [fill="#3B6FA8"] { fill: #12203A; }
+.dark .vc-cat-icon svg [fill="#335F99"] { fill: #12203A; }

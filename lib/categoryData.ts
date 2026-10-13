@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ডিফল্ট ক্যাটাগরি (৩১টি) — পুরোনো সিরিয়াল ও পুরোনো আইডি হুবহু ফেরত আনা হয়েছে।
 // আইকন-ডিজাইন সিস্টেম (সব আইকনে একই নিয়ম):
-//   • ক্যানভাস 32×32, আউটলাইন stroke 2.2 (ছোট অংশে 1.6 / 1.3)। সোর্সে আউটলাইন #0A1A3F লেখা থাকে, কিন্তু রেন্ডারের সময় brandifyCategoryIcon() সেটাকে স্কাই-ব্লু (#2E8BEA) করে দেয় — ডার্ক মোডে globals.css-এর .vc-cat-icon নিয়মে #7CC4FF
+//   • ক্যানভাস 32×32, আউটলাইন stroke 2.2 (ছোট অংশে 1.6 / 1.3)। সোর্সে আউটলাইন #0A1A3F লেখা থাকে, কিন্তু রেন্ডারের সময় brandifyCategoryIcon() সেটাকে VC_ICON_THEME অনুযায়ী বদলে দেয় (নিচে দেখুন)
 //   • বডি: হালকা→মাঝারি নীল গ্রেডিয়েন্ট  (#EAF5FF → #7FC3FD)
 //   • অ্যাকসেন্ট: ব্র্যান্ড-ব্লু গ্রেডিয়েন্ট (#6DBBFD → #44A7FC = brand-primary)
 //   • প্রিমিয়াম টাচ: গোল্ড গ্রেডিয়েন্ট (#FFE08A → #CC9A35), ডার্ক স্ক্রিন #0F2557
@@ -535,9 +535,18 @@ export async function fetchCategories(supabase: SupabaseClient): Promise<Categor
 export const CATEGORY_FILTER_EVENT = 'vc:categoryFilter';
 export const FOCUS_PRODUCT_EVENT = 'vc:focusProduct';
 
-// আইকন আউটলাইন/স্ক্রিনের রং — globals.css-এর `.dark .vc-cat-icon` নিয়মের সাথে হুবহু মিল রাখতে হবে
-export const VC_ICON_LINE = '#2E8BEA';
-export const VC_ICON_SCREEN = '#2674D0';
+// ─────────────────────────────────────────────────────────────────────────────
+// ক্যাটাগরি আইকনের কালার থিম — শুধু নিচের এই এক লাইন বদলালেই পুরো সাইটের আইকন বদলে যায়:
+//   'trust' = ট্রাস্ট স্ট্রিপের রঙ (ব্র্যান্ড স্কাই-ব্লু #44A7FC আউটলাইন, হালকা/সাদা বডি)
+//   'slate' = নরম স্লেট-ব্লু আউটলাইন (#3B6FA8), বেশি কনট্রাস্ট
+// ডার্ক মোডের নিয়ম globals.css-এর `.dark .vc-cat-icon`-এ, সার্কেলের স্টাইল Categories.tsx-এ।
+// ─────────────────────────────────────────────────────────────────────────────
+export const VC_ICON_THEME = 'slate' as 'trust' | 'slate';
+
+const VC_ICON_PALETTES = {
+  trust: { line: '#44A7FC', screen: '#44A7FC', top: '#FFFFFF', bodyBottom: '#CFE6FD', accentTop: '#A9D5FD' },
+  slate: { line: '#3B6FA8', screen: '#335F99', top: '#FFFFFF', bodyBottom: null, accentTop: null },
+} as const;
 
 /**
  * অ্যাডমিন/ডাটাবেসে সেভ করা পুরোনো আইকনে গাঢ় নীল (#0058C7 ইত্যাদি) থাকতে পারে —
@@ -545,15 +554,22 @@ export const VC_ICON_SCREEN = '#2674D0';
  */
 export function brandifyCategoryIcon(icon?: string): string | undefined {
   if (!icon || !icon.trim().startsWith('<svg')) return icon;
-  return icon
+  const P = VC_ICON_PALETTES[VC_ICON_THEME];
+  let out = icon
     .replace(/#0058C7/gi, '#44A7FC')
     .replace(/#4DA9FF/gi, '#6DBBFD')
     .replace(/#1E7BFF/gi, '#44A7FC')
     .replace(/#3B9BFF/gi, '#44A7FC')
     .replace(/#F4F9FF/gi, '#EAF5FF')
     .replace(/#9AC4F6/gi, '#7FC3FD')
-    // আউটলাইন: গাঢ় নেভি → ব্র্যান্ড স্কাই-ব্লুর গাঢ় শেড (ডার্ক মোডে globals.css-এর .vc-cat-icon নিয়মে হালকা হয়)
-    .replace(/#0A1A3F/gi, VC_ICON_LINE)
-    // স্ক্রিন/ডিটেইলের গাঢ় অংশ: নেভির বদলে নরম মাঝারি নীল
-    .replace(/#0F2557/gi, VC_ICON_SCREEN);
+    // বডির উপরের হালকা স্টপ → সাদা, যাতে সার্কেলের হালকা টিন্টের সাথে মিশে না যায়
+    .replace(/#EAF5FF/gi, P.top);
+  // 'trust' থিমে বডি/অ্যাকসেন্টও একটু ফ্যাকাসে — ট্রাস্ট স্ট্রিপের হালকা ভাবের সাথে মেলাতে
+  if (P.bodyBottom) out = out.replace(/#7FC3FD/gi, P.bodyBottom);
+  if (P.accentTop) out = out.replace(/#6DBBFD/gi, P.accentTop);
+  return out
+    // আউটলাইন: নেভি (#0A1A3F) বাদ
+    .replace(/#0A1A3F/gi, P.line)
+    // স্ক্রিন/ডিটেইলের গাঢ় অংশ (#0F2557) বাদ
+    .replace(/#0F2557/gi, P.screen);
 }

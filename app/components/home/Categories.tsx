@@ -2,11 +2,19 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
-  DEFAULT_CATEGORIES, CATEGORY_FILTER_EVENT, brandifyCategoryIcon,
+  DEFAULT_CATEGORIES, CATEGORY_FILTER_EVENT, brandifyCategoryIcon, VC_ICON_THEME,
 } from '@/lib/categoryData';
 import { sanitizeSvgHtml } from '@/lib/sanitize';
 import { useT } from '@/lib/i18n/useT';
 import type { Category } from '@/types';
+
+// আইকন-সার্কেলের স্টাইল — lib/categoryData.ts-এর VC_ICON_THEME-এর সাথে মেলে
+const CIRCLE_STYLE = {
+  trust:
+    'border border-[#D6EAFC] bg-[#ECF6FE] shadow-[0_1px_4px_rgba(68,167,252,.12)] group-hover:border-brand-light/50 group-hover:bg-[#E0F0FE] dark:border-[#2B4A75] dark:bg-[#1B2F4E] dark:shadow-[0_2px_10px_rgba(0,0,0,.35)] dark:group-hover:border-[#3F6BA3] dark:group-hover:bg-[#223B60]',
+  slate:
+    'border border-[#D3E7FB] bg-[#EEF6FF] shadow-[0_1px_4px_rgba(68,167,252,.12)] group-hover:border-brand-light/50 group-hover:bg-[#E2F0FF] dark:border-[#3E5F8E] dark:bg-[#2A4468] dark:shadow-[0_2px_10px_rgba(0,0,0,.35)] dark:group-hover:border-[#5679A8] dark:group-hover:bg-[#31507A]',
+} as const;
 
 function CatIcon({ icon }: { icon?: string }) {
   const isSvg = typeof icon === 'string' && icon.trim().startsWith('<svg');
@@ -152,7 +160,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
                 className="group flex min-h-[58px] cursor-pointer items-center gap-2 rounded-2xl border-[1.5px] border-brand-light/25 bg-white p-2 shadow-sh1 transition-brand hover:-translate-y-0.5 hover:border-brand-light hover:shadow-[0_8px_22px_rgba(68,167,252,.28)] md:min-h-[66px] md:gap-3 md:p-3 active:scale-98"
                 onClick={() => handleSelect(cat.id)}
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-brand-light/30 bg-[#EAF4FF] shadow-[0_2px_8px_rgba(68,167,252,.16)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:border-brand-light/60 group-hover:bg-[#DCEEFF] dark:border-[#2C4670] dark:bg-[#1A2A47] dark:shadow-[0_2px_10px_rgba(0,0,0,.35)] dark:group-hover:border-[#4C7BB8] dark:group-hover:bg-[#223758] md:h-[52px] md:w-[52px]">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 md:h-[52px] md:w-[52px] ${CIRCLE_STYLE[VC_ICON_THEME]}`}>
                   <CatIcon icon={cat.icon} />
                 </div>
                 <div className="line-clamp-2 min-w-0 flex-1 font-body text-xs font-bold leading-[1.3] text-black dark:text-[#F8FAFC] md:text-[13px]">
