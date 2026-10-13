@@ -410,7 +410,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className={colLinkClass}>
+                <Link href="/warranty" className={colLinkClass}>
                   {lang === 'en' ? 'Warranty Terms' : 'ওয়ারেন্টি নীতিমালা'}
                 </Link>
               </li>

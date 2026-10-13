@@ -74,6 +74,7 @@ export default function WaitingGame({ variant, active }: Props) {
   const submitTsRef = useRef(0);
   const autoShownRef = useRef(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     submitTsRef.current = readSubmitTs();
@@ -83,6 +84,15 @@ export default function WaitingGame({ variant, active }: Props) {
   const closeAll = useCallback(() => {
     setPhase('idle');
     setGame(null);
+    try {
+      const fsEl = document.fullscreenElement || (document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+      if (fsEl && (fsEl === wrapRef.current || wrapRef.current?.contains(fsEl))) {
+        const exit = document.exitFullscreen || (document as unknown as { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
+        exit?.call(document)?.catch?.(() => {});
+      }
+    } catch {
+      // ফুলস্ক্রিন API না থাকলে বা এক্সিট ব্যর্থ হলে চুপচাপ উপেক্ষা — গেম যেন বন্ধ হওয়া আটকে না যায়
+    }
   }, []);
 
   // ⏱️ ৫ মিনিটের সীমা: টাইমার + ব্যাকগ্রাউন্ড থেকে ফিরলে আবার হিসাব (ব্রাউজার ব্যাকগ্রাউন্ডে টাইমার থামায়)
@@ -122,6 +132,18 @@ export default function WaitingGame({ variant, active }: Props) {
     if (!active) closeAll();
   }, [active, closeAll]);
 
+  // 👋 ইউজার ট্যাব/ব্রাউজার থেকে সরে গেলে (ক্লোজ বাটনে না চেপেই) গেম সাথে সাথে বন্ধ — ব্যাকগ্রাউন্ডে সাউন্ড/লুপ চলতে থাকা আটকাতে
+  useEffect(() => {
+    if (phase === 'idle') return undefined;
+    const onVisibility = () => { if (document.visibilityState === 'hidden') closeAll(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', closeAll);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', closeAll);
+    };
+  }, [phase, closeAll]);
+
   // 💬 ফুলস্ক্রিন পেজে প্রথম ~৪০ সেকেন্ড কনটেন্ট পড়ার সময় দিয়ে নিজে থেকে একবার পপআপ
   useEffect(() => {
     if (variant !== 'page' || !mounted || !active || expired || games.length === 0) return undefined;
@@ -144,6 +166,21 @@ export default function WaitingGame({ variant, active }: Props) {
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [phase, closeAll]);
+
+  // 🖥️ গেম শুরু হওয়ার সাথে সাথে পুরো প্যানেলটা ব্রাউজারের নেটিভ ফুলস্ক্রিনে নেওয়ার চেষ্টা (ডেস্কটপ ও মোবাইল দুটোতেই —
+  // ব্যর্থ হলে (ব্রাউজার সাপোর্ট না করলে/পলিসি ব্লক করলে) চুপচাপ বর্তমান কার্ড-সাইজ লেআউটেই পড়ে থাকে)
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    const el = wrapRef.current;
+    if (!el) return;
+    const req = el.requestFullscreen
+      || (el as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
+    try {
+      req?.call(el)?.catch?.(() => {});
+    } catch {
+      // নীরবে উপেক্ষা — ফুলস্ক্রিন না হলেও গেম স্বাভাবিকভাবে চলবে
+    }
+  }, [phase]);
 
   // স্ক্রল লক + Esc (শুধু পপআপ/গেম খোলা থাকলে)
   useEffect(() => {
@@ -217,7 +254,12 @@ export default function WaitingGame({ variant, active }: Props) {
                       onClick={() => startGame(g)}
                       className="flex w-full items-center gap-3 rounded-[16px] border border-brand-light/35 bg-white/90 p-3 text-left shadow-xs transition-all duration-brand hover:border-brand-light hover:bg-white active:scale-[0.98]"
                     >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-brand-bg text-[22px]">{g.icon}</span>
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-brand-bg text-[22px]">
+                        {g.thumb ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={g.thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
+                        ) : g.icon}
+                      </span>
                       <span className="min-w-0 flex-1">
                         <strong className="block font-body text-[13.5px] font-extrabold text-ink">{en ? g.titleEn : g.titleBn}</strong>
                         <span className="block font-body text-[11.5px] leading-snug text-muted">{en ? g.descEn : g.descBn}</span>
@@ -237,7 +279,10 @@ export default function WaitingGame({ variant, active }: Props) {
               className="fixed inset-0 z-[1310] flex items-center justify-center bg-[#0B1B33]/90 animate-soft-fade-in"
               style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
-              <div className="relative h-full w-full overflow-hidden bg-[#C3DEFC] sm:h-[min(92vh,640px)] sm:max-w-[420px] sm:rounded-[24px] sm:shadow-sh3">
+              <div
+                ref={wrapRef}
+                className="relative h-full w-full overflow-hidden bg-[#C3DEFC] sm:h-[min(94vh,760px)] sm:max-w-[460px] sm:rounded-[24px] sm:shadow-sh3 [&:fullscreen]:max-w-none [&:fullscreen]:rounded-none [&:-webkit-full-screen]:max-w-none [&:-webkit-full-screen]:rounded-none"
+              >
                 <iframe
                   ref={iframeRef}
                   src={gameUrl(game, lang)}

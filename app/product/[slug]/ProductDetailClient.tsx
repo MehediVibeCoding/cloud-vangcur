@@ -966,7 +966,7 @@ export default function ProductDetailClient({
                     type="button"
                     key={i}
                     aria-label={lang === 'en' ? `View image ${i + 1}` : `ছবি ${i + 1} দেখুন`}
-                    className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-[10px] border-[1.5px] bg-white p-1 transition-brand duration-brand ${i === curImgIdx ? 'border-brand-light shadow-[0_0_0_3px_rgba(68,167,252,.12)]' : 'border-border-base hover:border-brand-light/40'}`}
+                    className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border-[1.5px] transition-brand duration-brand ${i === curImgIdx ? 'border-brand-light shadow-[0_0_0_3px_rgba(68,167,252,.12)]' : 'border-border-base hover:border-brand-light/40'}`}
                     onClick={() => goImg(i)}
                   >
                     <GalleryImg val={im} name={prod.name} isThumb />

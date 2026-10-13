@@ -23,6 +23,7 @@
 - [User Guide & How to Order](https://vangcur.com/guide): Step-by-step instructions on searching items, using coupons, bKash payments, and tracking.
 - [Order & Shipping Policy](https://vangcur.com/shipping): Delivery timelines (1-2 days Dhaka, 2-4 days Nationwide), closed-box shipping, and courier rates.
 - [Return & Replacement Policy](https://vangcur.com/refund-policy): 100% free replacement guarantee for defects, transit damages, and mandatory unboxing video guidelines.
+- [Warranty Policy](https://vangcur.com/warranty): 7-day replacement warranty, 6-month / 1-year / 2-year warranty on selected products, coverage, exclusions, claim requirements and claim steps.
 - [Terms & Conditions](https://vangcur.com/terms): Digital commerce operating agreement, bKash advance verification, and sales terms.
 - [Privacy Policy](https://vangcur.com/privacy-policy): Personal data protection, SSL encryption, and consumer privacy commitments.
 - [Order Tracking](https://vangcur.com/track-order): Live parcel delivery and order status tracking across Bangladesh.
@@ -32,5 +33,5 @@
 - Do you deliver outside Dhaka? Yes, to all 64 districts of Bangladesh via Pathao Courier. Delivery charge is 70 BDT inside Dhaka City (1-2 business days) and 120 BDT outside Dhaka (2-4 business days). A coupon code or membership reward can make delivery free.
 - How long does order confirmation take? After payment verification, confirmation usually arrives within 5-10 minutes (at most 30 minutes). The parcel is handed to the courier within 24 working hours.
 - How do I track my order? Pathao Courier sends a tracking SMS once the parcel is booked. Live status is also available at https://vangcur.com/track-order
-- What if the product is broken, defective or wrong? A free replacement is sent with no extra delivery charge. A continuous uncut unboxing video is mandatory, and the claim must be sent on WhatsApp (01897-804055) within 24-48 hours of receiving the parcel. Details: https://vangcur.com/refund-policy
+- What if the product is broken, defective or wrong? A free replacement is sent with no extra delivery charge. A continuous uncut unboxing video is mandatory, and the claim should be sent on WhatsApp (01897-804055) as soon as possible, ideally within 24-48 hours of receiving the parcel. Details: https://vangcur.com/refund-policy
 - Can I return a product I do not like? No. Without a defect, returns and refunds are not available for a change of mind. Genuinely defective products get a 100% free replacement. Details: https://vangcur.com/terms

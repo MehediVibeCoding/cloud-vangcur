@@ -22,21 +22,24 @@ export interface GameDef {
   titleEn: string;
   descBn: string;
   descEn: string;
-  /** কার্ডের ছোট ইমোজি আইকন */
+  /** কার্ডের ছোট ইমোজি আইকন — থাম্বনেইল ছবি (thumb) না থাকলে এটা ফলব্যাক হিসেবে দেখানো হয় */
   icon: string;
+  /** কার্ডের থাম্বনেইল — public/ ফোল্ডারের ভেতরের পাথ, গেমের অ্যাকচুয়াল স্ক্রিনশট/আর্ট */
+  thumb?: string;
 }
 
 export const GAMES: GameDef[] = [
   {
     id: 'stack-tower',
     src: '/games/stack-tower/index.html',
-    version: 2,
+    version: 3,
     enabled: true,
     titleBn: 'স্ট্যাক টাওয়ার',
     titleEn: 'Stack Tower',
     descBn: 'ব্লক সাজিয়ে সবচেয়ে উঁচু টাওয়ার বানান',
     descEn: 'Stack the parcels as high as you can',
     icon: '📦',
+    thumb: '/games/stack-tower/thumb.png',
   },
 ];
 

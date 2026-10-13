@@ -108,7 +108,7 @@ export default function WarrantyModal({ isOpen, onClose, warrantyText }: Warrant
   useEffect(() => {
     if (isOpen) {
       lockBody();
-      router.prefetch('/terms');
+      router.prefetch('/warranty');
     } else {
       unlockBody();
     }
@@ -124,7 +124,7 @@ export default function WarrantyModal({ isOpen, onClose, warrantyText }: Warrant
     return () => document.removeEventListener('keydown', onKeydown);
   }, [isOpen, onClose]);
 
-  const handleNavigateToTerms = (e: React.MouseEvent) => {
+  const handleNavigateToWarranty = (e: React.MouseEvent) => {
     e.preventDefault();
     onClose();
     setTimeout(() => {
@@ -132,7 +132,7 @@ export default function WarrantyModal({ isOpen, onClose, warrantyText }: Warrant
       // আগেই ফায়ার হয়ে গেছে, কিন্তু নিশ্চিত হতে push-এর ঠিক আগে আবার
       // suppress করা হচ্ছে — যদি এর মধ্যে অন্য কোনো মডাল স্লট নিয়ে থাকে।
       suppressHistoryCleanup();
-      router.push('/terms');
+      router.push('/warranty');
     }, 120);
   };
 
@@ -254,10 +254,10 @@ export default function WarrantyModal({ isOpen, onClose, warrantyText }: Warrant
                   </div>
                   <button
                     type="button"
-                    onClick={handleNavigateToTerms}
+                    onClick={handleNavigateToWarranty}
                     className="inline-flex shrink-0 items-center gap-1 font-body text-[12px] font-extrabold text-brand-light transition-colors hover:text-brand-light-hover hover:underline cursor-pointer"
                   >
-                    <span>{lang === 'en' ? 'Terms & Policy' : 'শর্তাবলী দেখুন'}</span>
+                    <span>{lang === 'en' ? 'Warranty Policy' : 'ওয়ারেন্টি নীতিমালা দেখুন'}</span>
                     <ArrowLinkIcon />
                   </button>
                 </div>

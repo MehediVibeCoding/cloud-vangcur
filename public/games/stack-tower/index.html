@@ -217,7 +217,10 @@ function front(){ // foreground nature drawn OVER the 3D scene (grass overlaps t
   const sw=x=>Math.sin(T*1.7+x*.03);fctx.lineCap='round';
   
   const gy0=HT/2+GO-28;
-  [[105,180,.6,0,'#6aae56'],[165,240,.9,1,'#4f9a43'],[225,320,1.3,2,'#2f7a34']].forEach(([a,b,k0,L,col])=>{
+  /* ব্যান্ডগুলো gy0 (মাটির/প্যালেটের রেখা) থেকে শুরু হয় — আগে প্রথম ব্যান্ড +105px পর থেকে শুরু হতো, আর নিচের
+     tallGrass() টেক্সচার +80px থেকে শুরু হতো, ফলে gy0..+105 অংশে কোনো ঘাসই আঁকা হতো না (খালি ফাঁকা দেখাত,
+     প্যালেটের ঠিক নিচে)। পুরো ব্যান্ড-সেট ১০৫px নিচের দিকে (gy0-এর কাছে) সরিয়ে আনা হলো — প্রস্থ/ওভারল্যাপ অপরিবর্তিত। */
+  [[0,75,.6,0,'#6aae56'],[60,135,.9,1,'#4f9a43'],[120,215,1.3,2,'#2f7a34']].forEach(([a,b,k0,L,col])=>{
     fctx.strokeStyle=col;fctx.lineWidth=1.6*k0;fctx.beginPath();
     for(let i=L;i<tufts.length;i+=3){const t=tufts[i],x=t.x*W,y=gy0+a+t.d*(b-a);if(y>HT+40)continue;const sc=k0*(.85+t.d*.3),w=sw(x)*2.5*sc,m=t.n+L;
       for(let k=0;k<m;k++){const q=(k-(m-1)/2)*.28,h=t.h*sc*1.15*(1-.1*Math.abs(k-1));fctx.moveTo(x+k*2*sc,y);fctx.quadraticCurveTo(x+Math.sin(q)*h*.5+w*.4,y-h*.6,x+Math.sin(q)*h+w,y-h)}}
@@ -446,6 +449,24 @@ $('fs').addEventListener('click',()=>{const e=document.documentElement;try{(docu
 document.addEventListener('fullscreenchange',syncFs);document.addEventListener('webkitfullscreenchange',syncFs);
 if(!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen))$('fs').style.display='none';
 syncFs();
+// 👉 প্যারেন্ট পেজ গেম শুরু হওয়ার সাথে সাথে ফুলস্ক্রিন করার চেষ্টা করে (WaitingGame.tsx); সেটা ব্যর্থ হলে
+// (যেমন iOS Safari-তে, যেখানে এই API সীমিত) এখানে fs বাটনের দিকে একবার তীর-ইঙ্গিত দেখানো হয়।
+// window.innerHeight স্ক্রিনের উচ্চতার কাছাকাছি মানে প্যারেন্টের ফুলস্ক্রিন ইতিমধ্যে সফল হয়েছে — তখন কিছু দেখানো হয় না।
+function looksFullscreen(){try{return (screen.height-window.innerHeight)<60||!!(document.fullscreenElement||document.webkitFullscreenElement)}catch(e){return true}}
+if(matchMedia('(pointer:coarse)').matches){
+  setTimeout(()=>{
+    if(looksFullscreen()||!$('fs')||$('fs').style.display==='none')return;
+    const tip=document.createElement('div');tip.id='fsHint';
+    tip.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg><span>'+(EN?'Tap for fullscreen':'ফুল স্ক্রিনে যেতে এখানে ট্যাপ করুন')+'</span>';
+    tip.style.cssText='position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top,0px) + var(--bs) + 10px);display:flex;align-items:center;gap:6px;padding:7px 13px 7px 10px;border-radius:999px;background:rgba(15,40,80,.72);color:#fff;font:700 11.5px "DM Sans","Hind Siliguri",sans-serif;white-space:nowrap;z-index:8;pointer-events:none;animation:fsBob 1.1s ease-in-out infinite';
+    const kf=document.createElement('style');kf.textContent='@keyframes fsBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}';document.head.appendChild(kf);
+    app.appendChild(tip);
+    const kill=()=>{tip.remove()};
+    $('fs').addEventListener('click',kill,{once:true});
+    document.addEventListener('fullscreenchange',()=>{if(looksFullscreen())kill()});
+    setTimeout(kill,6000);
+  },1200);
+}
 start();requestAnimationFrame(frame); // সরাসরি খেলা শুরু — কোনো "খেলা শুরু করুন" স্ক্রিন নেই
 })();
 </script></body></html>

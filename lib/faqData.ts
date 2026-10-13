@@ -40,9 +40,9 @@ export const DEFAULT_FAQS: Faq[] = [
   },
   {
     q: 'পণ্য ভাঙা, নষ্ট বা ভুল এলে কী করব?',
-    a: 'কারখানাগত ত্রুটি, ভাঙা বা ভুল পণ্য এলে বাড়তি ডেলিভারি চার্জ ছাড়াই নতুন পণ্য পাঠিয়ে দিই। এর জন্য পার্সেল খোলার শুরু থেকে একটানা আন-কাট আনবক্সিং ভিডিও বাধ্যতামূলক। পার্সেল পাওয়ার ২৪–৪৮ ঘণ্টার মধ্যে অর্ডার নম্বর ও ভিডিওসহ WhatsApp-এ (01897-804055) জানান, যাচাইয়ের পর ২৪ ঘণ্টার মধ্যে রিপ্লেসমেন্ট বুক হবে। পূর্ণ শর্ত [রিফান্ড ও রিপ্লেসমেন্ট নীতিমালা](/refund-policy) পেজে।',
+    a: 'কারখানাগত ত্রুটি, ভাঙা বা ভুল পণ্য এলে বাড়তি ডেলিভারি চার্জ ছাড়াই নতুন পণ্য পাঠিয়ে দিই। এর জন্য পার্সেল খোলার শুরু থেকে একটানা আন-কাট আনবক্সিং ভিডিও বাধ্যতামূলক। যত দ্রুত সম্ভব, পার্সেল পাওয়ার ২৪–৪৮ ঘণ্টার মধ্যে হলে সবচেয়ে ভালো, অর্ডার নম্বর ও ভিডিওসহ WhatsApp-এ (01897-804055) জানান। যাচাইয়ের পর ২৪ ঘণ্টার মধ্যে রিপ্লেসমেন্ট বুক হবে। পূর্ণ শর্ত [রিফান্ড ও রিপ্লেসমেন্ট নীতিমালা](/refund-policy) পেজে।',
     qEn: 'What should I do if my product arrives broken, defective or wrong?',
-    aEn: 'If you receive a manufacturing defect, a damaged item or the wrong product, we send a replacement at no extra delivery charge. A continuous, uncut unboxing video from the moment you start opening the parcel is mandatory. Message us on WhatsApp (01897-804055) with your order number and the video within 24–48 hours of receiving the parcel, and after verification the replacement is booked within 24 hours. Full conditions are in our [Refund & Replacement Policy](/refund-policy).',
+    aEn: 'If you receive a manufacturing defect, a damaged item or the wrong product, we send a replacement at no extra delivery charge. A continuous, uncut unboxing video from the moment you start opening the parcel is mandatory. Message us on WhatsApp (01897-804055) with your order number and the video as soon as possible, ideally within 24–48 hours of receiving the parcel. After verification the replacement is booked within 24 hours. Full conditions are in our [Refund & Replacement Policy](/refund-policy).',
   },
   {
     q: 'পছন্দ না হলে কি পণ্য ফেরত দেওয়া যায়?',

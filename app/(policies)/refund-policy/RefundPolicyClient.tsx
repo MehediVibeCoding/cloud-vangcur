@@ -184,8 +184,8 @@ export default function RefundPolicyClient() {
         <ul className={policyUlClass}>
           <PolicyBulletPoint>
             {lang === 'en'
-              ? 'Step 1: Contact our official WhatsApp Support (01897-804055) within 24 to 48 hours of parcel delivery.'
-              : 'ধাপ ১: পার্সেল রিসিভ করার ২৪ থেকে ৪৮ ঘণ্টার মধ্যে সরাসরি আমাদের অফিসিয়াল WhatsApp সাপোর্টে (01897-804055) মেসেজ দিন।'}
+              ? 'Step 1: As soon as you notice a problem, contact our official WhatsApp Support (01897-804055). Within 24 to 48 hours of receiving the parcel is best, and the sooner you report, the sooner we can resolve it.'
+              : 'ধাপ ১: সমস্যা ধরা পড়ার সাথে সাথে আমাদের অফিসিয়াল WhatsApp সাপোর্টে (01897-804055) মেসেজ দিন। পার্সেল পাওয়ার ২৪ থেকে ৪৮ ঘণ্টার মধ্যে জানানো সবচেয়ে ভালো, আর যত দ্রুত জানাবেন সমাধানও তত দ্রুত হবে।'}
           </PolicyBulletPoint>
           <PolicyBulletPoint>
             {lang === 'en'
@@ -206,8 +206,8 @@ export default function RefundPolicyClient() {
       >
         <p className={policyPClass}>
           {lang === 'en'
-            ? <>For technical issues arising after the initial 7-day period, coverage is handled under the respective product’s warranty timeline (up to 6 months, 1 year, or 2 years). Full warranty conditions are outlined on our <Link href="/terms" className="font-bold text-brand-light hover:underline">Terms &amp; Conditions</Link> page.</>
-            : <>প্রাথমিক ৭ দিনের পরও পণ্যের মেয়াদের মধ্যে (প্রোডাক্টভেদে ৬ মাস / ১ বছর / ২ বছর) কোনো অভ্যন্তরীণ টেকনিক্যাল সমস্যা দেখা দিলে একই নিয়মে ওয়ারেন্টি সাপোর্ট পাওয়া যাবে। বিস্তারিত জানতে আমাদের <Link href="/terms" className="font-bold text-brand-light hover:underline">শর্তাবলী পেজ</Link> দেখুন।</>}
+            ? <>For technical issues arising after the initial 7-day period, coverage is handled under the respective product’s warranty timeline (up to 6 months, 1 year, or 2 years). Full warranty conditions are outlined on our <Link href="/warranty" className="font-bold text-brand-light hover:underline">Warranty Policy</Link> page.</>
+            : <>প্রাথমিক ৭ দিনের পরও পণ্যের মেয়াদের মধ্যে (প্রোডাক্টভেদে ৬ মাস / ১ বছর / ২ বছর) কোনো অভ্যন্তরীণ টেকনিক্যাল সমস্যা দেখা দিলে একই নিয়মে ওয়ারেন্টি সাপোর্ট পাওয়া যাবে। বিস্তারিত জানতে আমাদের <Link href="/warranty" className="font-bold text-brand-light hover:underline">ওয়ারেন্টি নীতিমালা পেজ</Link> দেখুন।</>}
         </p>
       </PolicySection>
 

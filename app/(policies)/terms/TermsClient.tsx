@@ -9,7 +9,6 @@ import {
   PolicyBulletPoint,
   policyPClass,
   policyUlClass,
-  policySubheadingClass,
 } from '../PolicyContent';
 
 function DocumentTextIcon() {
@@ -271,24 +270,19 @@ export default function TermsClient() {
           </PolicyBulletPoint>
         </ul>
 
-        <div className={policySubheadingClass}>
-          {lang === 'en' ? 'Prerequisites for Filing a Warranty Claim:' : 'ওয়ারেন্টি ক্লেইম করতে যা আবশ্যক:'}
-        </div>
-        <ul className={policyUlClass}>
-          <PolicyBulletPoint>
-            {lang === 'en'
-              ? 'Original intact product box (damaged, taped, or torn boxes will void warranty).'
-              : 'অরিজিনাল ইনট্যাক্ট প্রোডাক্ট বক্স (ছেঁড়া, ফাটা বা টেপ লাগানো বক্স গ্রহণযোগ্য নয়)।'}
-          </PolicyBulletPoint>
-          <PolicyBulletPoint>
-            {lang === 'en'
-              ? 'Original official invoice paper provided inside the parcel box (digital/downloaded copies are not accepted for physical warranty claims).'
-              : 'পার্সেলের ভেতরে থাকা অফিসিয়াল ইনভয়েস পেপার/মেমো (সংরক্ষিত আসল কপি প্রদর্শন করতে হবে; কোনো ডাউনলোডকৃত ডিজিটাল কপি গ্রহণযোগ্য নয়)।'}
-          </PolicyBulletPoint>
-          <PolicyBulletPoint>
-            {lang === 'en' ? 'Continuous unboxing video proof.' : 'একটানা ধারণকৃত আনবক্সিং ভিডিও প্রমাণ।'}
-          </PolicyBulletPoint>
-        </ul>
+        <PolicyNote type="info">
+          {lang === 'en' ? (
+            <>
+              Claim requirements (original box, official invoice paper, continuous unboxing video), warranty types and the claim procedure are explained in full on our{' '}
+              <Link href="/warranty" className="font-bold text-brand-light hover:underline">Warranty Policy</Link> page.
+            </>
+          ) : (
+            <>
+              ক্লেইমের শর্ত (অরিজিনাল বক্স, অফিসিয়াল ইনভয়েস পেপার, একটানা আনবক্সিং ভিডিও), ওয়ারেন্টির ধরন ও ক্লেইম করার নিয়ম বিস্তারিত দেখুন আমাদের{' '}
+              <Link href="/warranty" className="font-bold text-brand-light hover:underline">ওয়ারেন্টি নীতিমালা</Link> পেজে।
+            </>
+          )}
+        </PolicyNote>
       </PolicySection>
 
       <PolicySection

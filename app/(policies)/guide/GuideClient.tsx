@@ -437,6 +437,13 @@ export default function GuideClient() {
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
+            <Link href="/warranty" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+              /warranty (ওয়ারেন্টি নীতিমালা)
+            </Link>
+            <span className="text-muted">ওয়ারেন্টির ধরন, মেয়াদ, কভারেজ ও ক্লেইম করার নিয়ম।</span>
+          </div>
+
+          <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
             <Link href="/terms" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /terms (শর্তাবলী)
             </Link>

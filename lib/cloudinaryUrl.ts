@@ -22,7 +22,16 @@ function optimizeR2Url(url: string, width: number): string | null {
   if (!url.startsWith(r2Base)) return null;
 
   const site = siteBase.endsWith('/') ? siteBase.slice(0, -1) : siteBase;
-  const params = `width=${width},quality=75,format=auto`;
+  // 🛠️ ব্লার-ফিক্স: আগে এখানে `dpr` parameter ছিলই না (উপরের লিগ্যাসি Cloudinary
+  // path-এ `dpr_auto` থাকলেও এই নতুন R2 path-এ বাদ পড়ে গিয়েছিল) — ফলে হাই-DPI
+  // ফোনে (Retina/2x-3x স্ক্রিন, যা বাংলাদেশে প্রায় সব স্মার্টফোনেই আছে) ১x
+  // রেজোলিউশনের ছবি টেনে বড় করে দেখানো হচ্ছিল, যেটাই "ব্লার" দেখাচ্ছিল।
+  // dpr=2 মানে ২x ফিজিক্যাল পিক্সেল পাঠানো হবে একই CSS সাইজের জন্য — সব
+  // 2x স্ক্রিনে পুরোপুরি শার্প, 3x স্ক্রিনেও আগের চেয়ে অনেক স্পষ্ট দেখাবে।
+  // quality 75→82: Cloudflare-এর ডিফল্ট (75) প্রোডাক্ট ফটোর জন্য একটু বেশি
+  // কমপ্রেসড, তাই সামান্য বাড়ানো হলো (ফাইল সাইজ সামান্য বাড়ে, কিন্তু
+  // ডিটেইল স্পষ্ট থাকে) — এখনো অনেক হালকা, "সুপারফাস্ট" থাকবে।
+  const params = `width=${width},quality=82,format=auto,dpr=2`;
   return `${site}/cdn-cgi/image/${params}/${url}`;
 }
 
