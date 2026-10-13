@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ডিফল্ট ক্যাটাগরি (৩১টি) — পুরোনো সিরিয়াল ও পুরোনো আইডি হুবহু ফেরত আনা হয়েছে।
 // আইকন-ডিজাইন সিস্টেম (সব আইকনে একই নিয়ম):
-//   • ক্যানভাস 32×32, আউটলাইন গাঢ় নেভি #0A1A3F, stroke 2.2 (ছোট অংশে 1.6 / 1.3)
+//   • ক্যানভাস 32×32, আউটলাইন stroke 2.2 (ছোট অংশে 1.6 / 1.3)। সোর্সে আউটলাইন #0A1A3F লেখা থাকে, কিন্তু রেন্ডারের সময় brandifyCategoryIcon() সেটাকে স্কাই-ব্লু (#2E8BEA) করে দেয় — ডার্ক মোডে globals.css-এর .vc-cat-icon নিয়মে #7CC4FF
 //   • বডি: হালকা→মাঝারি নীল গ্রেডিয়েন্ট  (#EAF5FF → #7FC3FD)
 //   • অ্যাকসেন্ট: ব্র্যান্ড-ব্লু গ্রেডিয়েন্ট (#6DBBFD → #44A7FC = brand-primary)
 //   • প্রিমিয়াম টাচ: গোল্ড গ্রেডিয়েন্ট (#FFE08A → #CC9A35), ডার্ক স্ক্রিন #0F2557
@@ -535,6 +535,10 @@ export async function fetchCategories(supabase: SupabaseClient): Promise<Categor
 export const CATEGORY_FILTER_EVENT = 'vc:categoryFilter';
 export const FOCUS_PRODUCT_EVENT = 'vc:focusProduct';
 
+// আইকন আউটলাইন/স্ক্রিনের রং — globals.css-এর `.dark .vc-cat-icon` নিয়মের সাথে হুবহু মিল রাখতে হবে
+export const VC_ICON_LINE = '#2E8BEA';
+export const VC_ICON_SCREEN = '#2674D0';
+
 /**
  * অ্যাডমিন/ডাটাবেসে সেভ করা পুরোনো আইকনে গাঢ় নীল (#0058C7 ইত্যাদি) থাকতে পারে —
  * রেন্ডারের সময় সেগুলো ব্র্যান্ড ফ্রেশ স্কাই-ব্লু প্যালেটে বদলে দেয় (ডেটা বদলাতে হয় না)।
@@ -547,5 +551,9 @@ export function brandifyCategoryIcon(icon?: string): string | undefined {
     .replace(/#1E7BFF/gi, '#44A7FC')
     .replace(/#3B9BFF/gi, '#44A7FC')
     .replace(/#F4F9FF/gi, '#EAF5FF')
-    .replace(/#9AC4F6/gi, '#7FC3FD');
+    .replace(/#9AC4F6/gi, '#7FC3FD')
+    // আউটলাইন: গাঢ় নেভি → ব্র্যান্ড স্কাই-ব্লুর গাঢ় শেড (ডার্ক মোডে globals.css-এর .vc-cat-icon নিয়মে হালকা হয়)
+    .replace(/#0A1A3F/gi, VC_ICON_LINE)
+    // স্ক্রিন/ডিটেইলের গাঢ় অংশ: নেভির বদলে নরম মাঝারি নীল
+    .replace(/#0F2557/gi, VC_ICON_SCREEN);
 }

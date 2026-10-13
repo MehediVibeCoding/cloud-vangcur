@@ -957,3 +957,8 @@ body,
   .vc-ripple { animation: none; opacity: 0; }
   .vc-press, .vc-press:active:not(:disabled) { transition: none; transform: none; }
 }
+
+/* ক্যাটাগরি আইকন — ডার্ক মোডে আউটলাইন/স্ক্রিন হালকা স্কাই-ব্লু (lib/categoryData.ts: VC_ICON_LINE / VC_ICON_SCREEN) */
+.dark .vc-cat-icon svg [stroke="#2E8BEA"] { stroke: #7CC4FF; }
+.dark .vc-cat-icon svg [fill="#2E8BEA"] { fill: #7CC4FF; }
+.dark .vc-cat-icon svg [fill="#2674D0"] { fill: #4C9DF0; }

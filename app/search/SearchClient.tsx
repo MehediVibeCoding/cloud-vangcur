@@ -154,7 +154,7 @@ function CategoryIcon({ icon }: { icon?: string }) {
   if (isSvg) {
     return (
       <span
-        className="flex h-5 w-5 shrink-0 items-center justify-center text-brand-light [&_svg]:!h-5 [&_svg]:!w-5"
+        className="flex h-5 w-5 shrink-0 items-center justify-center vc-cat-icon text-brand-light [&_svg]:!h-5 [&_svg]:!w-5"
         dangerouslySetInnerHTML={{ __html: sanitizeSvgHtml(brandifyCategoryIcon(icon)) }}
       />
     );

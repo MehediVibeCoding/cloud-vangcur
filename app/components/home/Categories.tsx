@@ -13,7 +13,7 @@ function CatIcon({ icon }: { icon?: string }) {
   if (isSvg) {
     return (
       <span
-        className="flex h-[32px] w-[32px] shrink-0 items-center justify-center [&_svg]:!h-[32px] [&_svg]:!w-[32px] md:h-[36px] md:w-[36px] md:[&_svg]:!h-[36px] md:[&_svg]:!w-[36px] drop-shadow-[0_1px_1.5px_rgba(10,26,63,.2)]"
+        className="vc-cat-icon flex h-[30px] w-[30px] shrink-0 items-center justify-center [&_svg]:!h-[30px] [&_svg]:!w-[30px] md:h-[34px] md:w-[34px] md:[&_svg]:!h-[34px] md:[&_svg]:!w-[34px]"
         dangerouslySetInnerHTML={{ __html: sanitizeSvgHtml(brandifyCategoryIcon(icon)) }}
       />
     );
@@ -152,10 +152,10 @@ export default function Categories({ initialCategories }: CategoriesProps) {
                 className="group flex min-h-[58px] cursor-pointer items-center gap-2 rounded-2xl border-[1.5px] border-brand-light/25 bg-white p-2 shadow-sh1 transition-brand hover:-translate-y-0.5 hover:border-brand-light hover:shadow-[0_8px_22px_rgba(68,167,252,.28)] md:min-h-[66px] md:gap-3 md:p-3 active:scale-98"
                 onClick={() => handleSelect(cat.id)}
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#F2F9FF] via-[#CFE7FE] to-[#8FCAFD] shadow-[0_0_0_1.5px_rgba(68,167,252,.55),0_3px_9px_rgba(68,167,252,.30)] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 md:h-[52px] md:w-[52px]">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-brand-light/30 bg-[#EAF4FF] shadow-[0_2px_8px_rgba(68,167,252,.16)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:border-brand-light/60 group-hover:bg-[#DCEEFF] dark:border-[#2C4670] dark:bg-[#1A2A47] dark:shadow-[0_2px_10px_rgba(0,0,0,.35)] dark:group-hover:border-[#4C7BB8] dark:group-hover:bg-[#223758] md:h-[52px] md:w-[52px]">
                   <CatIcon icon={cat.icon} />
                 </div>
-                <div className="line-clamp-2 min-w-0 flex-1 font-body text-xs font-bold leading-[1.3] text-[#0A1A3F] md:text-[13px]">
+                <div className="line-clamp-2 min-w-0 flex-1 font-body text-xs font-bold leading-[1.3] text-black dark:text-[#F8FAFC] md:text-[13px]">
                   {cat.name}
                 </div>
               </div>
