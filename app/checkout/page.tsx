@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import nextDynamic from 'next/dynamic';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { createOrder } from '@/app/actions/checkout';
@@ -29,16 +29,9 @@ import {
 } from '@/lib/couponData';
 import { getLegendaryVoucherStatus } from '@/lib/membershipData';
 
-const LoginModal = nextDynamic(() => import('@/app/components/auth/LoginModal'), { ssr: false });
-const PreConfirmLoginModal = nextDynamic(() => import('@/app/components/checkout/PreConfirmLoginModal'), { ssr: false });
-const PolicyModal = nextDynamic(() => import('@/app/components/checkout/PolicyModal'), { ssr: false });
-
-// 🛠️ বিল্ড-টাইম ফিক্স: এই পেজ static prerender করতে গেলে Supabase ক্লায়েন্ট
-// বানানোর সময় এরর হচ্ছিল, কারণ build environment-এ Supabase URL/Key থাকে না।
-// Checkout পেজ এমনিতেই user-specific/dynamic ডেটা নিয়ে কাজ করে — static হওয়ার
-// দরকার নেই — তাই এখানে এটাকে force-dynamic করে দেওয়া হলো, যাতে build-এর সময়
-// prerender না করে।
-export const dynamic = 'force-dynamic';
+const LoginModal = dynamic(() => import('@/app/components/auth/LoginModal'), { ssr: false });
+const PreConfirmLoginModal = dynamic(() => import('@/app/components/checkout/PreConfirmLoginModal'), { ssr: false });
+const PolicyModal = dynamic(() => import('@/app/components/checkout/PolicyModal'), { ssr: false });
 
 import {
   DISTRICTS,
@@ -59,7 +52,7 @@ import {
 } from '@/lib/checkoutData';
 import {
   sanitizePlainName, validateName, MAX_NAME_LEN,
-  sanitizeEmailInput, sanitizeAddressInput, MAX_ADDR_LEN, sanitizePhoneInput, PHONE_INPUT_MAX_CHARS,
+  sanitizeEmailInput, sanitizeAddressInput, MAX_ADDR_LEN, sanitizePhoneInput, bnDigitsToEn, PHONE_INPUT_MAX_CHARS,
 } from '@/lib/security';
 import { saveDraft, clearDraft, getDraft } from '@/lib/draftRecovery';
 import { sendLead } from '@/lib/leadCapture';
@@ -1756,7 +1749,7 @@ export default function CheckoutPage() {
                     maxLength={4}
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    onChange={(e) => { setLast4(e.target.value.replace(/\D/g, '')); if (errors.eL4) setErrors((err) => ({ ...err, eL4: undefined })); }}
+                    onChange={(e) => { setLast4(bnDigitsToEn(e.target.value).replace(/\D/g, '')); if (errors.eL4) setErrors((err) => ({ ...err, eL4: undefined })); }}
                     placeholder={t('যেমন: 5504')}
                   />
                 </div>

@@ -12,6 +12,7 @@ import { uploadReviewImageToCloudinary } from '@/lib/cloudinaryUpload';
 import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } from '@/lib/wishHeartBurst';
 import UserAvatar from './UserAvatar';
 import { VerifiedCustomerBadge } from './VerifiedBadges';
+import { confirmDialog, promptDialog } from '@/lib/confirm';
 import { fetchProfileCompletionMap } from '@/lib/profileData';
 import { formatSafeDate } from '@/lib/safeLocaleDate';
 import { logWarn } from '@/lib/logger';
@@ -74,14 +75,6 @@ function PlusIcon({ className = '' }: { className?: string }) {
     <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function VerifiedCheckIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="#10B981" className="shrink-0">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
     </svg>
   );
 }
@@ -357,8 +350,18 @@ export default function ProductReviews({
 
   const handleAdminReject = async (e: React.MouseEvent, reviewId: number | string) => {
     e.stopPropagation();
-    const reason = window.prompt('রিজেক্ট করার কারণ লিখুন (কাস্টমার দেখতে পাবেন):', 'কমিউনিটি গাইডলাইন বহির্ভূত');
-    if (reason === null) return;
+    const DEFAULT_REASON = 'কমিউনিটি গাইডলাইন বহির্ভূত';
+    const typed = await promptDialog({
+      title: t('রিভিউ রিজেক্ট করুন'),
+      message: t('রিজেক্ট করার কারণ লিখুন (কাস্টমার দেখতে পাবেন):'),
+      defaultValue: DEFAULT_REASON,
+      placeholder: t('কারণ লিখুন...'),
+      confirmText: t('রিজেক্ট করুন'),
+      cancelText: t('বাতিল'),
+      tone: 'danger',
+    });
+    if (typed === null) return;
+    const reason = typed.trim() || DEFAULT_REASON;
 
     try {
       const { error } = await supabase
@@ -376,7 +379,14 @@ export default function ProductReviews({
 
   const handleDeleteReview = async (e: React.MouseEvent, reviewId: number | string) => {
     e.stopPropagation();
-    if (!window.confirm(t('আপনি কি নিশ্চিতভাবে এই রিভিউটি মুছে ফেলতে চান?'))) return;
+    const ok = await confirmDialog({
+      title: t('রিভিউ মুছে ফেলবেন?'),
+      message: t('আপনি কি নিশ্চিতভাবে এই রিভিউটি মুছে ফেলতে চান?'),
+      confirmText: t('মুছে ফেলুন'),
+      cancelText: t('বাতিল'),
+      tone: 'danger',
+    });
+    if (!ok) return;
 
     const res = await deleteProductReview(supabase, reviewId, currentUser?.id);
     if (res.ok) {
@@ -850,7 +860,6 @@ export default function ProductReviews({
                               </div>
                               <div className="flex items-center gap-1 font-body text-[10px] text-white/80 drop-shadow-sm">
                                 <span>{dateStr}</span>
-                                {item.isVerifiedBuyer && <VerifiedCheckIcon />}
                               </div>
                             </div>
                           </div>
@@ -898,7 +907,6 @@ export default function ProductReviews({
                               </div>
                               <div className="flex items-center gap-1 font-body text-[10px] text-muted">
                                 <span>{dateStr}</span>
-                                {item.isVerifiedBuyer && <VerifiedCheckIcon />}
                               </div>
                             </div>
                           </div>

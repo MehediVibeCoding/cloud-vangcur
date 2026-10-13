@@ -19,6 +19,7 @@ import { fetchProfileCompletionMap } from '@/lib/profileData';
 import { formatSafeDate } from '@/lib/safeLocaleDate';
 import { withTimeout } from '@/lib/withTimeout';
 import { TeamVerifiedBadge, VerifiedCustomerBadge } from './VerifiedBadges';
+import { confirmDialog } from '@/lib/confirm';
 import type { ProductQuestion, ProductQuestionAnswer } from '@/types';
 
 interface ProductQnAProps {
@@ -266,7 +267,14 @@ export default function ProductQnA({ productId, productName }: ProductQnAProps) 
   };
 
   const handleDeleteQuestion = async (qId: number | string) => {
-    if (!window.confirm(t('আপনি কি নিশ্চিতভাবে এই প্রশ্নটি মুছে ফেলতে চান?'))) return;
+    const ok = await confirmDialog({
+      title: t('প্রশ্ন মুছে ফেলবেন?'),
+      message: t('আপনি কি নিশ্চিতভাবে এই প্রশ্নটি মুছে ফেলতে চান?'),
+      confirmText: t('মুছে ফেলুন'),
+      cancelText: t('বাতিল'),
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       const { error } = await supabase.from('product_questions').delete().eq('id', qId);
       if (error) throw error;
@@ -278,7 +286,14 @@ export default function ProductQnA({ productId, productName }: ProductQnAProps) 
   };
 
   const handleDeleteAnswer = async (ansId: number | string, qId: number | string) => {
-    if (!window.confirm(t('আপনি কি এই উত্তরটি মুছে ফেলতে চান?'))) return;
+    const ok = await confirmDialog({
+      title: t('উত্তর মুছে ফেলবেন?'),
+      message: t('আপনি কি এই উত্তরটি মুছে ফেলতে চান?'),
+      confirmText: t('মুছে ফেলুন'),
+      cancelText: t('বাতিল'),
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       const { error } = await supabase.from('product_question_answers').delete().eq('id', ansId);
       if (error) throw error;

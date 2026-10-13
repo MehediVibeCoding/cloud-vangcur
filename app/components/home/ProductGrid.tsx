@@ -31,17 +31,16 @@ function ArrowRightIcon() {
   );
 }
 
-// "সকল প্রোডাক্ট দেখুন" CTA — হোমপেজের "অর্ডার করুন" বাটনের একই মেইন-অ্যাকশন কালার সিস্টেম (.order-btn-glow:
-// হালকা নীল রেডিয়াল-গ্লো + #44A7FC) ব্যবহার করে, তাই দুই বাটন একই পরিবারের দেখায়। লিকুইড-গ্লাস ফিনিশ:
-// সাদা বর্ডার, ভেতরে উপরের হাইলাইট, নরম নীল শ্যাডো, আর শেষে সলিড ব্র্যান্ড-ব্লু তীর-চিপ।
+// "সকল প্রোডাক্ট দেখুন" CTA — ফ্ল্যাট, পরিচ্ছন্ন পিল: কোনো শ্যাডো/থ্রিডি/গ্লো নেই। হালকা সাদা→স্কাই-ব্লু গ্রেডিয়েন্ট,
+// ১.৫px ব্র্যান্ড-ব্লু বর্ডার, ব্র্যান্ড-ব্লু লেখা আর সলিড #44A7FC তীর-চিপ। হোভারে শুধু রং গাঢ় হয়, তীর সামান্য ডানে যায়।
 const viewAllBtnClass =
-  'order-btn-glow group relative inline-flex h-12 cursor-pointer items-center gap-3 overflow-hidden whitespace-nowrap rounded-full border border-white/90 py-1.5 pl-6 pr-1.5 font-body text-[15px] font-extrabold tracking-[0.1px] no-underline shadow-[0_10px_26px_rgba(68,167,252,.28),0_2px_6px_rgba(68,167,252,.18),inset_0_1px_0_rgba(255,255,255,.95)] transition-[transform,box-shadow] duration-300 ease-brand hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(68,167,252,.36),0_3px_8px_rgba(68,167,252,.22),inset_0_1px_0_rgba(255,255,255,.95)] active:translate-y-0 active:scale-[0.98]';
+  'group relative inline-flex h-12 cursor-pointer items-center gap-3 overflow-hidden whitespace-nowrap rounded-full border-[1.5px] border-brand-light/55 bg-gradient-to-r from-white via-white to-brand-bg/70 py-1.5 pl-6 pr-1.5 font-body text-[15px] font-bold tracking-[0.1px] text-[#0284C7] no-underline transition-[background-color,border-color,color] duration-300 ease-brand hover:border-brand-light hover:from-brand-bg/50 hover:via-brand-bg/60 hover:to-brand-bg active:scale-[0.98]';
 
 function ViewAllLabel({ children }: { children: React.ReactNode }) {
   return (
     <>
       <span className="relative z-[1]">{children}</span>
-      <span className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-light text-white shadow-[0_4px_12px_rgba(68,167,252,.5),inset_0_1px_0_rgba(255,255,255,.35)] transition-transform duration-300 ease-brand group-hover:translate-x-0.5">
+      <span className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-light text-white transition-transform duration-300 ease-brand group-hover:translate-x-0.5">
         <ArrowRightIcon />
       </span>
     </>

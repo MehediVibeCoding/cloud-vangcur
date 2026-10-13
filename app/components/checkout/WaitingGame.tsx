@@ -276,12 +276,12 @@ export default function WaitingGame({ variant, active }: Props) {
 
           {phase === 'playing' && game && (
             <div
-              className="fixed inset-0 z-[1310] flex items-center justify-center bg-[#0B1B33]/90 animate-soft-fade-in"
+              className="fixed inset-0 z-[1310] flex items-stretch justify-stretch bg-[#C3DEFC] animate-soft-fade-in"
               style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
               <div
                 ref={wrapRef}
-                className="relative h-full w-full overflow-hidden bg-[#C3DEFC] sm:h-[min(94vh,760px)] sm:max-w-[460px] sm:rounded-[24px] sm:shadow-sh3 [&:fullscreen]:max-w-none [&:fullscreen]:rounded-none [&:-webkit-full-screen]:max-w-none [&:-webkit-full-screen]:rounded-none"
+                className="relative h-full w-full overflow-hidden bg-[#C3DEFC]"
               >
                 <iframe
                   ref={iframeRef}

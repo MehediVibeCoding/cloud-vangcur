@@ -11,7 +11,7 @@ import ScrollReveal from '@/app/components/ui/ScrollReveal';
  *  • হেডিং: গোল পিল ব্যাজ → মেইন হেডিং (মাঝ বরাবর), সাবটাইটেল নেই।
  *      - পিল = heading.hl ("কিউরেটেড কালেকশন"), মেইন হেডিং = heading.lead (অ্যাডমিন থেকে বদলায়), শেষ ১–২ শব্দ নীল।
  *  • মোবাইলে ২×২, ট্যাবলেট/ল্যাপটপে এক সারিতে ৪টা। কার্ড লম্বা (৫:৮), গোল কোণা (সাইটের কার্ডের মতো)।
- *  • কার্ডে কোনো বাটন/তীর নেই — শুধু প্রায় ৭০% উচ্চতায়, মাঝ বরাবর, বড় ইটালিক (বাঁকা) নাম। পুরো কার্ডই ক্লিকযোগ্য।
+ *  • কার্ডে কোনো বাটন/তীর নেই — শুধু প্রায় ৮১% উচ্চতায়, মাঝ বরাবর, বড় ইটালিক (বাঁকা) নাম — একাধিক শব্দ হলে প্রতি শব্দ আলাদা লাইনে। পুরো কার্ডই ক্লিকযোগ্য।
  *  • ক্লিক করলে সরাসরি /collection/<id> পেজে যায় (ক্যাটাগরি সিস্টেম থেকে সম্পূর্ণ আলাদা)।
  *  • ডেটা আসে অ্যাডমিন প্যানেলের "হোম শোকেস" পেজ থেকে (lib/showcaseData.ts দেখুন)।
  */
@@ -34,6 +34,14 @@ function splitHighlight(text: string): [string, string] {
   if (words.length < 2) return ['', text];
   const n = words.length >= 4 ? 2 : 1;
   return [words.slice(0, -n).join(' ') + ' ', words.slice(-n).join(' ')];
+}
+
+// টাইটেল দুই লাইনে: একাধিক শব্দ হলে একটা শব্দের নিচে আরেকটা (তিন+ শব্দ হলে মাঝামাঝি ভেঙে ব্যালেন্স করে)
+function splitTitleLines(title: string): string[] {
+  const words = title.trim().split(/\s+/).filter(Boolean);
+  if (words.length < 2) return [title.trim()];
+  const mid = Math.ceil(words.length / 2);
+  return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
 }
 
 function SparkIcon() {
@@ -79,6 +87,7 @@ export default function CategoryShowcase({ heading, cards }: Props) {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:gap-5">
         {cards.map((c, i) => {
           const title = pick(c.title, c.titleEn);
+          const titleLines = splitTitleLines(title);
           return (
             <ScrollReveal key={`${c.collectionId}-${i}`} delay={i * 0.06} className="h-full">
               <Link
@@ -96,13 +105,15 @@ export default function CategoryShowcase({ heading, cards }: Props) {
                   className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-[1200ms] ease-brand group-hover:scale-[1.06]"
                 />
 
-                {/* নিচের অর্ধেকে নরম শেড — ছবি পরিষ্কার থাকে, কিন্তু ৭০% উচ্চতার লেখা সব ছবিতেই পড়া যায় */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/60 via-black/25 to-transparent" aria-hidden="true" />
+                {/* নিচের অর্ধেকে নরম শেড — ছবি পরিষ্কার থাকে, কিন্তু ৮১% উচ্চতার লেখা সব ছবিতেই পড়া যায় */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/65 via-black/30 to-transparent" aria-hidden="true" />
 
-                {/* শুধু লেখা: বড়, ইটালিক, মাঝ-বরাবর, ~৭০% উচ্চতায় — বাটন/তীর/চিহ্ন নেই */}
-                <div className="pointer-events-none absolute inset-x-0 top-[70%] -translate-y-1/2 px-3 text-center sm:px-4">
-                  <span className="inline-block font-body text-[21px] font-extrabold italic leading-[1.2] tracking-[0.2px] text-white transition-transform duration-500 ease-brand [text-shadow:0_2px_14px_rgba(0,0,0,.55),0_1px_3px_rgba(0,0,0,.4)] [text-wrap:balance] group-hover:scale-[1.05] sm:text-[27px] lg:text-[30px]">
-                    {title}
+                {/* শুধু লেখা: বড়, ইটালিক, মাঝ-বরাবর, ~৮১% উচ্চতায় — বাটন/তীর/চিহ্ন নেই */}
+                <div className="pointer-events-none absolute inset-x-0 top-[81%] -translate-y-1/2 px-3 text-center sm:px-4">
+                  <span className="inline-block font-body text-[21px] font-extrabold italic leading-[1.15] tracking-[0.2px] text-white transition-transform duration-500 ease-brand [text-shadow:0_2px_14px_rgba(0,0,0,.55),0_1px_3px_rgba(0,0,0,.4)] [text-wrap:balance] group-hover:scale-[1.05] sm:text-[27px] lg:text-[30px]">
+                    {titleLines.map((line, li) => (
+                      <span key={li} className="block">{line}</span>
+                    ))}
                   </span>
                 </div>
               </Link>

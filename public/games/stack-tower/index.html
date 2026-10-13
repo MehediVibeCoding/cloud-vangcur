@@ -74,9 +74,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 .card.rec .rtxt{display:block;margin:-4px 0 12px;font-size:13px;font-weight:700;color:#7A4B00}
 .card.rec .chip{border-color:rgba(214,154,0,.45)}
 @media (prefers-reduced-motion:reduce){.card,.card *,.btn::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
-@media (max-width:700px),(pointer:coarse){html,body{overflow:hidden}body{display:block}
+/* সব ডিভাইসে (ডেস্কটপ/ল্যাপটপসহ) গেম পুরো ভিউপোর্ট জুড়ে — আগে ডেস্কটপে ৩৮০×৫২০ কার্ড হয়ে উপরে-নিচে ফাঁকা থাকত */
+html,body{overflow:hidden}body{display:block}
 #app{position:fixed;inset:0;width:auto;height:auto;border-radius:0;box-shadow:none}
-}
 @media (max-width:360px){:root{--bs:38px}#hud{left:10px;right:10px;gap:6px}.hg{gap:6px}}
 </style></head>
 <body>
@@ -173,8 +173,6 @@ function mount(b){const L=[{o:0,a:46,c:['#9db8da','#c9dbee'],s:.007,p:.7,sn:1},{
     if(m.sn){ctx.fillStyle='rgba(255,255,255,.78)';for(let i=1;i<pts.length-1;i++)if(pts[i][1]<pts[i-1][1]&&pts[i][1]<pts[i+1][1]&&pts[i][1]<b-14-m.a*.7){const [x,y]=pts[i];ctx.beginPath();ctx.moveTo(x-12,y+10);ctx.lineTo(x,y);ctx.lineTo(x+12,y+10);ctx.lineTo(x+4,y+7);ctx.lineTo(x,y+12);ctx.lineTo(x-5,y+8);ctx.closePath();ctx.fill()}}}
   const hz=ctx.createLinearGradient(0,b-20,0,b+30);hz.addColorStop(0,'rgba(235,245,250,0)');hz.addColorStop(1,'rgba(235,245,250,.7)');ctx.fillStyle=hz;ctx.fillRect(0,b-20,W,60)}
 const FL=['#ffffff','#FF8FB1','#FFD54A','#B28DFF','#44A7FC','#FF8A5B'],GC=['#4E9A3E','#5FAF4B','#78C45C'];
-const tufts=Array.from({length:210},(_,i)=>({x:(i*37.7)%100/100,d:((i*61)%100)/100,h:14+((i*17)%14),n:3+i%3,g:i%3}));
-const tall=Array.from({length:24},(_,i)=>({x:(i*71+13)%100/100,d:(i*37%100)/100,h:30+(i*13%24),c:FL[(i+1)%6]}));
 function flower(g,x,y,r,c){g.fillStyle=c;for(let k=0;k<5;k++){const a=k*1.2566;g.beginPath();g.arc(x+Math.cos(a)*r,y+Math.sin(a)*r*.8,r*.85,0,7);g.fill()}g.fillStyle='#FFC83D';g.beginPath();g.arc(x,y,r*.7,0,7);g.fill()}
 function trees(b){for(let i=0;i<6;i++){const x=(i*61+20)%100/100*W,y=b-16*Math.sin(x*.015+2)-8*Math.sin(x*.0345+4)+3,s=.55+(i*7%5)/10;
   ctx.fillStyle='#7a5a3c';ctx.fillRect(x-2*s,y-22*s,4*s,24*s);
@@ -202,34 +200,55 @@ let leaves=[],nextLeaf=2;
 function leavesUpdate(dt){nextLeaf-=dt;
   if(nextLeaf<=0&&camY<60){nextLeaf=3+Math.random()*4;leaves.push({x:W+20,y:HT*(.1+Math.random()*.3),c0:camY,vx:-(30+Math.random()*25),vy:14+Math.random()*10,r:Math.random()*6,s:.7+Math.random()*.6,col:Math.random()<.7?'#6BBE4E':'#E0A030',ph:Math.random()*6})}
   for(const l of leaves){l.x+=l.vx*dt;l.y+=l.vy*dt+Math.sin(T*2+l.ph)*.6;l.r+=dt*(1.5+Math.sin(T+l.ph))}leaves=leaves.filter(l=>l.x>-30&&l.y<HT+30)}
+/* ── ঘাসের লেয়ার সিস্টেম ──────────────────────────────────────────────────────────────────────
+   প্যালেটের সামনের-নিচের কিনারা (boxBottom) থেকে শুরু করে স্ক্রিনের তলা পর্যন্ত একটানা তিনটা ঘাসের লেয়ার
+   (পেছনে ছোট হালকা → মাঝে মাঝারি + ফুল → সামনে বড় গাঢ় + ফুল), তার সামনে সবচেয়ে বড় ঘাসের টেক্সচার (tallGrass)।
+   • প্রতিটা লেয়ার "জিটারড গ্রিড"-এ সাজানো — প্রতি ঘরে একটা গুচ্ছ, তাই কোথাও ফাঁকা বা জমাট বাঁধে না।
+   • লেয়ার একবারই অফস্ক্রিন ক্যানভাসে আঁকা (সাইজ বদলালে আবার), প্রতি ফ্রেমে শুধু হালকা দুলুনি (skew) — দ্রুত ও মসৃণ।
+   • কোনো ঘাস/ফুল/লতা-পাতার ডগা boxBottom + ১০px-এর ওপরে যায় না, তাই বক্স/প্যালেটের গায়ে কিছু লাগে না
+     (ওপর থেকে পড়া পাতা এখন bg()-এ, অর্থাৎ বক্সের পেছনে আঁকা হয়)। */
+const GLAY=[
+  {a:.00,b:.46,k:.62,cell:14.5,cols:['#8ccb6c','#7cc060','#6fb454'],lw:1.5,fl:0},
+  {a:.18,b:.72,k:.92,cell:17.5,cols:['#62ae4f','#58a448','#4a9640'],lw:1.7,fl:8},
+  {a:.42,b:.96,k:1.3,cell:21,cols:['#3a8a3a','#2f7a34','#276c2e'],lw:1.9,fl:6}];
+let GL=null,GLW=0,GLH=0;
+function rngMk(s){return()=>(s=(s*16807)%2147483647)/2147483647}
+function boxBottom(){let m=0;for(const sx of [-1.75,1.75])for(const sz of [-1.75,1.75])m=Math.max(m,pr(sx,0,sz)[1]);return m}
+function mkGL(Hg){const d=1.5,P=12,rnd=rngMk(23);GL=[];GLW=W;GLH=HT;
+  for(const L of GLAY){const y0=Hg*L.a,y1=Hg*L.b,bh=Math.ceil(y1)+4,c=document.createElement('canvas');
+    c.width=Math.ceil((W+P*2)*d);c.height=Math.ceil(bh*d);const g=c.getContext('2d');g.scale(d,d);g.translate(P,0);g.lineCap='round';
+    const nc=Math.ceil(W/L.cell)+1,nr=Math.max(1,Math.ceil((y1-y0)/L.cell)),cw=(W+P)/nc,rh=(y1-y0)/nr,paths=L.cols.map(()=>new Path2D()),heads=[];
+    for(let r=0;r<nr;r++)for(let q=0;q<nc;q++){
+      const x=-P/2+(q+.15+rnd()*.7)*cw,y=y0+(r+.15+rnd()*.7)*rh+rh*.5,dep=Math.min(1,Math.max(0,(y-y0)/Math.max(1,y1-y0)));if(rnd()>Math.min(1,.12+dep*4.2))continue; /* ওপরের কিনারায় ঘনত্ব ধাপে বাড়ে — সোজা কাটা রেখা হয় না */const sc=L.k*(.85+dep*.3),
+        m=5+(rnd()*4|0),pa=paths[(rnd()*L.cols.length)|0],lean=(rnd()-.5)*.5;
+      for(let k=0;k<m;k++){const qn=(k-(m-1)/2)*.24+lean*.4,h0=(14+rnd()*14)*sc*1.2*(1-.1*Math.abs(k-(m-1)/2)/2),h=Math.min(h0,y-1);if(h<5)continue;
+        pa.moveTo(x+(k-(m-1)/2)*1.6*sc,y);pa.quadraticCurveTo(x+Math.sin(qn)*h*.5,y-h*.62,x+Math.sin(qn)*h+lean*h*.35,y-h)}
+      if(L.fl&&((r*nc+q)%L.fl===0)){const sh=(30+rnd()*24)*sc*1.05;if(y-sh>3){const w=(rnd()-.5)*10*sc;heads.push([x,y,x+w*.3,y-sh*.5,x+w,y-sh,3.6*sc,FL[(rnd()*6)|0]])}}}
+    g.lineWidth=L.lw;L.cols.forEach((col,i)=>{g.strokeStyle=col;g.stroke(paths[i])});
+    g.strokeStyle='#3F8F3A';g.lineWidth=L.lw*.95;for(const h of heads){g.beginPath();g.moveTo(h[0],h[1]);g.quadraticCurveTo(h[2],h[3],h[4],h[5]);g.stroke()}
+    for(const h of heads)flower(g,h[4],h[5],h[6],h[7]);
+    GL.push({c,bh,P,d})}}
 let TG=null,TGW=0;
 function mkTG(){const d=1.5,h=230,c=document.createElement('canvas');c.width=W*d;c.height=h*d;const g=c.getContext('2d');g.scale(d,d);let r=11;const rnd=()=>(r=(r*16807)%2147483647)/2147483647;
   const pass=(n,hmin,hmax,wid,cols,blur,al)=>{g.save();try{g.filter=`blur(${blur}px)`}catch(e){}g.globalAlpha=al;
     for(let i=0;i<n;i++){const x=rnd()*(W+30)-15,hh=hmin+rnd()*(hmax-hmin),lean=(rnd()-.5)*50,w=wid*(.7+rnd()*.6),gr=g.createLinearGradient(0,h,0,h-hh);gr.addColorStop(0,cols[0]);gr.addColorStop(1,cols[1]);g.fillStyle=gr;
       g.beginPath();g.moveTo(x-w,h+2);g.quadraticCurveTo(x-w*.4+lean*.2,h-hh*.55,x+lean,h-hh);g.quadraticCurveTo(x+w*.4+lean*.2,h-hh*.55,x+w,h+2);g.closePath();g.fill()}g.restore()};
   pass(Math.round(W/9),90,170,3.2,['#2c6b2e','#8cc863'],3.5,.75);pass(Math.round(W/12),70,215,4.5,['#1f5a27','#6fb04f'],1.6,.95);TG=c;TGW=W}
-function tallGrass(gy0){if(!TG||TGW!==W)mkTG();const yb=Math.max(gy0+310,HT+2);if(yb-230>HT)return;/* নিচের কিনারা সবসময় স্ক্রিনের তলা পর্যন্ত — মাঝখানে ফাঁকা সমতল জমি থাকে না */fctx.save();fctx.translate(0,yb);fctx.transform(1,0,Math.sin(T*.9)*.012,1,0,0);fctx.drawImage(TG,0,-230,W,230);fctx.restore()}
-function front(){ // foreground nature drawn OVER the 3D scene (grass overlaps the pallet = depth)
-  fctx.globalAlpha=Math.max(0,1-camY/60);
-  for(const l of leaves){fctx.save();fctx.translate(l.x,l.y+(camY-l.c0)*PY);fctx.rotate(l.r);fctx.fillStyle=l.col;fctx.beginPath();fctx.ellipse(0,0,7*l.s,3.2*l.s,0,0,7);fctx.fill();fctx.strokeStyle='rgba(0,60,0,.35)';fctx.lineWidth=.8;fctx.beginPath();fctx.moveTo(-7*l.s,0);fctx.lineTo(7*l.s,0);fctx.stroke();fctx.restore()}
-  fctx.globalAlpha=1;
-  const base=HT/2+GO+58;if(base>HT+60)return;
-  const sw=x=>Math.sin(T*1.7+x*.03);fctx.lineCap='round';
-  
-  const gy0=HT/2+GO-28;
-  /* ব্যান্ডগুলো gy0 (মাটির/প্যালেটের রেখা) থেকে শুরু হয় — আগে প্রথম ব্যান্ড +105px পর থেকে শুরু হতো, আর নিচের
-     tallGrass() টেক্সচার +80px থেকে শুরু হতো, ফলে gy0..+105 অংশে কোনো ঘাসই আঁকা হতো না (খালি ফাঁকা দেখাত,
-     প্যালেটের ঠিক নিচে)। পুরো ব্যান্ড-সেট ১০৫px নিচের দিকে (gy0-এর কাছে) সরিয়ে আনা হলো — প্রস্থ/ওভারল্যাপ অপরিবর্তিত। */
-  [[0,75,.6,0,'#6aae56'],[60,135,.9,1,'#4f9a43'],[120,215,1.3,2,'#2f7a34']].forEach(([a,b,k0,L,col])=>{
-    fctx.strokeStyle=col;fctx.lineWidth=1.6*k0;fctx.beginPath();
-    for(let i=L;i<tufts.length;i+=3){const t=tufts[i],x=t.x*W,y=gy0+a+t.d*(b-a);if(y>HT+40)continue;const sc=k0*(.85+t.d*.3),w=sw(x)*2.5*sc,m=t.n+L;
-      for(let k=0;k<m;k++){const q=(k-(m-1)/2)*.28,h=t.h*sc*1.15*(1-.1*Math.abs(k-1));fctx.moveTo(x+k*2*sc,y);fctx.quadraticCurveTo(x+Math.sin(q)*h*.5+w*.4,y-h*.6,x+Math.sin(q)*h+w,y-h)}}
-    fctx.stroke();
-    if(L>0){fctx.strokeStyle='#3F8F3A';fctx.lineWidth=1.8*k0;fctx.beginPath();const H=[];
-      for(let i=0;i<tall.length;i++){if(1+(i%2)!==L)continue;const t=tall[i],x=((t.x*W)+L*53)%W,y=gy0+a+t.d*(b-a);if(y>HT+40)continue;const sc=k0*(.85+t.d*.3),w=sw(x)*3*sc,hx=x+w,hy=y-t.h*sc*1.1;fctx.moveTo(x,y);fctx.quadraticCurveTo(x+w*.3,y-t.h*.5*sc,hx,hy);H.push([hx,hy,3.6*sc,t.c])}
-      fctx.stroke();for(const f of H)flower(fctx,f[0],f[1],f[2],f[3])}});
-  tallGrass(gy0);
-  for(const [cx,ph,c] of [[.28,0,'#FF8A5B'],[.74,2,'#B28DFF']]){const x=W*cx+Math.sin(T*.6+ph)*50,y=base-18+Math.sin(T*1.1+ph)*14,w=Math.abs(Math.sin(T*13+ph))*5+1;fctx.fillStyle=c;
+function tallGrass(q0){if(!TG||TGW!==W)mkTG();const gyOld=HT/2+GO-28,yb=Math.max(gyOld+310,HT+2);if(yb-230>HT)return;
+  const dh=Math.min(230,yb-q0-6);if(dh<40)return; /* ছোট স্ক্রিনে টেক্সচার চেপে ছোট করা হয় — যেন বক্সের কিনারা পর্যন্ত না ওঠে */
+  fctx.save();fctx.translate(0,yb);fctx.transform(1,0,Math.sin(T*.9)*.012,1,0,0);fctx.drawImage(TG,0,0,TG.width,TG.height,0,-dh,W,dh);fctx.restore()}
+function drawLeaves(g){ // পড়ন্ত পাতা — bg() থেকে আঁকা হয় (বক্সের পেছনে), তাই কখনো বক্সের ওপর দিয়ে দেখা যায় না
+  g.save();g.globalAlpha=Math.max(0,1-camY/60);
+  for(const l of leaves){g.save();g.translate(l.x,l.y+(camY-l.c0)*PY);g.rotate(l.r);g.fillStyle=l.col;g.beginPath();g.ellipse(0,0,7*l.s,3.2*l.s,0,0,7);g.fill();g.strokeStyle='rgba(0,60,0,.35)';g.lineWidth=.8;g.beginPath();g.moveTo(-7*l.s,0);g.lineTo(7*l.s,0);g.stroke();g.restore()}
+  g.restore()}
+function front(){ // সামনের প্রকৃতি: প্যালেটের নিচে থেকে স্ক্রিনের তলা পর্যন্ত লেয়ার করা ঘাস
+  const pb=boxBottom(),q0=pb+10;if(q0>HT+4)return;
+  if(!GL||GLW!==W||GLH!==HT)mkGL(Math.max(60,HT-(q0-(camY-1.9)*PY)+14));
+  GL.forEach((l,i)=>{fctx.save();fctx.translate(-l.P,q0+l.bh);fctx.transform(1,0,Math.sin(T*(.8+i*.22)+i*1.9)*(.005+i*.004),1,0,0);
+    fctx.drawImage(l.c,0,0,l.c.width,l.c.height,0,-l.bh,W+l.P*2,l.bh);fctx.restore()});
+  tallGrass(q0);
+  const H=Math.max(40,HT-q0);
+  for(const [cx,ph,c] of [[.28,0,'#FF8A5B'],[.74,2,'#B28DFF']]){const x=W*cx+Math.sin(T*.6+ph)*50,y=q0+Math.max(26,H*.22)+Math.sin(T*1.1+ph)*12,w=Math.abs(Math.sin(T*13+ph))*5+1;if(y>HT-10)continue;fctx.fillStyle=c;
     fctx.beginPath();fctx.ellipse(x-3,y,w,5,.4,0,7);fctx.fill();fctx.beginPath();fctx.ellipse(x+3,y,w,5,-.4,0,7);fctx.fill();fctx.fillStyle='#2a2a2a';fctx.fillRect(x-.6,y-4,1.2,8)}
 }
 function bg(){
@@ -252,6 +271,7 @@ function bg(){
   ctx.globalAlpha=1;
   const gy=HT/2+f-28;
   if(gy<HT){const gg=ctx.createLinearGradient(0,gy,0,HT);gg.addColorStop(0,'#86C46C');gg.addColorStop(1,'#5A9A4A');ctx.fillStyle=gg;ctx.fillRect(0,gy,W,HT-gy);gdetail(gy)}
+  drawLeaves(ctx);
 }
 const VOL=3.5;
 function out(){if(!MG){MG=AC.createGain();MG.gain.value=muted?0:VOL;const cp=AC.createDynamicsCompressor();cp.threshold.value=-10;cp.knee.value=10;cp.ratio.value=10;cp.attack.value=.003;cp.release.value=.15;MG.connect(cp);cp.connect(AC.destination)}return MG}
