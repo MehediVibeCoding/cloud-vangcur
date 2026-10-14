@@ -1,7 +1,7 @@
 # 🔐 Vangcur — Environment Variables & Configuration Registry
-**সর্বশেষ অডিট তারিখ:** সেপ্টেম্বর ২০২৬  
+**সর্বশেষ অডিট তারিখ:** অক্টোবর ২০২৬  
 **ফ্রেমওয়ার্ক:** Next.js 15 (App Router, Server Actions, Route Handlers)  
-**ডিপ্লয়মেন্ট প্ল্যাটফর্ম:** Vercel (Production & Preview Envs)
+**ডিপ্লয়মেন্ট প্ল্যাটফর্ম:** Cloudflare Workers (@opennextjs/cloudflare)
 
 ---
 
@@ -17,7 +17,7 @@ Vangcur প্ল্যাটফর্মের এনভায়রনমে�
 2. **সার্ভার-সাইড প্রাইভেট সিক্রেটস (Server-Only Secrets):**
    - এই ভেরিয়েবলগুলো `server-only` মডিউল, Server Actions (`app/actions/checkout.ts`) এবং Route Handlers (`app/api/*`)-এ সীমাবদ্ধ।
    - ব্রাউজারে এগুলো কখনো এক্সপোজ হয় না।
-   - **নিয়ম:** `SUPABASE_SERVICE_ROLE_KEY`, `TELEGRAM_BOT_TOKEN`, `TURNSTILE_SECRET_KEY` ইত্যাদি কখনোই গিটহাবে কমিট করা যাবে না। এগুলো শুধুমাত্র Vercel ড্যাশবোর্ডের Environment Variables ট্যাবে কনফিগার করতে হবে।
+   - **নিয়ম:** `SUPABASE_SERVICE_ROLE_KEY`, `TELEGRAM_BOT_TOKEN`, `TURNSTILE_SECRET_KEY`, `RECOVERY_HUB_HMAC_SECRET` ইত্যাদি কখনোই গিটহাবে কমিট করা যাবে না। এগুলো শুধুমাত্র Cloudflare Dashboard-এর Runtime Environment Variables/Secrets-এ কনফিগার করতে হবে।
 
 ---
 
@@ -28,11 +28,13 @@ Vangcur প্ল্যাটফর্মের এনভায়রনমে�
 | `NEXT_PUBLIC_SUPABASE_URL` | Public (Client/Server) | ডাটাবেজ ও অথ | **REQUIRED** | `lib/supabase/*.ts`<br>`app/page.tsx`<br>`app/sitemap.ts`<br>`app/product/[slug]/page.tsx`<br>`app/category/[slug]/page.tsx` | সুপাবেস প্রজেক্টের প্রধান HTTPS ইউআরএল। |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public (Client/Server) | ডাটাবেজ ও অথ | **REQUIRED** | `lib/supabase/*.ts`<br>`app/page.tsx`<br>`app/sitemap.ts`<br>`app/product/[slug]/page.tsx`<br>`app/category/[slug]/page.tsx` | ক্লায়েন্ট এবং সাধারণ এসএসআর রিডের জন্য RLS-সুরক্ষিত পাবলিক অ্যানন কী। |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-Only (Private) | ডাটাবেজ সিকিউরিটি | **REQUIRED** | `lib/supabase/serviceClient.ts`<br>`app/actions/checkout.ts` | RLS বাইপাস করে সুরক্ষিতভাবে অর্ডার ইনসার্ট ও স্টক আপডেটের মাস্টার অ্যাডমিন কী। |
-| `TELEGRAM_BOT_TOKEN` | Server-Only (Private) | অ্যাডমিন অ্যালার্টস | **REQUIRED** | `lib/telegram.ts`<br>`app/actions/checkout.ts` | অর্ডার সাবমিট হওয়ামাত্র টেলিগ্রাম বটের মাধ্যমে তাৎক্ষণিক নোটিফিকেশন পাঠানোর API টোকেন। |
+| `TELEGRAM_BOT_TOKEN` | Server-Only (Private) | অ্যাডমিন অ্যালার্টস | **REQUIRED** | `lib/telegram.ts`<br>`app/actions/checkout.ts` | অর্ডার সাবমিট হওয়ামাত্র টেলিগ্রাম বটের মাধ্যমে তাৎক্ষণিক নোটিফিকেশন পাঠানোর API টোকেন। |
 | `TELEGRAM_CHAT_ID` | Server-Only (Private) | অ্যাডমিন অ্যালার্টস | **REQUIRED** | `lib/telegram.ts`<br>`app/actions/checkout.ts` | যে টেলিগ্রাম চ্যানেল/গ্রুপ বা অ্যাডমিনের চ্যাটে অর্ডারের বিস্তারিত বার্তা যাবে তার চ্যাট আইডি। |
 | `TURNSTILE_SECRET_KEY` | Server-Only (Private) | বট প্রোটেকশন | Optional | `app/api/verify-turnstile/route.ts` | ক্লাউডফ্লেয়ার টার্নস্টাইল স্মার্ট ক্যাপচা টোকেন সার্ভার-সাইডে ভ্যালিডেট করার সিক্রেট কী। |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Public (Client-Side) | বট প্রোটেকশন | Optional | `app/components/auth/TurnstileWidget.tsx` | ব্রাউজারে টার্নস্টাইল অদৃশ্য ক্যাপচা উইজেট মাউন্ট করার পাবলিক সাইট কী। |
-| `GOOGLE_APPS_SCRIPT_LEAD_URL` | Server-Only (Private) | গুগল শিট ইন্টিগ্রেশন | Optional | `app/api/lead/route.ts` | এবানডনড চেকআউট ড্রাফট এবং স্টক নোটিফিকেশন রিকোয়েস্ট গুগল শিটে রেকর্ড করার ওয়েবহুক। |
+| `RECOVERY_HUB_BASE_URL` | Server-Only (Private) | Abandoned-cart recovery | Optional | `lib/recoveryHub.ts`<br>`app/api/lead/route.ts` | Recovery Hub (Cloudflare Worker)-এর বেস URL — checkout draft ও stock-notification request দুটোই এখান থেকে `/api/ingest/draft` ও `/api/ingest/stock`-এ পাঠানো হয়। |
+| `RECOVERY_HUB_INGEST_KEY` | Server-Only (Private) | Abandoned-cart recovery | Optional | `lib/recoveryHub.ts` | Recovery Hub-এর `api_keys` টেবিলে রেজিস্টার করা ingest API কী (prefix)। |
+| `RECOVERY_HUB_HMAC_SECRET` | Server-Only (Private) | Abandoned-cart recovery | Optional | `lib/recoveryHub.ts` | Recovery Hub-এর সাথে শেয়ার করা HMAC সাইনিং সিক্রেট — দুই পাশেই (store + hub) একই value হতে হবে। |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Public (Client-Side) | মিডিয়া ডেলিভারি | Optional | `lib/cloudinaryUpload.ts` | ক্লাউডিনারি ক্লাউড নাম (না থাকলে ডিফল্ট `dkjzleczw` ফলব্যাক ব্যবহৃত হয়)। |
 | `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` | Public (Client-Side) | মিডিয়া ডেলিভারি | Optional | `lib/cloudinaryUpload.ts` | কাস্টমার রিভিউ ইমেজ আপলোডের আনসাইনড প্রিসেট (ডিফল্ট `vangcur_reviews`)। |
 | `NEXT_PUBLIC_GTM_ID` | Public (Client-Side) | অ্যানালিটিক্স ও ট্র্যাকিং | Optional | `app/layout.tsx` | গুগল ট্যাগ ম্যানেজার কন্টেইনার আইডি (যেমন: `GTM-XXXXXXX`)। |
@@ -54,8 +56,9 @@ Vangcur প্ল্যাটফর্মের এনভায়রনমে�
 ### ৪. `TURNSTILE_SECRET_KEY` ও `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
 - **গ্রেসফুল ডিগ্রেডেশন:** টার্নস্টাইল সাইট কী বা সিক্রেট কী কনফিগার করা না থাকলে `TurnstileWidget` কিছুই রেন্ডার করবে না এবং লগইন/রেজিস্ট্রেশন স্বাভাবিকভাবে কাজ করবে।
 
-### ৫. `GOOGLE_APPS_SCRIPT_LEAD_URL`
-- **ড্রাফট রেজিলিয়েন্স:** গুগল শিটের ওয়েবহুক ইউআরএল না থাকলে `/api/lead` ব্যাকগ্রাউন্ড টাস্ক স্কিপ করে ক্লায়েন্টকে তৎক্ষণাৎ `{ ok: true }` রিটার্ন করবে।
+### ৫. `RECOVERY_HUB_BASE_URL` / `RECOVERY_HUB_INGEST_KEY` / `RECOVERY_HUB_HMAC_SECRET`
+- **গ্রেসফুল ডিগ্রেডেশন:** তিনটার যেকোনো একটা মিসিং থাকলে `/api/lead` ব্যাকগ্রাউন্ড ফরওয়ার্ড চুপচাপ স্কিপ হয়ে যায়, ক্লায়েন্টকে তাৎক্ষণাৎ `{ ok: true }` রিটার্ন হয় — চেকআউট/স্টক-নোটিফাই ফ্লো কখনো আটকায় না।
+- **নোট:** আগে এই একই জায়গায় `GOOGLE_APPS_SCRIPT_LEAD_URL` দিয়ে Google Sheets-এ পাঠানো হতো (checkout draft + stock notification দুটোই) — সেই পাইপলাইন সম্পূর্ণ সরিয়ে Recovery Hub (নিজস্ব Supabase + Cloudflare Worker) দিয়ে প্রতিস্থাপিত হয়েছে।
 
 ---
 
@@ -90,10 +93,14 @@ NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAAx...
 TURNSTILE_SECRET_KEY=0x4AAAAAAAx...
 
 # ==============================================================================
-# 📊 GOOGLE SHEETS DRAFT LEAD WEBHOOK (OPTIONAL)
+# 🔄 RECOVERY HUB — ABANDONED-CART + STOCK-NOTIFICATION FORWARDING (OPTIONAL)
 # ==============================================================================
-# Google Apps Script Web App Deployment URL
-GOOGLE_APPS_SCRIPT_LEAD_URL=https://script.google.com/macros/s/AKfycbx.../exec
+# Recovery Hub Cloudflare Worker-এর বেস URL (trailing slash ছাড়া)
+RECOVERY_HUB_BASE_URL=https://recovery-hub.mehedivibecoding.workers.dev
+# Recovery Hub-এর api_keys টেবিলে রেজিস্টার করা ingest key prefix
+RECOVERY_HUB_INGEST_KEY=rhk_xxxxxxxxxxxxxxxx
+# Recovery Hub-এর INGEST_HMAC_SECRET-এর সাথে হুবহু মিলতে হবে
+RECOVERY_HUB_HMAC_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # ==============================================================================
 # ☁️ CLOUDINARY MEDIA CDN CONFIGURATION (OPTIONAL / DEFAULTS INCLUDED)
@@ -105,3 +112,4 @@ NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=vangcur_reviews
 # 📈 GOOGLE TAG MANAGER CONTAINER ID (OPTIONAL)
 # ==============================================================================
 NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX
+```
