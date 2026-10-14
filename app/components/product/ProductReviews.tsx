@@ -8,7 +8,7 @@ import { useT } from '@/lib/i18n/useT';
 import { showToast } from '@/lib/toast';
 import { lockBody, unlockBody } from '@/lib/bodyScrollLock';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
-import { uploadReviewImageToCloudinary } from '@/lib/cloudinaryUpload';
+import { uploadReviewImageToR2 } from '@/lib/reviewImageUpload';
 import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } from '@/lib/wishHeartBurst';
 import UserAvatar from './UserAvatar';
 import { VerifiedCustomerBadge } from './VerifiedBadges';
@@ -470,7 +470,7 @@ export default function ProductReviews({
         for (let idx = 0; idx < selectedFiles.length; idx += 1) {
           const file = selectedFiles[idx];
           try {
-            const url = await uploadReviewImageToCloudinary(file);
+            const url = await uploadReviewImageToR2(file);
             if (url) uploadedUrls.push(url);
           } catch (uploadErr: any) {
             // কোন ছবিতে কী কারণে আটকাল — কনসোলে পূর্ণ তথ্য, স্ক্রিনে সংক্ষিপ্ত বার্তা
@@ -482,9 +482,7 @@ export default function ProductReviews({
               error: uploadErr,
             });
             setSubmitting(false);
-            const reason = uploadErr?.message?.includes('preset')
-              ? t('ক্লাউডিনারি প্রিসেট সেট করা হয়নি। ছবি ছাড়া রিভিউ সাবমিট করতে পারেন।')
-              : (uploadErr?.message || t('ছবি আপলোড ব্যর্থ হয়েছে'));
+            const reason = uploadErr?.message || t('ছবি আপলোড ব্যর্থ হয়েছে');
             setErrorMessage(
               selectedFiles.length > 1
                 ? `${t('ছবি')} ${idx + 1}/${selectedFiles.length}: ${reason}`
