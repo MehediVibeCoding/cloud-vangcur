@@ -671,6 +671,7 @@ export async function createOrder(payload: OrderPayload): Promise<ActionResponse
   // ফলাফলের জন্য সর্বোচ্চ ২.৫ সেকেন্ড অপেক্ষা করে (না এলে ট্রাস্ট লাইন ছাড়াই আগের মতো যায়)।
   const riskPromise = scoreAndSaveOrderRisk(service, {
     orderId: String(insResult.data.id),
+    name,
     phone,
     email,
     district: dist,
@@ -682,6 +683,12 @@ export async function createOrder(payload: OrderPayload): Promise<ActionResponse
     fingerprintId,
     ip: clientIp,
     geo: clientGeo,
+    advance: {
+      amount: advancePaidAmount,
+      senderNumber: autoConfirm?.sender || last4 || null,
+      transactionId: safeTxn || null,
+      verified: !!autoConfirm,
+    },
   });
   after(() => riskPromise);
 

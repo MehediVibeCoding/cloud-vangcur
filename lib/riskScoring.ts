@@ -1,4 +1,4 @@
-// [NEW FILE] ফাইলের পাথ: lib/riskScoring.ts
+// [REPLACE] ফাইলের পাথ: lib/riskScoring.ts
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logWarn } from '@/lib/logger';
@@ -14,14 +14,24 @@ import { calculateOrderRisk, type RiskLimitHit, type RiskResult } from '@/lib/ri
 
 /** হার্ড/সফট লিমিট-ঘটনা কতদিন পর্যন্ত গণনায় ধরা হবে */
 export const LIMIT_LOOKBACK_DAYS = 30;
+/** হিস্ট্রি গণনায় কতদিন আগে পর্যন্তের অর্ডার ধরা হবে */
+const HISTORY_LOOKBACK_LIMIT = 300; // নিরাপত্তা সীমা, এর বেশি লাগার কথা না
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FINGERPRINT_RE = /^[a-f0-9]{32}$/i;
 const PHONE_RE = /^01[3-9]\d{8}$/;
 const IP_RE = /^[0-9a-fA-F:.]{3,64}$/;
 
+export interface OrderRiskAdvanceParams {
+  amount: number;
+  senderNumber: string | null;
+  transactionId: string | null;
+  verified: boolean;
+}
+
 export interface OrderRiskParams {
   orderId: string;
+  name: string;
   phone: string;
   email: string;
   district: string;
@@ -33,6 +43,7 @@ export interface OrderRiskParams {
   fingerprintId: string;
   ip: string;
   geo: { city: string; country: string; region: string };
+  advance: OrderRiskAdvanceParams;
 }
 
 interface LimitEventRow {
@@ -42,6 +53,13 @@ interface LimitEventRow {
   fingerprint_id: string | null;
   user_id: string | null;
   ip: string | null;
+}
+
+/** বাংলাদেশ সময় অনুযায়ী বর্তমান ঘণ্টা (০–২৩) */
+function currentHourBD(): number {
+  const h = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Dhaka', hour: 'numeric', hour12: false }).format(new Date());
+  const n = Number(h);
+  return Number.isFinite(n) ? n % 24 : new Date().getHours();
 }
 
 export async function scoreAndSaveOrderRisk(service: SupabaseClient, p: OrderRiskParams): Promise<RiskResult | null> {
@@ -58,20 +76,25 @@ export async function scoreAndSaveOrderRisk(service: SupabaseClient, p: OrderRis
       loginPhone = (profile?.phone as string | null) || null;
     }
 
-    // ── আগে ডেলিভার্ড অর্ডার আছে কিনা (একই ফোন অথবা একই লগইন) ──
-    let hasDeliveredBefore = false;
+    // ── আগের delivered/cancelled অর্ডার সংখ্যা (একই ফোন অথবা একই লগইন) ──
+    // Vangcur-এর status enum-এ আলাদা "returned" নেই — rejected ও cancelled একসাথে cancelled হিসেবে গণনা হয়।
+    let delivered = 0;
+    let cancelled = 0;
     const prevConds: string[] = [];
     if (phone) prevConds.push(`customer_phone.eq.${phone}`);
     if (userId) prevConds.push(`user_id.eq.${userId}`);
     if (prevConds.length > 0) {
       const { data: prev } = await service
         .from('orders')
-        .select('id')
-        .eq('status', 'delivered')
+        .select('status')
+        .in('status', ['delivered', 'cancelled', 'rejected'])
         .neq('id', p.orderId)
         .or(prevConds.join(','))
-        .limit(1);
-      hasDeliveredBefore = !!(prev && prev.length > 0);
+        .limit(HISTORY_LOOKBACK_LIMIT);
+      for (const row of (prev || []) as { status: string }[]) {
+        if (row.status === 'delivered') delivered += 1;
+        else cancelled += 1; // cancelled + rejected
+      }
     }
 
     // ── লিমিট-ঘটনা (গত ৩০ দিন) ──
@@ -103,9 +126,12 @@ export async function scoreAndSaveOrderRisk(service: SupabaseClient, p: OrderRis
       }
     }
 
+    const payment: 'cod' | 'delivery_fee_paid' = p.advance.amount > 0 ? 'delivery_fee_paid' : 'cod';
+
     const result = calculateOrderRisk({
       total: p.total,
       items: p.items,
+      name: p.name,
       phone: p.phone,
       email: p.email,
       district: p.district,
@@ -113,9 +139,12 @@ export async function scoreAndSaveOrderRisk(service: SupabaseClient, p: OrderRis
       isLoggedIn: !!userId,
       loginEmail: p.loginEmail,
       loginPhone,
-      hasDeliveredBefore,
+      history: { delivered, cancelled },
       limitHits,
       geo: { city: p.geo.city, country: p.geo.country },
+      hourOfDay: currentHourBD(),
+      payment,
+      advance: p.advance,
     });
 
     const { error } = await service.from('order_risk').upsert(
@@ -129,7 +158,7 @@ export async function scoreAndSaveOrderRisk(service: SupabaseClient, p: OrderRis
         ip_city: p.geo.city || null,
         ip_region: p.geo.region || null,
         ip_country: p.geo.country || null,
-        engine_version: 1,
+        engine_version: 2,
         scored_at: new Date().toISOString(),
       },
       { onConflict: 'order_id' },
