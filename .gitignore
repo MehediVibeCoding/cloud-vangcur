@@ -6,5 +6,6 @@ node_modules/
 out/
 build/
 .vercel
+.open-next/
 *.log
 .DS_Store
