@@ -77,7 +77,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 html,body{overflow:hidden;background:var(--bg)}body{display:block}
 #app{position:fixed;top:0;bottom:0;left:0;right:0;width:auto;height:auto;border-radius:0;box-shadow:none}
 @media (min-aspect-ratio:7/10){
-  :root{--gw:min(100vw,clamp(300px,calc(100vh*.5625),520px))}
+  :root{--gw:min(100vw,clamp(340px,calc(100vh*.68),640px))}
   #app{left:50%;right:auto;width:var(--gw);margin-left:calc(var(--gw)/-2);box-shadow:0 0 0 1px rgba(68,167,252,.22)}
 }
 @media (max-width:360px){:root{--bs:38px}#hud{left:10px;right:10px;gap:6px}.hg{gap:6px}}
@@ -144,16 +144,20 @@ const labTex=ctex(256,160,(g,w,h)=>{g.fillStyle='#fff';g.fillRect(0,0,w,h);g.fil
   g.font='700 14px sans-serif';g.fillText('⇧⇧ FRAGILE',150,146);g.fillStyle='#44A7FC';g.fillRect(168,56,68,46)});
 const hueD=i=>225+50*Math.sin(i*.14-.37);
 const lin=c=>new THREE.Color(c).convertSRGBToLinear();
-function disp(g){g.traverse(m=>{if(m.geometry)m.geometry.dispose();if(m.material)m.material.dispose()})}
+// শেয়ার করা ম্যাটেরিয়াল/জিওমেট্রি (userData.shared) কখনো dispose হয় না — শুধু প্রতি-ব্লকের নিজস্ব জিওমেট্রি ছাড়া হয়।
+const matCache={};
+function shareMat(key,make){let m=matCache[key];if(!m){m=make();m.userData.shared=true;matCache[key]=m}return m}
+let labGeo=null;
+function disp(g){g.traverse(m=>{if(m.geometry&&!m.geometry.userData.shared)m.geometry.dispose();if(m.material&&!m.material.userData.shared)m.material.dispose()})}
 function mk(w,d,i,lab){ // a delivery parcel: kraft cardboard + brand tape (+ shipping label)
   const g=new THREE.Group(),alongX=i%2===1;
-  const body=new THREE.Mesh(new THREE.BoxGeometry(w,BH,d),new THREE.MeshStandardMaterial({map:cardTex,color:new THREE.Color().setHSL(.085+.012*Math.sin(i*.9),.14,.9+.08*Math.sin(i*.6+1)),roughness:.88}));
+  const ib=i%16,body=new THREE.Mesh(new THREE.BoxGeometry(w,BH,d),shareMat('b'+ib,()=>new THREE.MeshStandardMaterial({map:cardTex,color:new THREE.Color().setHSL(.085+.012*Math.sin(ib*.9),.14,.9+.08*Math.sin(ib*.6+1)),roughness:.88})));
   const tapeW=alongX?Math.min(.34,Math.max(.12,d*.26)):Math.min(.34,Math.max(.12,w*.26));
   const tg=alongX?new THREE.BoxGeometry(w+.012,BH+.014,tapeW):new THREE.BoxGeometry(tapeW,BH+.014,d+.012);
-  const tapeMat=new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(hueD(i)/360,.68,.58).convertSRGBToLinear(),roughness:.48,metalness:.015});
+  const tapeMat=shareMat('t'+(i%45),()=>new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(hueD(i%45)/360,.68,.58).convertSRGBToLinear(),roughness:.48,metalness:.015}));
   const tape=new THREE.Mesh(tg,tapeMat); tape.castShadow=true; tape.receiveShadow=true;
   for(const m of [body,tape]){m.castShadow=m.receiveShadow=true;g.add(m)}
-  if(lab&&w>1.3&&d>1.3){const L=new THREE.Mesh(new THREE.PlaneGeometry(1.15,.75),new THREE.MeshStandardMaterial({map:labTex,roughness:.6}));
+  if(lab&&w>1.3&&d>1.3){if(!labGeo){labGeo=new THREE.PlaneGeometry(1.15,.75);labGeo.userData.shared=true}const L=new THREE.Mesh(labGeo,shareMat('lab',()=>new THREE.MeshStandardMaterial({map:labTex,roughness:.6})));
     if(alongX)L.position.set(-w*.2,.02,d/2+.004);else{L.position.set(w/2+.004,.02,-d*.2);L.rotation.y=Math.PI/2}g.add(L)}
   scene.add(g);return g}
 (function(){const g=new THREE.Group(),add=(w,h,d,x,y,z,c)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:lin(c),roughness:.92}));b.position.set(x,y,z);b.castShadow=b.receiveShadow=true;g.add(b)};
@@ -288,16 +292,25 @@ function front(){ // সামনের ঘাস (C, D) + প্রজাপত
     fctx.beginPath();fctx.ellipse(x-3,y,w,5,.4,0,7);fctx.fill();fctx.beginPath();fctx.ellipse(x+3,y,w,5,-.4,0,7);fctx.fill();fctx.fillStyle='#2a2a2a';fctx.fillRect(x-.6,y-4,1.2,8)}
 }
 function bg(){
-  const al=Math.min(1,camY/70),k=al*2,i=Math.min(1,Math.floor(k)),t=k-i,top=mix(SK[i][0],SK[i+1][0],t),bot=mix(SK[i][1],SK[i+1][1],t);
+  const al=Math.min(1,camY/70),k=al*2,i=Math.min(1,Math.floor(k)),t=k-i,k2=sm(70,200,camY),top=mix(mix(SK[i][0],SK[i+1][0],t),[5,9,30],k2),bot=mix(mix(SK[i][1],SK[i+1][1],t),[24,44,108],k2); // k2: স্কোর ~৪৬ থেকে ধীরে ধীরে গভীর মহাকাশ
   const g=ctx.createLinearGradient(0,0,0,HT);g.addColorStop(0,`rgb(${top})`);g.addColorStop(1,`rgb(${bot})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,HT);
   const hy=HT/2+GO-28,hg=ctx.createLinearGradient(0,hy-260,0,hy+10);hg.addColorStop(0,'rgba(255,238,210,0)');hg.addColorStop(1,`rgba(255,238,210,${.34*(1-al)})`);ctx.fillStyle=hg;ctx.fillRect(0,hy-260,W,270);
   const sy=HT*.14+camY*2, sx=W*.8;
-  ctx.globalAlpha=Math.max(0,.96-al*.55);const R0=Math.max(8,15-al*4),sgl=ctx.createRadialGradient(sx,sy,R0*.8,sx,sy,R0*3.2);sgl.addColorStop(0,'rgba(255,214,102,.45)');sgl.addColorStop(1,'rgba(255,214,102,0)');ctx.fillStyle=sgl;ctx.beginPath();ctx.arc(sx,sy,R0*3.2,0,7);ctx.fill();
+  ctx.globalAlpha=Math.max(0,(.96-al*.55)*(1-k2));const R0=Math.max(8,15-al*4),sgl=ctx.createRadialGradient(sx,sy,R0*.8,sx,sy,R0*3.2);sgl.addColorStop(0,'rgba(255,214,102,.45)');sgl.addColorStop(1,'rgba(255,214,102,0)');ctx.fillStyle=sgl;ctx.beginPath();ctx.arc(sx,sy,R0*3.2,0,7);ctx.fill();
   const sd=ctx.createRadialGradient(sx-R0*.25,sy-R0*.25,0,sx,sy,R0);sd.addColorStop(0,'#FFFBE0');sd.addColorStop(.55,'#FFE27A');sd.addColorStop(1,'#FFB938');ctx.fillStyle=sd;ctx.beginPath();ctx.arc(sx,sy,R0,0,7);ctx.fill();ctx.globalAlpha=1;
-  if(al>.7){ctx.fillStyle=`rgba(255,255,255,${(al-.7)*2})`;for(let n=0;n<40;n++){ctx.beginPath();ctx.arc((n*97.3)%W,(n*53.7)%(HT*.7),n%3?.7:1.2,0,7);ctx.fill()}}
-    const m=36,nc=LITE?Math.min(8,clouds.length):clouds.length;
+  if(al>.7){const ns=LITE?32:40+Math.round(70*k2),aa=Math.min(1,(al-.7)*2.4),sh=HT*(.7+.22*k2);ctx.fillStyle='#fff';
+    for(let n=0;n<ns;n++){ctx.globalAlpha=aa*(n%4?.9:.55+.45*Math.sin(T*2+n));ctx.beginPath();ctx.arc(W*((n*.6180339)%1),sh*((n*.7548776)%1),n%3?.7:1.2,0,7);ctx.fill()}ctx.globalAlpha=1;
+    const k3=sm(130,200,camY);
+    if(k3>0){ctx.globalAlpha=k3;const mx=W*.2,my=HT*.2,mg=ctx.createRadialGradient(mx,my,10,mx,my,48);mg.addColorStop(0,'rgba(220,232,255,.35)');mg.addColorStop(1,'rgba(220,232,255,0)');ctx.fillStyle=mg;ctx.beginPath();ctx.arc(mx,my,48,0,7);ctx.fill();
+      const md=ctx.createRadialGradient(mx-6,my-6,2,mx,my,19);md.addColorStop(0,'#FFFFFF');md.addColorStop(1,'#C9D4E8');ctx.fillStyle=md;ctx.beginPath();ctx.arc(mx,my,19,0,7);ctx.fill();
+      ctx.fillStyle='rgba(140,156,184,.4)';for(const [cx,cy,cr] of [[-6,-3,4],[5,6,3],[6,-7,2.4]]){ctx.beginPath();ctx.arc(mx+cx,my+cy,cr,0,7);ctx.fill()}ctx.globalAlpha=1}
+    const k4=sm(190,260,camY);
+    if(k4>0){ctx.globalAlpha=k4;const px=W*.78,py=HT*.42,pg=ctx.createRadialGradient(px-8,py-8,2,px,py,26);pg.addColorStop(0,'#FFB48A');pg.addColorStop(1,'#B5482B');ctx.fillStyle=pg;ctx.beginPath();ctx.arc(px,py,26,0,7);ctx.fill();
+      ctx.strokeStyle='rgba(255,226,190,.55)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(px,py,42,10,-.35,0,7);ctx.stroke();ctx.globalAlpha=1}
+    if(!LITE&&k2>.3){const sn=Math.floor(T/6),ph=(T%6)/.7;if(ph<1){const x0=W*(.15+.7*((sn*.37)%1))+ph*130,y0=HT*(.06+.28*((sn*.61)%1))+ph*65;ctx.strokeStyle=`rgba(255,255,255,${(1-ph)*.9})`;ctx.lineWidth=1.6;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0-46,y0-23);ctx.stroke()}}}
+    const m=36,nc=k2>=1?0:LITE?Math.min(8,clouds.length):clouds.length;
   for(let q=0;q<nc;q++){const c=clouds[q],x=((c.x*(W+300)+T*c.dr*(.9+c.p*1.2))%(W+300))-150,w=(((c.cy-camY*c.p)%m)+m)%m,y=HT+60-w*(HT+160)/m,sc=c.sc*(.7+.5*c.p);
-    ctx.globalAlpha=(.28+.34*c.p)*(1-al*.45);ctx.drawImage(c.s,x-120*sc,y-55*sc,240*sc,110*sc)}
+    ctx.globalAlpha=(.28+.34*c.p)*(1-al*.45)*(1-k2);ctx.drawImage(c.s,x-120*sc,y-55*sc,240*sc,110*sc)}
   ctx.globalAlpha=1;
   const f=GO;
   const haze=ctx.createLinearGradient(0,HT*.42,0,HT*.82);haze.addColorStop(0,'rgba(255,255,255,0)');haze.addColorStop(1,`rgba(245,250,255,${.10+al*.14})`);ctx.fillStyle=haze;ctx.fillRect(0,0,W,HT);
@@ -367,7 +380,8 @@ function countUp(el,to,ms){if(to<3){el.textContent=to;return}const t0=performanc
 function pop(t){const p=$('pop');p.textContent=t;p.className='';void p.offsetWidth;p.className='go'}
 
 const EN=new URLSearchParams(location.search).get('lang')==='en';
-const MS=EN?{10:'Earbud level 🎧',25:'Smartwatch level ⌚',50:'Drone level 🚁'}:{10:'ইয়ারবাড লেভেল 🎧',25:'স্মার্টওয়াচ লেভেল ⌚',50:'ড্রোন লেভেল 🚁'};
+const MS=EN?{10:'Earbud level 🎧',25:'Smartwatch level ⌚',50:'Drone level 🚁',75:'Rocket level 🚀',100:'Satellite level 🛰️',150:'Moon level 🌕',200:'Mars level 🪐'}:{10:'ইয়ারবাড লেভেল 🎧',25:'স্মার্টওয়াচ লেভেল ⌚',50:'ড্রোন লেভেল 🚁',75:'রকেট লেভেল 🚀',100:'স্যাটেলাইট লেভেল 🛰️',150:'চাঁদ লেভেল 🌕',200:'মঙ্গল লেভেল 🪐'};
+function msText(s){if(MS[s])return MS[s];if(s>200&&s%50===0){const q=s/50-3;return EN?'Galaxy level x'+q+' ✨':'গ্যালাক্সি লেভেল x'+q+' ✨'}return ''}
 const TX=EN?{hint:'Tap the screen to drop the block',over:'Game over',rec:'New record!',yours:'Your score',best:'Best score: ',again:'Play again',back:'Back to waiting page',first:'Your first record!',beat:'You beat your previous best of ',fs:'Fullscreen',snd:'Sound',cls:'Close'}
   :{hint:'ব্লক ফেলতে স্ক্রিনে ট্যাপ করুন',over:'খেলা শেষ',rec:'নতুন রেকর্ড!',yours:'আপনার স্কোর',best:'সেরা স্কোর: ',again:'আবার খেলুন',back:'ওয়েটিং পেজে ফিরে যান',first:'এটাই আপনার প্রথম রেকর্ড!',beat:'আপনি আগের সেরা স্কোর ছাড়িয়ে গেছেন: ',fs:'ফুল স্ক্রিন',snd:'সাউন্ড',cls:'বন্ধ করুন'};
 if(EN){document.documentElement.lang='en';document.title='Vangcur Stack Tower'}
@@ -382,11 +396,21 @@ function reset(){blocks.forEach(b=>{if(b.g){scene.remove(b.g);disp(b.g)}});debri
 function spawn(){const n=blocks.length,t=blocks[n-1],a=n%2?'x':'z',dir=n%4<2?1:-1;
   cur={a,x:t.x,z:t.z,w:t.w,d:t.d,dir,i:n,y:t.top+BH/2,g:mk(t.w,t.d,n,1),intro:0};cur[a]=-dir*RANGE;cur.g.position.set(cur.x,cur.y,cur.z);
   speed=3.4*(1+Math.min(.12,n*.003)); /* আগে 2.6 গুণ পর্যন্ত বেড়ে যেত — এখন শুরুর গতিই থাকে, ৪০টা ব্লকে মাত্র ১২% বেশি */camT=Math.max(1.9,t.top-.9)}
-function collapse(g,a,out,w,d){ // whole tower comes down, top first
-  const n=blocks.length,dl=Math.min(.07,.8/n);colT=0;colDur=n*dl+.3;colC=camY;colEnd=(n-1)*dl+.8;collapseSfx(Math.min(1.4,colEnd),n);
-  const mp=(g,j,w,d)=>({g,w,d,t:0,pile:true,delay:(n-j)*dl,vx:(Math.random()-.5)*2.4+(a==='x'?out*(1.25+j*.035):0),vz:(Math.random()-.5)*2.4+(a==='z'?out*(1.25+j*.035):0),vy:-.5-j*.18,wx:(Math.random()-.5)*4.2,wz:(Math.random()-.5)*4.2});
-  for(let j=1;j<n;j++){const b=blocks[j];b.g.visible=true;debris.push(mp(b.g,j,b.w,b.d))}
-  debris.push(mp(g,n,w,d));shake=.5}
+function collapse(g,a,out,w,d){ // টাওয়ার ওপর থেকে নিচে ভাঙে
+  /* বড় টাওয়ারে (৩০+ ব্লক) সবগুলো পড়লে শ'খানেক মেশ+শ্যাডো একসাথে চলত → ধীর ডিভাইসে হ্যাং। এখন শুধু ওপরের TOPN আর নিচের BOTN ব্লক
+     পড়ে; মাঝেরগুলো মুছে ফেলা হয় (ক্যামেরা তখন ওপরে, দর্শক দেখে না)। ওপরের অংশ নিচের অংশের ঠিক ওপরে নামিয়ে আনা হয়, যাতে ক্যামেরা
+     নামতে নামতেই স্তূপটা চোখের সামনে ভেঙে পড়ে — ১৫০০ ইউনিট ওপর থেকে পড়ার অপেক্ষা করতে হয় না। */
+  const TOPN=24,BOTN=6,n=blocks.length;let fall=[];
+  if(n-1>TOPN+BOTN){
+    for(let j=1;j<n;j++){const b=blocks[j];if(j<=BOTN||j>=n-TOPN)fall.push(j);else{scene.remove(b.g);disp(b.g);b.g.visible=false}}
+    const off=blocks[n-TOPN].g.position.y-(blocks[BOTN].top+.8);
+    for(const j of fall)if(j>BOTN)blocks[j].g.position.y-=off;
+    g.position.y-=off}
+  else for(let j=1;j<n;j++)fall.push(j);
+  const m=fall.length+1,dl=Math.min(.07,.8/m);colT=0;colDur=Math.max(1.1,m*dl+.3);colC=camY;colEnd=Math.max(.8,(m-1)*dl+.8);collapseSfx(Math.min(1.4,colEnd),m);
+  const mp=(g,r,w,d)=>({g,w,d,t:0,pile:true,delay:(m-1-r)*dl,vx:(Math.random()-.5)*2.4+(a==='x'?out*(1.25+r*.035):0),vz:(Math.random()-.5)*2.4+(a==='z'?out*(1.25+r*.035):0),vy:-.5-r*.18,wx:(Math.random()-.5)*4.2,wz:(Math.random()-.5)*4.2});
+  fall.forEach((j,r)=>{const b=blocks[j];b.g.visible=true;debris.push(mp(b.g,r,b.w,b.d))});
+  debris.push(mp(g,m-1,w,d));shake=.5}
 function toDeb(g,a,out){return{g,a,out,t:0,vy:.7,s:out*(1.1+Math.random()*.8),wz:out*(2.5+Math.random()*2.5),wo:(Math.random()-.5)*3}}
 function slice(l,r,out){const a=cur.a,g=mk(a==='x'?r-l:cur.w,a==='z'?r-l:cur.d,cur.i,0);g.position.set(a==='x'?(l+r)/2:cur.x,cur.y,a==='z'?(l+r)/2:cur.z);return toDeb(g,a,out)}
 function place(){
@@ -405,7 +429,7 @@ function place(){
   if(perf){ring={x,z,w:nw,d:nd,y:top,t:0};noise(.16,.028);pop('PERFECT! ✨'+(combo>1?' x'+combo:''));const f=523*Math.pow(2,[0,2,4,7,9,12][Math.min(combo-1,5)]/12);
     snd(f,.35,'sine',.14);snd(f*2,.25,'triangle',.05);snd(f*3,.2,'sine',.03);thud();spark(x,top,z,14,'#bfe9ff',1);const gl2=$('glow');gl2.classList.add('on');setTimeout(()=>gl2.classList.remove('on'),120);navigator.vibrate&&navigator.vibrate(12)}
   else{const p=debris[debris.length-1].g.position;spark(p.x,p.y+BH/2,p.z,10,'#8fb3e0',2);thud();noise(.18,.03)}
-  if(MS[score])setTimeout(()=>{pop(MS[score]);snd(1175,.3,'sine',.1);noise(.18,.022)},450);
+  {const sc=score,mt=msText(sc);if(mt)setTimeout(()=>{if(st!=='playing')return;pop(mt);snd(sc>=75?1568:1175,.3,'sine',.1);noise(.18,.022);if(sc>=75){const g3=$('glow');g3.classList.add('on');setTimeout(()=>g3.classList.remove('on'),260)}},450)}
   spawn();hud()}
 function showOver(){if(st!=='over'||overShown)return;
   const rec=score>prevBest&&score>0,card=$('card');
