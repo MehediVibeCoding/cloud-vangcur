@@ -32,7 +32,7 @@ export const GAMES: GameDef[] = [
   {
     id: 'stack-tower',
     src: '/games/stack-tower/index.html',
-    version: 3,
+    version: 4,
     enabled: true,
     titleBn: 'স্ট্যাক টাওয়ার',
     titleEn: 'Stack Tower',
@@ -44,7 +44,7 @@ export const GAMES: GameDef[] = [
 ];
 
 /** ওয়েটিং পেজ খোলার কত সময় পর "গেম খেলবেন?" পপআপ নিজে থেকে আসবে (শুধু ফুলস্ক্রিন পেজে)। */
-export const GAME_INVITE_DELAY_MS = 40 * 1000;
+export const GAME_INVITE_DELAY_MS = 25 * 1000;
 
 /**
  * অর্ডার সাবমিটের কত সময় পর্যন্ত গেম খেলা যাবে। এটা StatusClient-এর WAIT_TIMEOUT_MS (৫ মিনিট)-এর সাথে

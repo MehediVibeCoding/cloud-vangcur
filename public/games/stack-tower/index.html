@@ -5,8 +5,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;800&family=Hind+Siliguri:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#EAF3FE;--muted:#6B7280;--bs:42px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B1220;--muted:#9CA3AF}}
-:root[data-theme="dark"]{--bg:#0B1220;--muted:#9CA3AF}
 html,body{height:100%;margin:0}
 body{background:var(--bg);font-family:'DM Sans','Hind Siliguri',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 #app{position:relative;width:min(380px,calc(100% - 16px));height:clamp(480px,calc(100svh - 90px),520px);border-radius:24px;overflow:hidden;background:linear-gradient(180deg,#C3DEFC 0%,#DCEBFD 55%,#fff 100%);box-shadow:0 8px 36px rgba(0,0,0,.13);touch-action:none;cursor:pointer}
@@ -74,9 +72,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 .card.rec .rtxt{display:block;margin:-4px 0 12px;font-size:13px;font-weight:700;color:#7A4B00}
 .card.rec .chip{border-color:rgba(214,154,0,.45)}
 @media (prefers-reduced-motion:reduce){.card,.card *,.btn::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
-/* সব ডিভাইসে (ডেস্কটপ/ল্যাপটপসহ) গেম পুরো ভিউপোর্ট জুড়ে — আগে ডেস্কটপে ৩৮০×৫২০ কার্ড হয়ে উপরে-নিচে ফাঁকা থাকত */
-html,body{overflow:hidden}body{display:block}
-#app{position:fixed;inset:0;width:auto;height:auto;border-radius:0;box-shadow:none}
+/* গেম সবসময় ফোনের মতো একটা লম্বা কলাম। ফোনে পুরো স্ক্রিন; ল্যাপটপ/ডেস্কটপের চওড়া স্ক্রিনে কলামটা মাঝখানে (উপর-নিচ পুরো উচ্চতা),
+   আর দুই পাশে শুধু একটা সিঙ্গেল আইস-ব্লু রং — সেখানে কোনো রেন্ডারিং/অ্যানিমেশন নেই। তাই CPU/GPU শুধু মাঝের কলামের পিক্সেলই আঁকে। */
+html,body{overflow:hidden;background:var(--bg)}body{display:block}
+#app{position:fixed;top:0;bottom:0;left:0;right:0;width:auto;height:auto;border-radius:0;box-shadow:none}
+@media (min-aspect-ratio:7/10){
+  :root{--gw:min(100vw,clamp(300px,calc(100vh*.5625),520px))}
+  #app{left:50%;right:auto;width:var(--gw);margin-left:calc(var(--gw)/-2);box-shadow:0 0 0 1px rgba(68,167,252,.22)}
+}
 @media (max-width:360px){:root{--bs:38px}#hud{left:10px;right:10px;gap:6px}.hg{gap:6px}}
 </style></head>
 <body>
@@ -110,20 +113,23 @@ const $=i=>document.getElementById(i);
 const app=$('app'),cv=$('cv'),ctx=cv.getContext('2d'),fx=$('fx'),fctx=fx.getContext('2d'),gl=$('gl'),cf=$('cf'),cctx=cf.getContext('2d');
 const KEY='vc_stack_hs',BASE=3,BH=1.5,PH=.45,RANGE=3,TOL=.08,S=1;
 let best=0;try{best=+localStorage.getItem(KEY)||0}catch(e){}
-let W=0,HT=0,T=0,cam=0,camY=1.9,camT=1.9,AC,MG,PY=30,GO=59,muted=false,renderer;
-try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true})}catch(e){app.insertAdjacentHTML('beforeend','<div class="ov"><div class="card"><p style="margin:0 0 4px;font-weight:700">এই ডিভাইসে WebGL সাপোর্ট করছে না।</p><button class="btn" onclick="try{parent.postMessage({type:\'vc-game-close\'},location.origin)}catch(e){}">ওয়েটিং পেজে ফিরে যান</button></div></div>');return}
+let W=0,HT=0,T=0,cam=0,camY=1.9,camT=1.9,AC,MG,PY=30,GO=59,muted=false,renderer,SC=null,LITE=false;
+try{renderer=new THREE.WebGLRenderer({antialias:(devicePixelRatio||1)<2,alpha:true,powerPreference:'high-performance'})}catch(e){app.insertAdjacentHTML('beforeend','<div class="ov"><div class="card"><p style="margin:0 0 4px;font-weight:700">এই ডিভাইসে WebGL সাপোর্ট করছে না।</p><button class="btn" onclick="try{parent.postMessage({type:\'vc-game-close\'},location.origin)}catch(e){}">ওয়েটিং পেজে ফিরে যান</button></div></div>');return}
 renderer.setClearColor(0,0);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
-gl.appendChild(renderer.domElement);
+gl.appendChild(renderer.domElement);renderer.domElement.addEventListener('webglcontextlost',e=>e.preventDefault());
+// ধীর ডিভাইস শনাক্ত: সফটওয়্যার রেন্ডারার (GPU নেই) / কম মেমোরি / কম কোর — হলে শুরুতেই হালকা কোয়ালিটি (নিচে setQuality)
+let LOW=false;try{const gx=renderer.getContext(),ex=gx.getExtension('WEBGL_debug_renderer_info'),rn=ex?String(gx.getParameter(ex.UNMASKED_RENDERER_WEBGL)):'';
+  LOW=/swiftshader|llvmpipe|software|basic render|softpipe/i.test(rn)||(navigator.hardwareConcurrency||8)<=4||(navigator.deviceMemory||8)<=2}catch(e){}
 const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-4.75,4.75,5,-5,.1,200);
-let DPRCAP=1.75; // কোয়ালিটি গভর্নর ধীর ডিভাইসে এটা কমিয়ে দেয়
+let DPRCAP=1.5; // কোয়ালিটি গভর্নর ধীর ডিভাইসে এটা কমিয়ে দেয়
 function resize(){const r=app.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,DPRCAP);W=r.width;HT=r.height;
   for(const c of [cv,fx,cf]){c.width=W*d;c.height=HT*d}ctx.setTransform(d,0,0,d,0,0);fctx.setTransform(d,0,0,d,0,0);cctx.setTransform(d,0,0,d,0,0);
-  renderer.setPixelRatio(d);renderer.setSize(W,HT);const a=W/HT,hh=Math.max(4.75/a,6.5);camera.top=hh;camera.bottom=-hh;camera.left=-hh*a;camera.right=hh*a;camera.updateProjectionMatrix();PY=HT/(2*hh)*.8165}
+  renderer.setPixelRatio(d);renderer.setSize(W,HT);const a=W/HT,hh=Math.max(4.75/a,6.5);camera.top=hh;camera.bottom=-hh;camera.left=-hh*a;camera.right=hh*a;camera.updateProjectionMatrix();PY=HT/(2*hh)*.8165;SC=null}
 new ResizeObserver(resize).observe(app);resize();
 // lighting: key sun (casts shadows) + sky/ground bounce + cool fill on the +z face
 scene.add(new THREE.HemisphereLight(0xeaf4ff,0xa9bfdc,.55));
-const sun=new THREE.DirectionalLight(0xfff1de,.85);sun.castShadow=true;sun.shadow.mapSize.set(1536,1536);
+const sun=new THREE.DirectionalLight(0xfff1de,.85);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
 Object.assign(sun.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:1,far:80});sun.shadow.bias=-.0004;sun.shadow.normalBias=.03;
 scene.add(sun,sun.target);
 const fill=new THREE.DirectionalLight(0xb9d8ff,.32);fill.position.set(-4,5,9);scene.add(fill);
@@ -166,89 +172,119 @@ function birdsUpdate(dt){nextBird-=dt;
   if(nextBird<=0&&camY<55){nextBird=7+Math.random()*9;const dir=Math.random()<.5?1:-1,n=2+(Math.random()*3|0),y=HT*(.05+Math.random()*.16),s=.8+Math.random()*.5,v=dir*(38+Math.random()*14)*s;
     for(let i=0;i<n;i++)birds.push({x:dir>0?-30-i*26:W+30+i*26,y0:y+(i%2?1:-1)*i*7,c0:camY,v,s,ph:Math.random()*6})}
   for(const b of birds)b.x+=b.v*dt;birds=birds.filter(b=>b.x>-80&&b.x<W+80)}
-function hills(base,amp,f,ph,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,HT);for(let x=0;x<=W+12;x+=12)ctx.lineTo(x,base-amp*Math.sin(x*f+ph)-amp*.5*Math.sin(x*f*2.3+ph*2));ctx.lineTo(W,HT);ctx.closePath();ctx.fill()}
-function mount(b){const L=[{o:0,a:46,c:['#9db8da','#c9dbee'],s:.007,p:.7,sn:1},{o:20,a:32,c:['#8eb0d2','#bcd6e8'],s:.011,p:2.4,sn:0}];
+/* ── ছোট সহায়ক ফাংশন ── */
+const sm=(a,b,x)=>{x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x)}; // smoothstep: ঘনত্ব ধাপে নয়, মসৃণভাবে বাড়ে/কমে
+const ps=y=>.3+.7*Math.min(1.3,Math.max(0,y)/330); // গভীরতার মাপ: দিগন্তের কাছে (y ছোট) ছোট, সামনে (y বড়) বড়
+function cvs(w,h,d){const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w*d));c.height=Math.max(1,Math.ceil(h*d));const g=c.getContext('2d');g.scale(d,d);return{c,g}}
+function rngMk(s){return()=>(s=(s*16807)%2147483647)/2147483647}
+/* ── দূরের দৃশ্য: পাহাড়, টিলা, গাছ — সবই এখন "g" কনটেক্সটে আঁকা হয় (একবার অফস্ক্রিনে, প্রতি ফ্রেমে নয়) ── */
+function hills(g,base,amp,f,ph,col){g.fillStyle=col;g.beginPath();g.moveTo(0,HT);for(let x=0;x<=W+12;x+=12)g.lineTo(x,base-amp*Math.sin(x*f+ph)-amp*.5*Math.sin(x*f*2.3+ph*2));g.lineTo(W,HT);g.closePath();g.fill()}
+function mount(g,b){const L=[{o:0,a:46,c:['#9db8da','#c9dbee'],s:.007,p:.7,sn:1},{o:20,a:32,c:['#8eb0d2','#bcd6e8'],s:.011,p:2.4,sn:0}];
   for(const m of L){const pts=[];for(let x=0;x<=W+8;x+=8)pts.push([x,b+m.o-14-Math.abs(Math.sin(x*m.s+m.p))*m.a-Math.abs(Math.sin(x*m.s*2.7+m.p*2))*m.a*.35]);
-    const g=ctx.createLinearGradient(0,b-m.a-30,0,b+m.o+10);g.addColorStop(0,m.c[0]);g.addColorStop(1,m.c[1]);ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(0,HT);pts.forEach(p=>ctx.lineTo(p[0],p[1]));ctx.lineTo(W,HT);ctx.closePath();ctx.fill();
-    if(m.sn){ctx.fillStyle='rgba(255,255,255,.78)';for(let i=1;i<pts.length-1;i++)if(pts[i][1]<pts[i-1][1]&&pts[i][1]<pts[i+1][1]&&pts[i][1]<b-14-m.a*.7){const [x,y]=pts[i];ctx.beginPath();ctx.moveTo(x-12,y+10);ctx.lineTo(x,y);ctx.lineTo(x+12,y+10);ctx.lineTo(x+4,y+7);ctx.lineTo(x,y+12);ctx.lineTo(x-5,y+8);ctx.closePath();ctx.fill()}}}
-  const hz=ctx.createLinearGradient(0,b-20,0,b+30);hz.addColorStop(0,'rgba(235,245,250,0)');hz.addColorStop(1,'rgba(235,245,250,.7)');ctx.fillStyle=hz;ctx.fillRect(0,b-20,W,60)}
-const FL=['#ffffff','#FF8FB1','#FFD54A','#B28DFF','#44A7FC','#FF8A5B'],GC=['#4E9A3E','#5FAF4B','#78C45C'];
-function flower(g,x,y,r,c){g.fillStyle=c;for(let k=0;k<5;k++){const a=k*1.2566;g.beginPath();g.arc(x+Math.cos(a)*r,y+Math.sin(a)*r*.8,r*.85,0,7);g.fill()}g.fillStyle='#FFC83D';g.beginPath();g.arc(x,y,r*.7,0,7);g.fill()}
-function trees(b){for(let i=0;i<6;i++){const x=(i*61+20)%100/100*W,y=b-16*Math.sin(x*.015+2)-8*Math.sin(x*.0345+4)+3,s=.55+(i*7%5)/10;
-  ctx.fillStyle='#7a5a3c';ctx.fillRect(x-2*s,y-22*s,4*s,24*s);
-  for(const [dx,dy,r,c] of [[0,-34,17,'#5FAF55'],[-11,-26,12,'#6BBE5E'],[11,-26,12,'#4F9F48'],[3,-40,11,'#7CCB6C']]){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x+dx*s,y+dy*s,r*s,0,7);ctx.fill()}}}
-let gpat=null;const GF=Array.from({length:60},(_,i)=>({x:((i*53.1)%100)/100,d:Math.pow(((i*37+11)%100)/100,1.5),c:FL[i%6]}));
-function mkGround(){const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d');let r=7;const rnd=()=>(r=(r*16807)%2147483647)/2147483647;
-  g.fillStyle='#74b45a';g.fillRect(0,0,512,512);
-  for(let i=0;i<46;i++){const x=rnd()*512,y=rnd()*512,rad=40+rnd()*90,l=rnd()<.5;
-    for(const ox of [-512,0,512])for(const oy of [-512,0,512]){const q=g.createRadialGradient(x+ox,y+oy,0,x+ox,y+oy,rad);q.addColorStop(0,l?'rgba(155,210,105,.24)':'rgba(40,100,40,.22)');q.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=q;g.fillRect(x+ox-rad,y+oy-rad,rad*2,rad*2)}}
-  g.lineCap='round';const cols=['rgba(45,110,45,.55)','rgba(110,185,80,.55)','rgba(155,215,105,.45)','rgba(30,85,40,.5)'];
-  for(let i=0;i<4500;i++){const x=rnd()*512,y=rnd()*512,h=4+rnd()*9,t=(rnd()-.5)*4;g.strokeStyle=cols[i&3];g.lineWidth=.8+rnd()*.8;g.beginPath();g.moveTo(x,y);g.lineTo(x+t,y-h);g.stroke()}
-  gpat=ctx.createPattern(c,'repeat')}
-function gdetail(gy){if(!gpat)mkGround();const h=HT-gy;ctx.save();ctx.translate(0,gy);
-  ctx.fillStyle=gpat;ctx.fillRect(0,0,W,h);
-  const hz=ctx.createLinearGradient(0,0,0,Math.min(h,260));hz.addColorStop(0,'rgba(218,238,228,.6)');hz.addColorStop(1,'rgba(218,238,228,0)');ctx.fillStyle=hz;ctx.fillRect(0,0,W,Math.min(h,260));
-  const dk=ctx.createLinearGradient(0,0,0,h);dk.addColorStop(0,'rgba(0,0,0,0)');dk.addColorStop(1,'rgba(20,70,30,.3)');ctx.fillStyle=dk;ctx.fillRect(0,0,W,h);
-  ctx.lineCap='round';
-  for(const f of GF){const y=8+f.d*330;if(y>h+10)continue;const x=f.x*W,sz=1.3+Math.min(1,y/260)*3;
-    ctx.strokeStyle='#3f8f3a';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y+sz*.6);ctx.lineTo(x,y+sz*3.4);ctx.moveTo(x-sz*1.2,y+sz*3.4);ctx.lineTo(x,y+sz*2.2);ctx.lineTo(x+sz*1.2,y+sz*3.4);ctx.stroke();
-    flower(ctx,x,y,sz,f.c)}
-  ctx.restore()}
-function bush(x,y,s){for(const [dx,dy,r] of [[-22,0,17],[0,-8,22],[22,0,17],[-8,-18,14],[12,-16,15]]){const g=fctx.createRadialGradient(x+dx*s-4,y+dy*s-6,2,x+dx*s,y+dy*s,r*s);g.addColorStop(0,'#8FD36B');g.addColorStop(1,'#3E8A3A');fctx.fillStyle=g;fctx.beginPath();fctx.arc(x+dx*s,y+dy*s,r*s,0,7);fctx.fill()}
-  for(let i=0;i<5;i++){fctx.fillStyle=i%2?'#FF8FB1':'#fff';fctx.beginPath();fctx.arc(x+(i-2)*11*s,y-(6+i%3*6)*s,2.2*s,0,7);fctx.fill()}}
+    const gg=g.createLinearGradient(0,b-m.a-30,0,b+m.o+10);gg.addColorStop(0,m.c[0]);gg.addColorStop(1,m.c[1]);g.fillStyle=gg;g.beginPath();g.moveTo(0,HT);pts.forEach(p=>g.lineTo(p[0],p[1]));g.lineTo(W,HT);g.closePath();g.fill();
+    if(m.sn){g.fillStyle='rgba(255,255,255,.78)';for(let i=1;i<pts.length-1;i++)if(pts[i][1]<pts[i-1][1]&&pts[i][1]<pts[i+1][1]&&pts[i][1]<b-14-m.a*.7){const [x,y]=pts[i];g.beginPath();g.moveTo(x-12,y+10);g.lineTo(x,y);g.lineTo(x+12,y+10);g.lineTo(x+4,y+7);g.lineTo(x,y+12);g.lineTo(x-5,y+8);g.closePath();g.fill()}}}
+  const hz=g.createLinearGradient(0,b-20,0,b+30);hz.addColorStop(0,'rgba(235,245,250,0)');hz.addColorStop(1,'rgba(235,245,250,.7)');g.fillStyle=hz;g.fillRect(0,b-20,W,60)}
+function trees(g,b){for(let i=0;i<6;i++){const x=(i*61+20)%100/100*W,y=b-16*Math.sin(x*.015+2)-8*Math.sin(x*.0345+4)+3,s=.55+(i*7%5)/10;
+  g.fillStyle='#7a5a3c';g.fillRect(x-2*s,y-22*s,4*s,24*s);
+  for(const [dx,dy,r,c] of [[0,-34,17,'#5FAF55'],[-11,-26,12,'#6BBE5E'],[11,-26,12,'#4F9F48'],[3,-40,11,'#7CCB6C']]){g.fillStyle=c;g.beginPath();g.arc(x+dx*s,y+dy*s,r*s,0,7);g.fill()}}}
+/* ── ঘাসের গুচ্ছ ও ফুল ── */
+const FL=['#ffffff','#FF8FB1','#FFD54A','#B28DFF','#44A7FC','#FF8A5B'];
+function flower(g,x,y,r,c){g.fillStyle=c;for(let k=0;k<5;k++){const a=k*1.2566;g.beginPath();g.arc(x+Math.cos(a)*r,y+Math.sin(a)*r*.8,r*.85,0,7);g.fill()}
+  if(r>=2.6){g.strokeStyle='rgba(60,40,70,.16)';g.lineWidth=.6;for(let k=0;k<5;k++){const a=k*1.2566;g.beginPath();g.arc(x+Math.cos(a)*r,y+Math.sin(a)*r*.8,r*.85,0,7);g.stroke()}} // বড় ফুলে হালকা কিনারা
+  g.fillStyle=c==='#FFD54A'?'#F08A24':'#FFC83D';g.beginPath();g.arc(x,y,r*.7,0,7);g.fill()}
+function bloom(g,x,y,r,c,stemH,lean){ // ডাঁটাসহ ফুল (সামান্য বাঁকা ডাঁটা)
+  const tx=x+lean*stemH,ty=y-stemH;
+  g.strokeStyle='#3F8F3A';g.lineWidth=Math.max(.7,r*.34);g.lineCap='round';g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+lean*stemH*.2,y-stemH*.6,tx,ty);g.stroke();
+  flower(g,tx,ty,r,c)}
+function tuft(g,x,y,H,w,n,cols,lean,rnd,shade){ // একটা গুচ্ছ = n টা সরু-হয়ে-যাওয়া ফলক (গোড়া গাঢ় → ডগা হালকা)
+  if(shade){g.fillStyle='rgba(15,70,25,'+shade+')';g.beginPath();g.ellipse(x,y+.5,w*n*.55,w*1.1,0,0,7);g.fill()} // মাটির সাথে ছোট্ট ছায়া
+  if(H<8)g.fillStyle=cols[1];else{const gr=g.createLinearGradient(0,y,0,y-H);gr.addColorStop(0,cols[0]);gr.addColorStop(1,cols[1]);g.fillStyle=gr}
+  for(let k=0;k<n;k++){const f=(k-(n-1)/2)/Math.max(1,(n-1)/2),h=H*(1-.22*Math.abs(f))*(.85+rnd()*.3),l=lean+f*.22+(rnd()-.5)*.12,bx=x+f*w*n*.35,
+      tx=bx+l*h,ty=y-h,cx=bx+l*h*.3+(rnd()-.5)*w,cy=y-h*.58;
+    g.beginPath();g.moveTo(bx-w/2,y);g.quadraticCurveTo(cx-w*.3,cy,tx,ty);g.quadraticCurveTo(cx+w*.3,cy,bx+w/2,y);g.closePath();g.fill()}}
+/* একটা গভীরতা-স্তরে গুচ্ছ+ফুল ছড়ানো: সারি-সারি "জিটারড গ্রিড" (কোথাও জমাট বাঁধে না), সারির উচ্চতা/ফাঁক গভীরতা অনুযায়ী বাড়ে,
+   o.dens(y) ঘনত্ব ঠিক করে (ওপরে/বক্সের কাছে কম → নিচে বেশি), ফুলের মাঝে ন্যূনতম দূরত্ব, o.minTip-এর ওপরে কোনো ডগা যায় না। */
+function scatter(g,o,rnd){
+  const placed=[];let fi=(rnd()*6)|0;
+  for(let y=o.y0;y<o.y1;){const s=ps(y),rh=Math.max(4,o.cellH*s),cw=Math.max(7,o.cellW*s);
+    for(let x=-cw*.5+rnd()*cw;x<W+cw;x+=cw){
+      const yy=y+rh*(.15+rnd()*.7),xx=x+(rnd()-.5)*cw*.7;
+      if(yy>o.y1||yy<o.y0||rnd()>o.dens(yy))continue;
+      const sc=ps(yy),H=Math.min((o.H[0]+rnd()*(o.H[1]-o.H[0]))*sc,yy-o.minTip),w=o.w*sc*(.8+rnd()*.4),n=o.n[0]+((rnd()*(o.n[1]-o.n[0]+1))|0);
+      if(H<3)continue;
+      tuft(g,xx,yy,H,w,n,o.cols,(rnd()-.5)*.35,rnd,o.shade);
+      if(o.fl&&rnd()<o.fl.p){const r=o.fl.r*sc,fx=xx+(rnd()-.5)*cw*.5,fh=(o.fl.stem[0]+rnd()*(o.fl.stem[1]-o.fl.stem[0]))*sc;
+        if(yy-fh>=o.minTip&&placed.every(b=>Math.hypot(b[0]-fx,(b[1]-yy)*1.6)>o.fl.gap*sc)){placed.push([fx,yy]);fi=(fi+1+((rnd()*3)|0))%6;bloom(g,fx,yy,r,FL[fi],fh,(rnd()-.5)*.3)}}}
+    y+=rh}}
 let leaves=[],nextLeaf=2;
 function leavesUpdate(dt){nextLeaf-=dt;
   if(nextLeaf<=0&&camY<60){nextLeaf=3+Math.random()*4;leaves.push({x:W+20,y:HT*(.1+Math.random()*.3),c0:camY,vx:-(30+Math.random()*25),vy:14+Math.random()*10,r:Math.random()*6,s:.7+Math.random()*.6,col:Math.random()<.7?'#6BBE4E':'#E0A030',ph:Math.random()*6})}
   for(const l of leaves){l.x+=l.vx*dt;l.y+=l.vy*dt+Math.sin(T*2+l.ph)*.6;l.r+=dt*(1.5+Math.sin(T+l.ph))}leaves=leaves.filter(l=>l.x>-30&&l.y<HT+30)}
-/* ── ঘাসের লেয়ার সিস্টেম ──────────────────────────────────────────────────────────────────────
-   প্যালেটের সামনের-নিচের কিনারা (boxBottom) থেকে শুরু করে স্ক্রিনের তলা পর্যন্ত একটানা তিনটা ঘাসের লেয়ার
-   (পেছনে ছোট হালকা → মাঝে মাঝারি + ফুল → সামনে বড় গাঢ় + ফুল), তার সামনে সবচেয়ে বড় ঘাসের টেক্সচার (tallGrass)।
-   • প্রতিটা লেয়ার "জিটারড গ্রিড"-এ সাজানো — প্রতি ঘরে একটা গুচ্ছ, তাই কোথাও ফাঁকা বা জমাট বাঁধে না।
-   • লেয়ার একবারই অফস্ক্রিন ক্যানভাসে আঁকা (সাইজ বদলালে আবার), প্রতি ফ্রেমে শুধু হালকা দুলুনি (skew) — দ্রুত ও মসৃণ।
-   • কোনো ঘাস/ফুল/লতা-পাতার ডগা boxBottom + ১০px-এর ওপরে যায় না, তাই বক্স/প্যালেটের গায়ে কিছু লাগে না
-     (ওপর থেকে পড়া পাতা এখন bg()-এ, অর্থাৎ বক্সের পেছনে আঁকা হয়)। */
-const GLAY=[
-  {a:.00,b:.46,k:.62,cell:14.5,cols:['#8ccb6c','#7cc060','#6fb454'],lw:1.5,fl:0},
-  {a:.18,b:.72,k:.92,cell:17.5,cols:['#62ae4f','#58a448','#4a9640'],lw:1.7,fl:8},
-  {a:.42,b:.96,k:1.3,cell:21,cols:['#3a8a3a','#2f7a34','#276c2e'],lw:1.9,fl:6}];
-let GL=null,GLW=0,GLH=0;
-function rngMk(s){return()=>(s=(s*16807)%2147483647)/2147483647}
+/* ── দৃশ্যপট ক্যাশ + ঘাসের ৪-স্তর সিস্টেম ───────────────────────────────────────────────────────────
+   আগে প্রতি ফ্রেমে পাহাড়/গাছ/মাটির টেক্সচার/৬০টা ফুল নতুন করে আঁকা হতো, আর সামনে ঘন ঝাপসা ঘাসের টেক্সচার ছিল —
+   তাই কম দামি ফোন ও ল্যাপটপে CPU গরম হয়ে ল্যাগ করত। এখন সবকিছু একবারই অফস্ক্রিন ক্যানভাসে আঁকা হয়
+   (সাইজ বা কোয়ালিটি বদলালে আবার); প্রতি ফ্রেমে শুধু কয়েকটা drawImage।
+
+   মাঠ = ৪টা গভীরতার স্তর (পেছন থেকে সামনে)। yq = প্যালেটের সামনের কিনারা, Zf = তার নিচ থেকে স্ক্রিনের তল পর্যন্ত উচ্চতা:
+     A  দূরে      : খুব ছোট, হালকা, ফাঁকা-ফাঁকা গুচ্ছ + ছোট ফুল          (মাটির সাথে বেক করা)
+     B  মাঝ-দূর   : একটু মোটা, ছোট ফলক, মাঝারি ফুল                        (মাটির সাথে বেক করা)
+     C  মাঝ-কাছে  : মোটা-মাঝারি, গাঢ় ফলক, হালকা দোলে                     (সামনের ক্যানভাস)
+     D  সবচেয়ে কাছে: লম্বা-চিকন ফলক, কম সংখ্যক বড় ফুল, একটু বেশি দোলে      (সামনের ক্যানভাস)
+   • ঘনত্ব নিচে বেশি, বক্সের দিকে ওপরে উঠতে উঠতে ক্রমে কমে ফেড হয়ে যায়। দূরের জিনিস ছোট/হালকা, কাছের বড়/গাঢ়।
+   • A, B বক্সের পেছনের ক্যানভাসে আঁকা — বক্স/প্যালেট ওদের স্বাভাবিকভাবেই ঢেকে দেয়, কখনো ওপরে পড়ে না।
+   • C, D বক্সের সামনে আঁকা, কিন্তু কোনো ফলক/ডাঁটা yq-এর ওপরে যায় না; ক্যামেরা ওঠার সাথে সাথে এরা প্যালেটের চেয়ে
+     একটু দ্রুত নিচে নেমে যায় (কাছের জিনিস আগে সরে) — তাই বক্সের গায়ে কিছু লাগার সুযোগই নেই। */
+function curD(){return Math.min(devicePixelRatio||1,DPRCAP)}
 function boxBottom(){let m=0;for(const sx of [-1.75,1.75])for(const sz of [-1.75,1.75])m=Math.max(m,pr(sx,0,sz)[1]);return m}
-function mkGL(Hg){const d=1.5,P=12,rnd=rngMk(23);GL=[];GLW=W;GLH=HT;
-  for(const L of GLAY){const y0=Hg*L.a,y1=Hg*L.b,bh=Math.ceil(y1)+4,c=document.createElement('canvas');
-    c.width=Math.ceil((W+P*2)*d);c.height=Math.ceil(bh*d);const g=c.getContext('2d');g.scale(d,d);g.translate(P,0);g.lineCap='round';
-    const nc=Math.ceil(W/L.cell)+1,nr=Math.max(1,Math.ceil((y1-y0)/L.cell)),cw=(W+P)/nc,rh=(y1-y0)/nr,paths=L.cols.map(()=>new Path2D()),heads=[];
-    for(let r=0;r<nr;r++)for(let q=0;q<nc;q++){
-      const x=-P/2+(q+.15+rnd()*.7)*cw,y=y0+(r+.15+rnd()*.7)*rh+rh*.5,dep=Math.min(1,Math.max(0,(y-y0)/Math.max(1,y1-y0)));if(rnd()>Math.min(1,.12+dep*4.2))continue; /* ওপরের কিনারায় ঘনত্ব ধাপে বাড়ে — সোজা কাটা রেখা হয় না */const sc=L.k*(.85+dep*.3),
-        m=5+(rnd()*4|0),pa=paths[(rnd()*L.cols.length)|0],lean=(rnd()-.5)*.5;
-      for(let k=0;k<m;k++){const qn=(k-(m-1)/2)*.24+lean*.4,h0=(14+rnd()*14)*sc*1.2*(1-.1*Math.abs(k-(m-1)/2)/2),h=Math.min(h0,y-1);if(h<5)continue;
-        pa.moveTo(x+(k-(m-1)/2)*1.6*sc,y);pa.quadraticCurveTo(x+Math.sin(qn)*h*.5,y-h*.62,x+Math.sin(qn)*h+lean*h*.35,y-h)}
-      if(L.fl&&((r*nc+q)%L.fl===0)){const sh=(30+rnd()*24)*sc*1.05;if(y-sh>3){const w=(rnd()-.5)*10*sc;heads.push([x,y,x+w*.3,y-sh*.5,x+w,y-sh,3.6*sc,FL[(rnd()*6)|0]])}}}
-    g.lineWidth=L.lw;L.cols.forEach((col,i)=>{g.strokeStyle=col;g.stroke(paths[i])});
-    g.strokeStyle='#3F8F3A';g.lineWidth=L.lw*.95;for(const h of heads){g.beginPath();g.moveTo(h[0],h[1]);g.quadraticCurveTo(h[2],h[3],h[4],h[5]);g.stroke()}
-    for(const h of heads)flower(g,h[4],h[5],h[6],h[7]);
-    GL.push({c,bh,P,d})}}
-let TG=null,TGW=0;
-function mkTG(){const d=1.5,h=230,c=document.createElement('canvas');c.width=W*d;c.height=h*d;const g=c.getContext('2d');g.scale(d,d);let r=11;const rnd=()=>(r=(r*16807)%2147483647)/2147483647;
-  const pass=(n,hmin,hmax,wid,cols,blur,al)=>{g.save();try{g.filter=`blur(${blur}px)`}catch(e){}g.globalAlpha=al;
-    for(let i=0;i<n;i++){const x=rnd()*(W+30)-15,hh=hmin+rnd()*(hmax-hmin),lean=(rnd()-.5)*50,w=wid*(.7+rnd()*.6),gr=g.createLinearGradient(0,h,0,h-hh);gr.addColorStop(0,cols[0]);gr.addColorStop(1,cols[1]);g.fillStyle=gr;
-      g.beginPath();g.moveTo(x-w,h+2);g.quadraticCurveTo(x-w*.4+lean*.2,h-hh*.55,x+lean,h-hh);g.quadraticCurveTo(x+w*.4+lean*.2,h-hh*.55,x+w,h+2);g.closePath();g.fill()}g.restore()};
-  pass(Math.round(W/9),90,170,3.2,['#2c6b2e','#8cc863'],3.5,.75);pass(Math.round(W/12),70,215,4.5,['#1f5a27','#6fb04f'],1.6,.95);TG=c;TGW=W}
-function tallGrass(q0){if(!TG||TGW!==W)mkTG();const gyOld=HT/2+GO-28,yb=Math.max(gyOld+310,HT+2);if(yb-230>HT)return;
-  const dh=Math.min(230,yb-q0-6);if(dh<40)return; /* ছোট স্ক্রিনে টেক্সচার চেপে ছোট করা হয় — যেন বক্সের কিনারা পর্যন্ত না ওঠে */
-  fctx.save();fctx.translate(0,yb);fctx.transform(1,0,Math.sin(T*.9)*.012,1,0,0);fctx.drawImage(TG,0,0,TG.width,TG.height,0,-dh,W,dh);fctx.restore()}
+function mkScenery(){
+  const d=curD(),hb0=HT/2,gy0=hb0-28,GOref=GO-(camY-1.9)*PY,Z={W,HT,d};
+  const layer=(top,draw)=>{const h=Math.max(1,Math.ceil(HT-top)),o=cvs(W,h,d);o.g.translate(0,-top);draw(o.g);return{c:o.c,top,h}};
+  // ① দূরের পাহাড় + প্রথম টিলা (প্যারালাক্স ০.৫৫), ② দ্বিতীয় টিলা + গাছ (০.৮)
+  Z.m1=layer(Math.max(0,Math.floor(hb0-150)),g=>{mount(g,hb0-26);hills(g,hb0-10,24,.011,1,'#B4D8BC')});
+  Z.m2=layer(Math.max(0,Math.floor(hb0-90)),g=>{hills(g,hb0+8,16,.015,2,'#93C784');trees(g,hb0+8)});
+  // ③ মাটি — মাপগুলো দিগন্ত-রেখা (মাটির ওপরের কিনারা) থেকে নিচের দিকে গণনা
+  const yq=Math.max(30,boxBottom()-pr(0,0,0)[1]+28+10),Hvis=Math.max(yq+80,HT/2+28-GOref),Zf=Hvis-yq,Hg=Math.ceil(Hvis+14),rnd=rngMk(7);
+  Z.yq=yq;Z.Zf=Zf;
+  {const o=cvs(W,Hg,d),g=o.g;
+    // বেস: দূরে ধোঁয়াটে হালকা সবুজ → সামনে গাঢ় ও সম্পৃক্ত (বায়ুমণ্ডলীয় পারস্পেকটিভ)
+    let gr=g.createLinearGradient(0,0,0,Hg);gr.addColorStop(0,'#9CCB8B');gr.addColorStop(.28,'#82C468');gr.addColorStop(.65,'#68AE52');gr.addColorStop(1,'#4C9040');g.fillStyle=gr;g.fillRect(0,0,W,Hg);
+    // সূর্যের আলো-ছায়ার ছোপ: লম্বাটে উপবৃত্ত, গভীরতা অনুযায়ী বড়
+    for(let i=0;i<34;i++){const y=Math.pow(rnd(),.8)*Hg,s=ps(y),rx=(50+rnd()*110)*s,ry=rx*(.22+rnd()*.12),x=rnd()*W,lt=rnd()<.5;
+      const q=g.createRadialGradient(x,y,0,x,y,rx);q.addColorStop(0,lt?'rgba(176,222,120,.26)':'rgba(30,95,40,.2)');q.addColorStop(1,'rgba(0,0,0,0)');
+      g.save();g.translate(x,y);g.scale(1,ry/rx);g.translate(-x,-y);g.fillStyle=q;g.fillRect(x-rx,y-rx,rx*2,rx*2);g.restore()}
+    // মাটির সূক্ষ্ম টেক্সচার (ছোট ছোট দাগ)
+    g.lineCap='round';for(let i=0,n=Math.round(W*Hg/260);i<n;i++){const y=Math.pow(rnd(),.9)*Hg,s=ps(y),x=rnd()*W;g.strokeStyle=rnd()<.5?'rgba(40,110,45,.35)':'rgba(170,224,120,.35)';g.lineWidth=.7+s*.5;g.beginPath();g.moveTo(x,y);g.lineTo(x+(rnd()-.5)*2*s,y-(2+rnd()*4)*s);g.stroke()}
+    // দিগন্তের কুয়াশা + সামনের কিনারায় হালকা গাঢ় ভিনিয়েট (গভীরতা বোঝাতে)
+    const hh=Math.min(Hg,200);gr=g.createLinearGradient(0,0,0,hh);gr.addColorStop(0,'rgba(222,240,232,.55)');gr.addColorStop(1,'rgba(222,240,232,0)');g.fillStyle=gr;g.fillRect(0,0,W,hh);
+    gr=g.createLinearGradient(0,Hg*.6,0,Hg);gr.addColorStop(0,'rgba(14,64,28,0)');gr.addColorStop(1,'rgba(14,64,28,.26)');g.fillStyle=gr;g.fillRect(0,Hg*.6,W,Hg*.4);
+    // ওপরের কিনারা নরম করে পেছনের টিলার সাথে মেশানো
+    g.globalCompositeOperation='destination-in';gr=g.createLinearGradient(0,0,0,14);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,1)');g.fillStyle=gr;g.fillRect(0,0,W,Hg);g.globalCompositeOperation='source-over';
+    // স্তর A (দূরে) ও B (মাঝ-দূর) — মাটির সাথেই বেক
+    scatter(g,{y0:8,y1:yq+Zf*.8,cellW:14,cellH:9,H:[8,13],w:1.3,n:[3,5],cols:['#74B85A','#B1E08C'],shade:0,minTip:0,
+      dens:y=>{const u=(y-yq)/Zf;return y<yq?.1+.1*sm(8,yq,y):(.2+.35*sm(0,.25,u))*(1-sm(.45,.78,u))},fl:{p:.12,r:1.7,stem:[8,13],gap:28}},rnd);
+    scatter(g,{y0:yq+Zf*.08,y1:yq+Zf*.78,cellW:19,cellH:12,H:[16,24],w:2,n:[3,5],cols:['#4F9F45','#8CCF6A'],shade:.12,minTip:0,
+      dens:y=>{const u=(y-yq)/Zf;return sm(.08,.36,u)*(1-sm(.6,.88,u))*.8},fl:{p:.15,r:2.9,stem:[15,22],gap:34}},rnd);
+    Z.gr={c:o.c,top:gy0,h:Hg}}
+  // ④ সামনের দুই স্তর C, D — আলাদা ক্যানভাস, যাতে হালকা দোলানো যায়
+  Z.fr=[
+    {y0:yq+Zf*.3,y1:yq+Zf*.92,cellW:24,cellH:15,H:[26,40],w:2.6,n:[4,6],cols:['#2F7F33','#6DBA55'],shade:.14,minTip:yq+3,seed:31,r:1.06,amp:.02,ph:1.3,
+      dens:y=>{const u=(y-yq)/Zf;return sm(.3,.58,u)*(1-.4*sm(.78,1,u))*.8},fl:{p:.15,r:3.8,stem:[24,34],gap:40}},
+    {y0:yq+Zf*.52,y1:Hg+10,cellW:30,cellH:17,H:[46,72],w:1.5,n:[5,8],cols:['#34853A','#8AD06A'],shade:.1,minTip:yq+3,seed:57,r:1.14,amp:.032,ph:3.1,
+      dens:y=>{const u=(y-yq)/Zf;return sm(.52,.82,u)*.75},fl:{p:.1,r:5,stem:[40,60],gap:52}}
+  ].map(L=>{const topL=Math.floor(Math.max(yq+2,L.y0-L.H[1]*1.3-2)),h=Math.max(1,Math.ceil(Hg-topL)),P=14,o=cvs(W+P*2,h,d);o.g.translate(P,-topL);scatter(o.g,L,rngMk(L.seed));return{c:o.c,topL,h,P,r:L.r,amp:L.amp,ph:L.ph}});
+  SC=Z}
 function drawLeaves(g){ // পড়ন্ত পাতা — bg() থেকে আঁকা হয় (বক্সের পেছনে), তাই কখনো বক্সের ওপর দিয়ে দেখা যায় না
   g.save();g.globalAlpha=Math.max(0,1-camY/60);
   for(const l of leaves){g.save();g.translate(l.x,l.y+(camY-l.c0)*PY);g.rotate(l.r);g.fillStyle=l.col;g.beginPath();g.ellipse(0,0,7*l.s,3.2*l.s,0,0,7);g.fill();g.strokeStyle='rgba(0,60,0,.35)';g.lineWidth=.8;g.beginPath();g.moveTo(-7*l.s,0);g.lineTo(7*l.s,0);g.stroke();g.restore()}
   g.restore()}
-function front(){ // সামনের প্রকৃতি: প্যালেটের নিচে থেকে স্ক্রিনের তলা পর্যন্ত লেয়ার করা ঘাস
-  const pb=boxBottom(),q0=pb+10;if(q0>HT+4)return;
-  if(!GL||GLW!==W||GLH!==HT)mkGL(Math.max(60,HT-(q0-(camY-1.9)*PY)+14));
-  GL.forEach((l,i)=>{fctx.save();fctx.translate(-l.P,q0+l.bh);fctx.transform(1,0,Math.sin(T*(.8+i*.22)+i*1.9)*(.005+i*.004),1,0,0);
-    fctx.drawImage(l.c,0,0,l.c.width,l.c.height,0,-l.bh,W+l.P*2,l.bh);fctx.restore()});
-  tallGrass(q0);
-  const H=Math.max(40,HT-q0);
-  for(const [cx,ph,c] of [[.28,0,'#FF8A5B'],[.74,2,'#B28DFF']]){const x=W*cx+Math.sin(T*.6+ph)*50,y=q0+Math.max(26,H*.22)+Math.sin(T*1.1+ph)*12,w=Math.abs(Math.sin(T*13+ph))*5+1;if(y>HT-10)continue;fctx.fillStyle=c;
+function front(){ // সামনের ঘাস (C, D) + প্রজাপতি — প্রতি ফ্রেমে শুধু ২টা drawImage + সামান্য দোলুনি
+  const Z=SC;if(!Z)return;
+  const gy=HT/2+GO-28,xt=(camY-1.9)*PY,gust=.65+.35*Math.sin(T*.42);
+  for(let i=0;i<Z.fr.length;i++){const L=Z.fr[i],y0=gy+L.topL+(L.r-1)*xt;if(y0>HT+2)continue;
+    const sk=L.amp*gust*(Math.sin(T*(.9+i*.25)+L.ph)*.75+Math.sin(T*2.1+L.ph*1.7)*.25); // স্তরের মাঝখানকে কেন্দ্র করে দোলে
+    fctx.save();fctx.translate(0,y0+L.h/2);fctx.transform(1,0,sk,1,0,0);fctx.drawImage(L.c,0,0,L.c.width,L.c.height,-L.P,-L.h/2,W+L.P*2,L.h);fctx.restore()}
+  if(LITE)return;
+  for(const [cx,ph,c] of [[.28,0,'#FF8A5B'],[.74,2,'#B28DFF']]){const x=W*cx+Math.sin(T*.6+ph)*50,y=gy+Z.yq+Z.Zf*.3+Math.sin(T*1.1+ph)*12,w=Math.abs(Math.sin(T*13+ph))*5+1;if(y>HT-10)continue;fctx.fillStyle=c;
     fctx.beginPath();fctx.ellipse(x-3,y,w,5,.4,0,7);fctx.fill();fctx.beginPath();fctx.ellipse(x+3,y,w,5,-.4,0,7);fctx.fill();fctx.fillStyle='#2a2a2a';fctx.fillRect(x-.6,y-4,1.2,8)}
 }
 function bg(){
@@ -259,18 +295,19 @@ function bg(){
   ctx.globalAlpha=Math.max(0,.96-al*.55);const R0=Math.max(8,15-al*4),sgl=ctx.createRadialGradient(sx,sy,R0*.8,sx,sy,R0*3.2);sgl.addColorStop(0,'rgba(255,214,102,.45)');sgl.addColorStop(1,'rgba(255,214,102,0)');ctx.fillStyle=sgl;ctx.beginPath();ctx.arc(sx,sy,R0*3.2,0,7);ctx.fill();
   const sd=ctx.createRadialGradient(sx-R0*.25,sy-R0*.25,0,sx,sy,R0);sd.addColorStop(0,'#FFFBE0');sd.addColorStop(.55,'#FFE27A');sd.addColorStop(1,'#FFB938');ctx.fillStyle=sd;ctx.beginPath();ctx.arc(sx,sy,R0,0,7);ctx.fill();ctx.globalAlpha=1;
   if(al>.7){ctx.fillStyle=`rgba(255,255,255,${(al-.7)*2})`;for(let n=0;n<40;n++){ctx.beginPath();ctx.arc((n*97.3)%W,(n*53.7)%(HT*.7),n%3?.7:1.2,0,7);ctx.fill()}}
-    const m=36;
-  for(const c of clouds){const x=((c.x*(W+300)+T*c.dr*(.9+c.p*1.2))%(W+300))-150,w=(((c.cy-camY*c.p)%m)+m)%m,y=HT+60-w*(HT+160)/m,sc=c.sc*(.7+.5*c.p);
+    const m=36,nc=LITE?Math.min(8,clouds.length):clouds.length;
+  for(let q=0;q<nc;q++){const c=clouds[q],x=((c.x*(W+300)+T*c.dr*(.9+c.p*1.2))%(W+300))-150,w=(((c.cy-camY*c.p)%m)+m)%m,y=HT+60-w*(HT+160)/m,sc=c.sc*(.7+.5*c.p);
     ctx.globalAlpha=(.28+.34*c.p)*(1-al*.45);ctx.drawImage(c.s,x-120*sc,y-55*sc,240*sc,110*sc)}
   ctx.globalAlpha=1;
-  const f=GO,hb=HT/2+f*.55;
+  const f=GO;
   const haze=ctx.createLinearGradient(0,HT*.42,0,HT*.82);haze.addColorStop(0,'rgba(255,255,255,0)');haze.addColorStop(1,`rgba(245,250,255,${.10+al*.14})`);ctx.fillStyle=haze;ctx.fillRect(0,0,W,HT);
-  if(hb-60<HT){mount(hb-26);hills(hb-10,24,.011,1,'#B4D8BC');hills(HT/2+f*.8+8,16,.015,2,'#93C784');trees(HT/2+f*.8+8)}
+  if(!SC||SC.W!==W||SC.HT!==HT||SC.d!==curD())mkScenery();
+  const blit=(L,rate)=>{const y=L.top+rate*f;if(y<HT)ctx.drawImage(L.c,0,0,L.c.width,L.c.height,0,y,W,L.h)}; // ক্যাশ করা স্তর শুধু উল্লম্বে সরানো (প্যারালাক্স)
+  blit(SC.m1,.55);blit(SC.m2,.8);
   ctx.globalAlpha=Math.max(0,1-camY/50);ctx.strokeStyle='rgba(40,60,90,.65)';ctx.lineWidth=1.6;ctx.lineCap='round';
   for(const b of birds){const y=b.y0+(camY-b.c0)*PY,fl=Math.sin(T*9+b.ph)*5*b.s,w=11*b.s;ctx.beginPath();ctx.moveTo(b.x-w,y+fl);ctx.quadraticCurveTo(b.x-w*.4,y-4*b.s-fl*.3,b.x,y);ctx.quadraticCurveTo(b.x+w*.4,y-4*b.s-fl*.3,b.x+w,y+fl);ctx.stroke()}
   ctx.globalAlpha=1;
-  const gy=HT/2+f-28;
-  if(gy<HT){const gg=ctx.createLinearGradient(0,gy,0,HT);gg.addColorStop(0,'#86C46C');gg.addColorStop(1,'#5A9A4A');ctx.fillStyle=gg;ctx.fillRect(0,gy,W,HT-gy);gdetail(gy)}
+  blit(SC.gr,1);
   drawLeaves(ctx);
 }
 const VOL=3.5;
@@ -316,7 +353,7 @@ function showHint(){const h=$('hint');if(!h)return;h.classList.remove('off');hin
 function hideHint(){if(!hintOn)return;hintOn=false;$('hint').classList.add('off')}
 // 🎊 কনফেটি — আলাদা ক্যানভাসে (কার্ডের ওপরে), শুধু সেলিব্রেশনের সময় চলে, শেষ হলেই বন্ধ
 let conf=[],confT=0,confOn=false;const CCOL=['#FFC83D','#F5B301','#44A7FC','#FF8FB1','#B28DFF','#6BBE4E','#ffffff','#FF8A5B'];
-function celebrate(){conf=[];confT=0;confOn=true;const n=W<500?110:150;
+function celebrate(){conf=[];confT=0;confOn=true;cf.style.display='block';const n=W<500?110:150;
   for(let i=0;i<n;i++){const burst=i<n*.45,a=-Math.PI/2+(Math.random()-.5)*1.6,sp=380+Math.random()*420;
     conf.push(burst?{x:W/2,y:HT*.55,vx:Math.cos(a)*sp*.7,vy:Math.sin(a)*sp,g:620,r:Math.random()*6,vr:(Math.random()-.5)*14,w:6+Math.random()*6,h:3+Math.random()*4,c:CCOL[i%8],ph:Math.random()*6}
       :{x:Math.random()*W,y:-20-Math.random()*HT*.5,vx:(Math.random()-.5)*90,vy:40+Math.random()*120,g:90,r:Math.random()*6,vr:(Math.random()-.5)*9,w:6+Math.random()*6,h:3+Math.random()*4,c:CCOL[i%8],ph:Math.random()*6})}}
@@ -324,7 +361,7 @@ function confStep(dt){if(!confOn)return;confT+=dt;cctx.clearRect(0,0,W,HT);let a
   for(const p of conf){p.vy+=p.g*dt;p.vx*=1-1.2*dt;if(p.vy>170)p.vy=170+(p.vy-170)*.9;p.x+=(p.vx+Math.sin(confT*3+p.ph)*28)*dt;p.y+=p.vy*dt;p.r+=p.vr*dt;if(p.y>HT+20)continue;alive++;
     cctx.save();cctx.translate(p.x,p.y);cctx.rotate(p.r);cctx.scale(1,Math.cos(confT*7+p.ph));cctx.fillStyle=p.c;cctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cctx.restore()}
   if(!alive||confT>8)stopConf()}
-function stopConf(){if(!confOn&&!conf.length)return;confOn=false;conf=[];cctx.clearRect(0,0,W,HT)}
+function stopConf(){if(!confOn&&!conf.length)return;confOn=false;conf=[];cctx.clearRect(0,0,W,HT);cf.style.display='none'}
 function fanfare(){if(muted)return;[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>{snd(f,.4,'triangle',.12);snd(f*2,.25,'sine',.04)},i*110))}
 function countUp(el,to,ms){if(to<3){el.textContent=to;return}const t0=performance.now();(function s(n){const k=Math.min(1,(n-t0)/ms);el.textContent=Math.round(to*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(s)})(t0)}
 function pop(t){const p=$('pop');p.textContent=t;p.className='';void p.offsetWidth;p.className='go'}
@@ -336,14 +373,15 @@ const TX=EN?{hint:'Tap the screen to drop the block',over:'Game over',rec:'New r
 if(EN){document.documentElement.lang='en';document.title='Vangcur Stack Tower'}
 $('hint').textContent=TX.hint;$('oLbl').textContent=TX.yours;$('bAgain').textContent=TX.again;$('bBack').textContent=TX.back;
 $('fs').setAttribute('aria-label',TX.fs);$('mute').setAttribute('aria-label',TX.snd);$('cl').setAttribute('aria-label',TX.cls);
-const pr=(x,y,z)=>{const v=new THREE.Vector3(x,y,z).project(camera);return[(v.x+1)/2*W,(1-v.y)/2*HT]};
+const _pv=new THREE.Vector3(),pr=(x,y,z)=>{_pv.set(x,y,z).project(camera);return[(_pv.x+1)/2*W,(1-_pv.y)/2*HT]};
 function spark(x,y,z,n,col,k){const q=pr(x,y,z);for(let i=0;i<n;i++)parts.push({x:q[0],y:q[1],vx:(Math.random()-.5)*260,vy:-Math.random()*220-40,r:0,vr:0,c:col,t:0,s:2+Math.random()*3,k,L:.55+Math.random()*.35})}
 let pendingOver=false,colEnd=1,colT=99,colDur=1,colC=1.9,st='ready',blocks=[],cur=null,debris=[],ring=null,parts=[],landings=[],score=0,combo=0,speed=3.4,shake=0,overAt=0,overShown=false,prevBest=0;
-function reset(){blocks.forEach(b=>b.g&&scene.remove(b.g));debris.forEach(d=>scene.remove(d.g));cur&&cur.g&&scene.remove(cur.g);
+function reset(){blocks.forEach(b=>{if(b.g){scene.remove(b.g);disp(b.g)}});debris.forEach(d=>{scene.remove(d.g);disp(d.g)});if(cur&&cur.g){scene.remove(cur.g);disp(cur.g)}landings=[]; /* আগে জিওমেট্রি/ম্যাটেরিয়াল ছাড়া হতো না — বারবার হারলে মেমোরি ফুলে ধীর হতো */
+ 
   blocks=[{x:0,z:0,w:BASE,d:BASE,top:PH}];debris=[];ring=null;score=0;combo=0;camY=camT=1.9;colT=99;pendingOver=false;spawn();hud()}
 function spawn(){const n=blocks.length,t=blocks[n-1],a=n%2?'x':'z',dir=n%4<2?1:-1;
-  cur={a,x:t.x,z:t.z,w:t.w,d:t.d,dir,i:n,y:t.top+BH/2,g:mk(t.w,t.d,n,1)};cur[a]=-dir*RANGE;cur.g.position.set(cur.x,cur.y,cur.z);
-  speed=3.4*Math.min(2.6,1+.1*Math.floor(n/4));camT=Math.max(1.9,t.top-.9)}
+  cur={a,x:t.x,z:t.z,w:t.w,d:t.d,dir,i:n,y:t.top+BH/2,g:mk(t.w,t.d,n,1),intro:0};cur[a]=-dir*RANGE;cur.g.position.set(cur.x,cur.y,cur.z);
+  speed=3.4*(1+Math.min(.12,n*.003)); /* আগে 2.6 গুণ পর্যন্ত বেড়ে যেত — এখন শুরুর গতিই থাকে, ৪০টা ব্লকে মাত্র ১২% বেশি */camT=Math.max(1.9,t.top-.9)}
 function collapse(g,a,out,w,d){ // whole tower comes down, top first
   const n=blocks.length,dl=Math.min(.07,.8/n);colT=0;colDur=n*dl+.3;colC=camY;colEnd=(n-1)*dl+.8;collapseSfx(Math.min(1.4,colEnd),n);
   const mp=(g,j,w,d)=>({g,w,d,t:0,pile:true,delay:(n-j)*dl,vx:(Math.random()-.5)*2.4+(a==='x'?out*(1.25+j*.035):0),vz:(Math.random()-.5)*2.4+(a==='z'?out*(1.25+j*.035):0),vy:-.5-j*.18,wx:(Math.random()-.5)*4.2,wz:(Math.random()-.5)*4.2});
@@ -391,10 +429,12 @@ function act(){
 
 function update(dt){
   if(cur&&(st==='ready'||st==='playing')){const a=cur.a;cur[a]+=speed*cur.dir*dt;
-    if(cur[a]>RANGE){cur[a]=RANGE;cur.dir=-1}else if(cur[a]<-RANGE){cur[a]=-RANGE;cur.dir=1}cur.g.position[a]=cur[a]}
+    if(cur[a]>RANGE){cur[a]=RANGE;cur.dir=-1}else if(cur[a]<-RANGE){cur[a]=-RANGE;cur.dir=1}cur.g.position[a]=cur[a];
+    if(cur.intro<1){cur.intro=Math.min(1,cur.intro+dt/.2);const e=1-Math.pow(1-cur.intro,3);cur.g.position.y=cur.y+(1-e)*.8;cur.g.scale.setScalar(.88+.12*e)} /* হঠাৎ উদয় নয় — ওপর থেকে নরমভাবে নামে */
+  }
   if(st==='over'&&colT<9){colT+=dt;camT=1.9+(colC-1.9)*Math.max(0,1-colT/colDur)}
   camY+=(camT-camY)*Math.min(1,dt*(st==="over"?6:4));
-  if(pendingOver&&st==='over'&&colT>colEnd&&Math.abs(camY-camT)<.08){pendingOver=false;showOver()}cam=camY*38;birdsUpdate(dt);leavesUpdate(dt);
+  if(pendingOver&&st==='over'&&colT>colEnd&&Math.abs(camY-camT)<.08){pendingOver=false;showOver()}cam=camY*38;if(!LITE){birdsUpdate(dt);leavesUpdate(dt)}
   for(const l of landings){l.t+=dt;const q=Math.min(1,l.t/.18);const ease=1-Math.pow(1-q,3);l.g.position.y=l.baseY+Math.sin(q*Math.PI)*.055*(1-q);l.g.scale.setScalar(1+.018*Math.sin(q*Math.PI));}
   landings=landings.filter(l=>l.t<.24);
   for(const d of debris){d.t+=dt;const p=d.g.position;
@@ -427,9 +467,9 @@ function render(){
 // ⚙️ কোয়ালিটি গভর্নর: ফ্রেম টাইম লম্বা হলে (ল্যাপটপ/ধীর GPU) নিজে থেকে ধাপে ধাপে রেজোলিউশন ও শ্যাডো কমায়।
 // ফোন/শক্তিশালী ডিভাইসে এটা কিছুই বদলায় না। ধাপ: ১) রেজোলিউশন ≤১.২৫ + শ্যাডো ১০২৪  ২) রেজোলিউশন ১ + শ্যাডো ৫১২  ৩) শ্যাডো বন্ধ
 let qLvl=0,qAcc=0,qN=0,qCool=90,lastRaw=0;
-function setQuality(l){qLvl=l;
+function setQuality(l){qLvl=l;LITE=l>=2; // LITE: মেঘ কম, পাখি/পাতা/প্রজাপতি বন্ধ
   if(l>=1)DPRCAP=l>=2?1:1.25;
-  if(l===1){sun.shadow.mapSize.set(1024,1024)}
+  if(l===1){sun.shadow.mapSize.set(768,768);renderer.shadowMap.type=THREE.PCFShadowMap}
   if(l===2){sun.shadow.mapSize.set(512,512);renderer.shadowMap.type=THREE.BasicShadowMap}
   if(l>=3)renderer.shadowMap.enabled=false;
   if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}
@@ -439,9 +479,9 @@ function governor(raw){ // raw = আসল ফ্রেম-ব্যবধান
   if(qLvl>=3||document.hidden)return;if(raw>.25){qAcc=0;qN=0;return} // ট্যাব-সুইচ/পজ বাদ
   if(qCool>0){qCool--;return}
   qAcc+=raw;qN++;
-  if(qN>=45){const avg=qAcc/qN;qAcc=0;qN=0;if(avg>.026){setQuality(qLvl+1);qCool=60}}}
+  if(qN>=30){const avg=qAcc/qN;qAcc=0;qN=0;if(avg>.024){setQuality(qLvl+1);qCool=45}}}
 let last=0;
-function frame(t){T=t/1000;const raw=(t-lastRaw)/1000||0;lastRaw=t;governor(raw);const dt=Math.min((t-last)/1000||0,1/30);last=t;update(dt);render();confStep(dt);requestAnimationFrame(frame)}
+function frame(t){T=t/1000;const raw=(t-lastRaw)/1000||0;lastRaw=t;governor(raw);const dt=Math.min((t-last)/1000||0,1/20);last=t;update(dt);render();confStep(dt);requestAnimationFrame(frame)}
 
 // ── বাটনের আইকন (SVG) ──
 const SV=p=>'<svg viewBox="0 0 24 24">'+p+'</svg>';
@@ -453,7 +493,7 @@ const IC={
 const syncMute=()=>{$('mute').innerHTML=muted?IC.off:IC.on};
 const syncFs=()=>{$('fs').innerHTML=(document.fullscreenElement||document.webkitFullscreenElement)?IC.min:IC.max};
 
-app.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;if(e.pointerType==='touch')e.preventDefault();unlockAudio();act()},{passive:false});
+document.addEventListener('pointerdown',e=>{if(e.button>0||e.target.closest('button'))return;if(e.pointerType==='touch')e.preventDefault();unlockAudio();act()},{passive:false});
 $('bAgain').addEventListener('click',start);
 const closeGame=()=>{try{parent.postMessage({type:'vc-game-close'},location.origin)}catch(e){}};
 $('cl').addEventListener('click',closeGame);
@@ -487,6 +527,10 @@ if(matchMedia('(pointer:coarse)').matches){
     setTimeout(kill,6000);
   },1200);
 }
+cf.style.display='none';
+if(LOW)setQuality(1);
+// ট্যাব ব্যাকগ্রাউন্ডে গেলে অডিও থামে (ব্যাটারি/CPU বাঁচে), ফিরলে চালু
+document.addEventListener('visibilitychange',()=>{try{if(!AC)return;if(document.hidden)AC.suspend();else if(!muted)AC.resume()}catch(e){}});
 start();requestAnimationFrame(frame); // সরাসরি খেলা শুরু — কোনো "খেলা শুরু করুন" স্ক্রিন নেই
 })();
 </script></body></html>

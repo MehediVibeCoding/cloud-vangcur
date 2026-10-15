@@ -147,16 +147,17 @@ function matchCategoryList(cats: Category[], q: string): Category[] {
   return matchCategoriesData(cats, q, 5);
 }
 
+// নাম সবসময় শুরু থেকে দেখানো হয় — সামনের দিকে কখনো "..." বসে না।
+// লম্বা নাম কাটার কাজ CSS করে (line-clamp-2): শুধু শেষে "..." আসে, দরকার হলে দুই লাইনে ভেঙে।
 function highlightMatch(text: string, q: string) {
-  const idx = text.toLowerCase().indexOf(q.toLowerCase());
-  if (idx === -1) return text.length > 45 ? text.slice(0, 45) + '...' : text;
+  const needle = q.trim();
+  const idx = needle ? text.toLowerCase().indexOf(needle.toLowerCase()) : -1;
+  if (idx === -1) return text;
   const before = text.slice(0, idx);
-  const match = text.slice(idx, idx + q.length);
-  const after = text.slice(idx + q.length);
-  const truncBefore = before.length > 20 ? '...' + before.slice(-20) : before;
-  const truncAfter = after.length > 25 ? after.slice(0, 25) + '...' : after;
+  const match = text.slice(idx, idx + needle.length);
+  const after = text.slice(idx + needle.length);
   return (
-    <>{truncBefore}<span className="bg-brand-light-hover/20 text-brand-light font-bold">{match}</span>{truncAfter}</>
+    <>{before}<span className="bg-brand-light-hover/20 text-brand-light font-bold">{match}</span>{after}</>
   );
 }
 
@@ -327,7 +328,7 @@ function SearchDropdown({
               >
                 <SearchThumb imgVal={(p.imgs || [])[0]} />
                 <div className="min-w-0 flex-1">
-                  <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold">{highlightMatch(p.name, searchQuery)}</div>
+                  <div className="line-clamp-2 break-words text-[13px] font-semibold leading-[1.35]">{highlightMatch(p.name, searchQuery)}</div>
                   <div className="mt-0.5 text-[11px] text-muted">
                     {catName(p.cat)}{p.stock <= 0 && <> · <span className="text-brand-light">{t('স্টক শেষ')}</span></>}
                   </div>

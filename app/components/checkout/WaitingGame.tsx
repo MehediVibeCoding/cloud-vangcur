@@ -15,7 +15,7 @@ import {
  * 🎮 ওয়েটিং পেজ/ওভারলের মিনি গেম — একটাই কম্পোনেন্ট, দুই জায়গায় বসে।
  *
  *  • ইনলাইনে একটা ছোট "গেম খেলুন" বাটন দেখায় (যেখানে কম্পোনেন্টটা বসানো হয়)।
- *  • বাটনে ক্লিক (বা `variant="page"`-এ ৪০ সেকেন্ড পর নিজে থেকে) → ইনভাইট পপআপ (✕ দিয়ে বন্ধ হয়)।
+ *  • বাটনে ক্লিক (বা `variant="page"`-এ ২৫ সেকেন্ড পর নিজে থেকে) → ইনভাইট পপআপ (✕ দিয়ে বন্ধ হয়)।
  *  • পপআপের গেম কার্ডে ক্লিক → ফুলস্ক্রিন গেম (iframe — তখনই তৈরি হয়, তাই যে খেলবে না তার কোনো বাড়তি ডাউনলোড নেই)।
  *  • গেম বন্ধ হয় তৎক্ষণাৎ: গেমের ✕ / Esc, অর্ডারের স্ট্যাটাস বদলালে (`active` = false বা কনফার্ম ইভেন্ট),
  *    অথবা অর্ডার সাবমিটের ৫ মিনিট পূর্ণ হলে। বন্ধ হলে iframe ধ্বংস হয় (WebGL মেমোরি মুক্ত)।
@@ -56,7 +56,7 @@ function IconClose() {
 }
 
 interface Props {
-  /** `page` = ফুলস্ক্রিন স্ট্যাটাস পেজ (৪০ সেকেন্ড পর অটো-পপআপ), `overlay` = ওভারলে (শুধু বাটন) */
+  /** `page` = ফুলস্ক্রিন স্ট্যাটাস পেজ (২৫ সেকেন্ড পর অটো-পপআপ), `overlay` = ওভারলে (শুধু বাটন) */
   variant: 'page' | 'overlay';
   /** অর্ডার এখনো পেন্ডিং (এবং ওয়েটিং স্ক্রিন চালু) থাকলে true */
   active: boolean;
@@ -144,7 +144,7 @@ export default function WaitingGame({ variant, active }: Props) {
     };
   }, [phase, closeAll]);
 
-  // 💬 ফুলস্ক্রিন পেজে প্রথম ~৪০ সেকেন্ড কনটেন্ট পড়ার সময় দিয়ে নিজে থেকে একবার পপআপ
+  // 💬 ফুলস্ক্রিন পেজে প্রথম ~২৫ সেকেন্ড কনটেন্ট পড়ার সময় দিয়ে নিজে থেকে একবার পপআপ
   useEffect(() => {
     if (variant !== 'page' || !mounted || !active || expired || games.length === 0) return undefined;
     const timer = setTimeout(() => {
@@ -276,12 +276,12 @@ export default function WaitingGame({ variant, active }: Props) {
 
           {phase === 'playing' && game && (
             <div
-              className="fixed inset-0 z-[1310] flex items-stretch justify-stretch bg-[#C3DEFC] animate-soft-fade-in"
+              className="fixed inset-0 z-[1310] flex items-stretch justify-stretch bg-[#EAF3FE] animate-soft-fade-in"
               style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
               <div
                 ref={wrapRef}
-                className="relative h-full w-full overflow-hidden bg-[#C3DEFC]"
+                className="relative h-full w-full overflow-hidden bg-[#EAF3FE]"
               >
                 <iframe
                   ref={iframeRef}
