@@ -726,6 +726,27 @@ export default function CheckoutPage() {
     };
   }, [fireLeadSafe]);
 
+  // 📮 ড্রাফট রিকভারি: আগে শুধু (ক) ধাপ ২-এ পৌঁছানোর মুহূর্তে এবং (খ) ট্যাব লুকালে/বন্ধ হলে পাঠানো হতো।
+  // তাই ধাপ ২/৩-এ এসে অ্যাপের ভেতরেই "ব্যাক" করে বেরিয়ে গেলে (ট্যাব লুকায় না) শেষ তথ্য যেত না।
+  // এখন: (১) পেজ ছেড়ে গেলে (unmount) পাঠানো হয়, (২) ধাপ ২-এর পর কোনো ফিল্ড বদলালে ৬ সেকেন্ড থামলে আবার।
+  // fireLeadSafe নিজেই orderDone/ধাপ-২/ফোন যাচাই ও ২ সেকেন্ডের থ্রটল করে — অর্ডার সম্পন্ন হলে কিছুই যায় না।
+  const fireLeadLatestRef = useRef(fireLeadSafe);
+  useEffect(() => {
+    fireLeadLatestRef.current = fireLeadSafe;
+  }, [fireLeadSafe]);
+
+  useEffect(() => {
+    return () => {
+      fireLeadLatestRef.current();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!reachedStep2Ref.current) return;
+    const t = setTimeout(() => fireLeadSafe(), 6000);
+    return () => clearTimeout(t);
+  }, [name, phone, dist, addr, email, cartItems, step, fireLeadSafe]);
+
   const shipOptions = getShipOptions(dist);
 
   useEffect(() => {

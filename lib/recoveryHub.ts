@@ -29,15 +29,26 @@ function hubConfig(): { baseUrl: string; apiKey: string; secret: string } | null
   return { baseUrl: baseUrl.replace(/\/$/, ''), apiKey, secret };
 }
 
+// কনফিগ না থাকার সতর্কতা প্রতি সার্ভার-ইনস্ট্যান্সে একবার — লগ ভরে না, কিন্তু "চুপচাপ কিছু হচ্ছে না" অবস্থাও থাকে না
+let warnedUnconfigured = false;
+
 async function postToHub(path: string, body: string, logLabel: string): Promise<void> {
   const cfg = hubConfig();
-  if (!cfg) return; // Hub not configured yet — no-op
+  if (!cfg) {
+    if (!warnedUnconfigured) {
+      warnedUnconfigured = true;
+      logWarn(
+        `[RecoveryHub] ${logLabel} পাঠানো হয়নি — RECOVERY_HUB_BASE_URL / RECOVERY_HUB_INGEST_KEY / RECOVERY_HUB_HMAC_SECRET-এর কোনো একটা সেট করা নেই।`,
+      );
+    }
+    return;
+  }
 
   const timestamp = String(Math.floor(Date.now() / 1000));
   const signature = signRequest(cfg.secret, timestamp, body);
 
   try {
-    await fetch(`${cfg.baseUrl}${path}`, {
+    const res = await fetch(`${cfg.baseUrl}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -48,6 +59,11 @@ async function postToHub(path: string, body: string, logLabel: string): Promise<
       body,
       signal: AbortSignal.timeout(5000),
     });
+    // আগে রেসপন্সের স্ট্যাটাস দেখাই হতো না — হাব 401/422 ফেরত দিলেও কোথাও কিছু লেখা হতো না।
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      logWarn(`[RecoveryHub] ${logLabel} হাব প্রত্যাখ্যান করেছে: HTTP ${res.status} ${text.slice(0, 200)}`);
+    }
   } catch (err) {
     logWarn(`[RecoveryHub] ${logLabel} forward error:`, err);
   }
