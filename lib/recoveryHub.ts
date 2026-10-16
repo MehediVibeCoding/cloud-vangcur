@@ -62,6 +62,9 @@ async function postToHub(path: string, body: string, logLabel: string): Promise<
     // আগে রেসপন্সের স্ট্যাটাস দেখাই হতো না — হাব 401/422 ফেরত দিলেও কোথাও কিছু লেখা হতো না।
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      // DEBUG (ডিবাগ শেষে মুছে ফেলুন): secret/body-র ছোট fingerprint
+      const fp = (v: string) => crypto.createHash('sha256').update(v, 'utf8').digest('hex').slice(0, 8);
+      logWarn(`[RecoveryHub] DEBUG secret_len=${cfg.secret.length} secret_fp=${fp(cfg.secret)} body_len=${Buffer.byteLength(body, 'utf8')} body_fp=${fp(body)}`);
       logWarn(`[RecoveryHub] ${logLabel} হাব প্রত্যাখ্যান করেছে: HTTP ${res.status} ${text.slice(0, 200)}`);
     }
   } catch (err) {
