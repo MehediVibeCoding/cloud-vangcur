@@ -10,24 +10,30 @@ const MAX_REVIEW_LEN = 200;
 const MAX_UNVERIFIED_REVIEWS_PER_DAY = 2;
 const LIKED_REVIEWS_KEY = 'vc_liked_reviews';
 
+// R2 (Cloudflare) পাবলিক ইমেজ হোস্ট — রিভিউ ছবি এখন এখানে 'reviews/' prefix-এ থাকে
+const R2_IMAGE_HOST = 'img.vangcur.com';
+const R2_REVIEW_PREFIX = '/reviews/';
+
 /**
- * 🛡️ ক্লাউডিনারি ইমেজ হোয়াইটলিস্টিং ও সিকিউরিটি স্যানিটাইজার
- * শুধুমাত্র আমাদের অনুমোদিত ক্লাউড নেম ও https://res.cloudinary.com/ ডোমেইনের ইমেজ ইউআরএল গ্রহণ করা হবে।
+ * 🛡️ রিভিউ ইমেজ URL হোয়াইটলিস্টিং ও সিকিউরিটি স্যানিটাইজার
+ * গ্রহণযোগ্য শুধু: (১) নিজের R2 ডোমেইনের (img.vangcur.com/reviews/...) ছবি,
+ * (২) পুরনো Cloudinary ডেটা (আমাদের ক্লাউড নেম সহ) — যাতে আগের রিভিউ না ভাঙে।
+ * ফাংশনের নাম আগের মতোই রাখা হয়েছে, যেন কোনো import না ভাঙে।
  */
 export function validateAndCleanCloudinaryUrls(rawUrls?: string | null): string | null {
   if (!rawUrls || typeof rawUrls !== 'string') return null;
   const urls = rawUrls.split(',').map((u) => u.trim()).filter(Boolean);
   const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dkjzleczw';
-  
+
   const safeUrls = urls.filter((url) => {
     try {
       const parsed = new URL(url);
-      return (
-        parsed.protocol === 'https:' &&
-        parsed.hostname === 'res.cloudinary.com' &&
-        parsed.pathname.startsWith(`/${CLOUD_NAME}/`) &&
-        !/[<>"'`]/.test(url)
-      );
+      if (parsed.protocol !== 'https:' || /[<>"'`]/.test(url)) return false;
+      const isR2 =
+        parsed.hostname === R2_IMAGE_HOST && parsed.pathname.startsWith(R2_REVIEW_PREFIX);
+      const isLegacyCloudinary =
+        parsed.hostname === 'res.cloudinary.com' && parsed.pathname.startsWith(`/${CLOUD_NAME}/`);
+      return isR2 || isLegacyCloudinary;
     } catch {
       return false;
     }
