@@ -1,36 +1,21 @@
-// R2 (Cloudflare) আপলোড হেল্পার — মূল সাইটের জন্য, অ্যাডমিন প্যানেলের lib/r2.ts-এর
-// সাথে হুবহু একই কনভেনশন মেনে লেখা। R2 S3-compatible API ব্যবহার করে, তাই
-// @aws-sdk/client-s3 দিয়েই কাজ হয়, আলাদা কোনো Cloudflare-নির্দিষ্ট SDK লাগে না।
+// R2 (Cloudflare) আপলোড হেল্পার — মূল সাইটের জন্য।
 //
 // ⚠️ এই ফাইলটা শুধু সার্ভার-সাইডে (API route / server action) ব্যবহার হবে —
-// কখনো 'use client' কম্পোনেন্টে import করা যাবে না, কারণ এতে secret key আছে।
+// কখনো 'use client' কম্পোনেন্টে import করা যাবে না।
 //
-// প্রয়োজনীয় env vars (সার্ভার-সাইড সিক্রেট, NEXT_PUBLIC_ না — তাই Cloudflare
-// Pages-এ "Secret" হিসেবে আর Vercel-এ "Sensitive/Secret" টগল অন করে বসাতে হবে):
-//   R2_ACCOUNT_ID        — Cloudflare ড্যাশবোর্ডের ডান দিকে অ্যাকাউন্ট আইডি
-//   R2_ACCESS_KEY_ID      — R2 API Token তৈরির সময় পাওয়া Access Key ID
-//   R2_SECRET_ACCESS_KEY  — R2 API Token তৈরির সময় পাওয়া Secret Access Key
-//   R2_BUCKET_NAME        — bucket-এর নাম (অ্যাডমিনে যেটা ব্যবহার হচ্ছে: vangcur-img)
-//   R2_PUBLIC_BASE_URL    — bucket-এ কানেক্ট করা কাস্টম ডোমেইন, যেমন https://img.vangcur.com
+// 🔧 ফিক্স: আগে এটা শুধু S3-compatible API (@aws-sdk/client-s3 + access key) দিয়ে
+// লিখত, যেটা Cloudflare Workers রানটাইমে ভরসাযোগ্য না — আপলোড নিঃশব্দে ফেল করত।
+// এখন প্রধান পথ R2 native binding (wrangler.jsonc-এর `REVIEWS_BUCKET`) — Worker-এর
+// ভেতর থেকে সরাসরি bucket-এ লেখে, কোনো key/SDK লাগে না। binding না পাওয়া গেলে
+// (যেমন লোকাল `next dev`) আগের S3 পথে নামে, তাই ডেভ পরিবেশ ভাঙে না।
 //
-// এই পাঁচটা ভ্যালু অ্যাডমিন প্যানেলে যা বসানো আছে, মূল সাইটেও হুবহু একই ভ্যালু বসবে —
-// দুটো প্রজেক্টই একই R2 bucket-এ লেখে, শুধু আলাদা prefix ব্যবহার করে ('reviews')।
+// env (শুধু URL তৈরির জন্য): R2_PUBLIC_BASE_URL — না থাকলে https://img.vangcur.com।
+// S3 ফলব্যাকের জন্য আগের R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY /
+// R2_BUCKET_NAME লাগে (শুধু লোকাল ডেভে)।
 
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-function getR2Client() {
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  if (!accountId || !accessKeyId || !secretAccessKey) {
-    throw new Error('R2 env vars সেট করা নেই (R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY)');
-  }
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey },
-  });
-}
+const DEFAULT_PUBLIC_BASE = 'https://img.vangcur.com';
 
 export interface R2UploadResult {
   ok: boolean;
@@ -38,33 +23,81 @@ export interface R2UploadResult {
   message?: string;
 }
 
+// ন্যূনতম টাইপ — শুধু যে মেথড লাগে সেটুকু
+interface R2BucketLike {
+  put(
+    key: string,
+    value: ArrayBuffer,
+    options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
+  ): Promise<unknown>;
+}
+
+function getBucketBinding(): R2BucketLike | null {
+  try {
+    const env = getCloudflareContext().env as unknown as { REVIEWS_BUCKET?: R2BucketLike };
+    return env?.REVIEWS_BUCKET ?? null;
+  } catch {
+    // Cloudflare কনটেক্সট নেই (লোকাল next dev) — S3 ফলব্যাকে যাবে
+    return null;
+  }
+}
+
+function publicUrlFor(path: string): string {
+  const raw = process.env.R2_PUBLIC_BASE_URL || DEFAULT_PUBLIC_BASE;
+  const base = raw.endsWith('/') ? raw.slice(0, -1) : raw;
+  return `${base}/${path}`;
+}
+
+async function putViaS3(buffer: Buffer, path: string, contentType: string): Promise<void> {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
+    throw new Error('R2 binding পাওয়া যায়নি এবং S3 env vars-ও সেট নেই');
+  }
+  // শুধু ফলব্যাকে লাগে, তাই ডাইনামিক import — মূল পথে SDK লোডই হয় না
+  const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+  const client = new S3Client({
+    region: 'auto',
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
+  });
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: path,
+      Body: buffer,
+      ContentType: contentType,
+      CacheControl: 'public, max-age=31536000, immutable',
+    }),
+  );
+}
+
 /**
  * ফাইল R2-তে আপলোড করে পাবলিক URL ফেরত দেয়।
  * prefix: path-এর ফোল্ডার অংশ (এই সাইটে এখন শুধু 'reviews' ব্যবহার হবে)।
  */
 export async function uploadToR2(file: File, prefix: string, ext: string): Promise<R2UploadResult> {
-  const bucket = process.env.R2_BUCKET_NAME;
-  const publicBase = process.env.R2_PUBLIC_BASE_URL;
-  if (!bucket || !publicBase) {
-    return { ok: false, message: 'R2 bucket/public URL env var সেট করা নেই' };
-  }
   try {
-    const client = getR2Client();
     const path = `${prefix}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const arrayBuffer = await file.arrayBuffer();
 
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: path,
-        Body: buffer,
-        ContentType: file.type,
-        CacheControl: 'public, max-age=31536000, immutable',
-      })
-    );
+    const bucket = getBucketBinding();
+    if (bucket) {
+      await bucket.put(path, arrayBuffer, {
+        httpMetadata: {
+          contentType: file.type,
+          cacheControl: 'public, max-age=31536000, immutable',
+        },
+      });
+    } else {
+      await putViaS3(Buffer.from(arrayBuffer), path, file.type);
+    }
 
-    const base = publicBase.endsWith('/') ? publicBase.slice(0, -1) : publicBase;
-    return { ok: true, url: `${base}/${path}` };
+    return { ok: true, url: publicUrlFor(path) };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : 'R2 আপলোড ব্যর্থ' };
   }
