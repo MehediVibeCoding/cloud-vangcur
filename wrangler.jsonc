@@ -7,6 +7,14 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // 🪣 রিভিউ ছবি আপলোডের জন্য R2 native binding — S3 API/access key লাগে না,
+  // Workers-এর ভেতর সরাসরি bucket-এ লেখে (lib/r2.ts এটাই আগে ব্যবহার করে)।
+  "r2_buckets": [
+    {
+      "binding": "REVIEWS_BUCKET",
+      "bucket_name": "vangcur-img"
+    }
+  ],
   "kv_namespaces": [
     {
       "binding": "NEXT_INC_CACHE_KV",
