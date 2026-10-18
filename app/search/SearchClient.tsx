@@ -288,7 +288,7 @@ function ResultsList({ results, total }: { results: Product[]; total: number }) 
     appendNextBatch();
   };
 
-  // 🔒 দাম/স্টক আপডেট (প্রতি ৩০ সেকেন্ডে, ট্যাব দৃশ্যমান থাকলে) — শুধু যে প্রোডাক্টগুলো
+  // 🔒 দাম/স্টক আপডেট (প্রতি ৩ মিনিটে, ট্যাব দৃশ্যমান থাকলে) — শুধু যে প্রোডাক্টগুলো
   // এখন স্ক্রিনে আছে সেগুলোর জন্য। ফলাফল আলাদা `fresh` ম্যাপে থাকে; ব্যর্থ হলে বা ফাঁকা
   // এলে কিছুই মোছা হয় না (আগে ব্যর্থ হলে পুরো তালিকা মুছে "০টি পণ্য" হয়ে যেত)।
   const [fresh, setFresh] = useState<Map<string, Product>>(() => new Map());
@@ -297,7 +297,10 @@ function ResultsList({ results, total }: { results: Product[]; total: number }) 
 
   useEffect(() => {
     let cancelled = false;
-    const POLL_MS = 30000;
+    // ৩০ সেকেন্ড থেকে ৩ মিনিট: প্রোডাক্ট পেজের (ProductDetailClient) সাথে মিলিয়ে। ভিজিটর
+    // বাড়লে প্রতি ৩০ সেকেন্ডে ৬০ আইডির কোয়েরি সরাসরি Supabase-এ গিয়ে Free কোটা শেষ করত।
+    // ট্যাবে ফিরলে সাথে সাথে একবার রিফ্রেশ হয় (নিচের visibilitychange), তাই দেরিতে ভুল দেখায় না।
+    const POLL_MS = 180000;
     const MAX_POLL_IDS = 60;
 
     const tick = async () => {

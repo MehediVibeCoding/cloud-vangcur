@@ -67,6 +67,16 @@ function getLikedGalleryIds(): Set<string> {
   }
 }
 
+// এই ডিভাইসের সার্ভার-লাইক সেশনে একবারই মেলানো হয় (আগে প্রতিটি হোম-লোডে একটা RPC যেত — ক্যাশ থাকলেও)।
+// ডিভাইস-আইডি কুকিতেও থাকে, তাই লোকাল-স্টোরেজ মুছে গেলেও নতুন সেশনে লাইক ফিরে আসে।
+const LIKES_SYNCED_KEY = 'vc_likes_synced_gal';
+function likesAlreadySyncedThisSession(): boolean {
+  try { return sessionStorage.getItem(LIKES_SYNCED_KEY) === '1'; } catch { return false; }
+}
+function markLikesSyncedThisSession() {
+  try { sessionStorage.setItem(LIKES_SYNCED_KEY, '1'); } catch { /* ignore */ }
+}
+
 function markGalleryLiked(id: string) {
   if (typeof window === 'undefined') return;
   try {
@@ -113,7 +123,7 @@ function PackageFallbackIcon() {
   );
 }
 
-export default function CustomerGallery() {
+export default function CustomerGallery({ initialReviews }: { initialReviews?: Review[] | null }) {
   const { t, lang } = useT();
   const supabase = useRef(createClient()).current;
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -170,12 +180,40 @@ export default function CustomerGallery() {
       setReviews(withLiked);
       setActiveIdx(0);
       setLoaded(true);
-      fetchMyLikedIds(supabase, 'customer_gallery').then((ids) => {
-        if (cancelled || !ids.length) return;
-        ids.forEach((sid) => markGalleryLiked(sid));
-        const all = getLikedGalleryIds();
-        setReviews((prev) => prev.map((r) => ({ ...r, liked: r.liked || all.has(String(r.id)) })));
-      });
+      if (!likesAlreadySyncedThisSession()) {
+        fetchMyLikedIds(supabase, 'customer_gallery').then((ids) => {
+          markLikesSyncedThisSession();
+          if (cancelled || !ids.length) return;
+          ids.forEach((sid) => markGalleryLiked(sid));
+          const all = getLikedGalleryIds();
+          setReviews((prev) => prev.map((r) => ({ ...r, liked: r.liked || all.has(String(r.id)) })));
+        });
+      }
+      return;
+    }
+
+    // 🆕 সার্ভার (হোম ISR) থেকে আসা ছবির তালিকা — ব্রাউজার থেকে customer_reviews কোয়েরি ছাড়াই দেখানো হয়।
+    // (কোয়েরি আর ক্রম হুবহু আগের মতো; ক্যাশ/লাইক মেলানো নিচের মতোই।)
+    if (initialReviews && initialReviews.length > 0) {
+      const likedIds = getLikedGalleryIds();
+      const mapped = initialReviews.map((r) => ({ ...r, liked: likedIds.has(String(r.id)) }));
+      setReviews(mapped);
+      setCachedReviews(mapped);
+      setActiveIdx(0);
+      setLoaded(true);
+      if (!likesAlreadySyncedThisSession()) {
+        fetchMyLikedIds(supabase, 'customer_gallery').then((ids) => {
+          markLikesSyncedThisSession();
+          if (cancelled || !ids.length) return;
+          ids.forEach((sid) => markGalleryLiked(sid));
+          const all = getLikedGalleryIds();
+          setReviews((prev) => {
+            const next = prev.map((r) => ({ ...r, liked: r.liked || all.has(String(r.id)) }));
+            setCachedReviews(next);
+            return next;
+          });
+        });
+      }
       return;
     }
 
@@ -190,6 +228,7 @@ export default function CustomerGallery() {
         if (!cancelled && !error && data && data.length > 0) {
           // সার্ভারে এই ডিভাইসের আগের লাইকও মিলিয়ে নেওয়া (লোকাল স্টোরেজ মুছে গেলেও লাভ ফিরে আসবে)
           const serverLiked = await fetchMyLikedIds(supabase, 'customer_gallery');
+          markLikesSyncedThisSession();
           serverLiked.forEach((sid) => markGalleryLiked(sid));
           const likedIds = getLikedGalleryIds();
           const mapped = (data as Review[]).map((r) => ({ ...r, liked: likedIds.has(String(r.id)) }));
@@ -205,7 +244,7 @@ export default function CustomerGallery() {
     })();
 
     return () => { cancelled = true; };
-  }, [supabase]);
+  }, [supabase, initialReviews]);
 
   const resetAutoplay = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);

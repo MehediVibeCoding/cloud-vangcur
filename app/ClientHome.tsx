@@ -33,6 +33,7 @@ interface ClientHomeProps {
   initialHasMore?: boolean;
   /** শুধু হোম পেজ (app/page.tsx) পাঠায় — না এলে (যেমন /category/[slug]) শোকেস সেকশন দেখায় না */
   initialShowcase?: ShowcaseConfig;
+  initialGallery?: { id: number | string; image_url?: string | null; like_count?: number | string | null; created_at?: string }[] | null;
 }
 
 export default function ClientHome({
@@ -42,6 +43,7 @@ export default function ClientHome({
   initialCategory,
   initialHasMore,
   initialShowcase,
+  initialGallery,
 }: ClientHomeProps) {
   const cartQty = useCartStore((s) => cartCount(s.cart));
   const wishQty = useWishlistStore((s) => s.wishlist.length);
@@ -80,7 +82,7 @@ export default function ClientHome({
         </>
       )}
       <BrandMarquee />
-      <CustomerGallery />
+      <CustomerGallery initialReviews={initialGallery} />
       <FAQ />
       <About />
       <Footer />

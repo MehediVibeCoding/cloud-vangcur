@@ -25,7 +25,15 @@ const INTERNAL_SECRET_PROTECTED_API_PATHS = [
   '/api/order-email',
 ];
 
+// 🆕 পাবলিক, সেশন-নিরপেক্ষ, ক্যাশ-করা ডেটার API — এগুলো লগইন/কুকি ব্যবহার করে না, তাই লগইন-করা
+// ইউজারের প্রতিটি কলে Supabase Auth-এ `getUser()` রাউন্ড-ট্রিপ (updateSession) অযথা। রেট-লিমিট
+// (Redis + এজ-মেমরি) আগের মতোই প্রযোজ্য — শুধু সেশন-রিফ্রেশ স্কিপ।
+const SESSIONLESS_PUBLIC_API_PATHS = ['/api/live-products', '/api/search-index'];
+
 function needsAuthRefresh(pathname: string): boolean {
+  if (SESSIONLESS_PUBLIC_API_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return false;
+  }
   return AUTH_REFRESH_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix)
   );

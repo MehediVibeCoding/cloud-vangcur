@@ -13,6 +13,23 @@ import HomeJsonLd from './components/home/HomeJsonLd';
 
 export const revalidate = 120;
 
+// 🆕 কাস্টমার-গ্যালারির ছবি — হোম ISR-এর সাথে সার্ভারে একবার আনা হয় (আগে প্রতিটি নতুন ভিজিটরের
+// ব্রাউজার থেকে আলাদা কোয়েরি যেত)। কোয়েরি হুবহু CustomerGallery-র আগের কোয়েরি; ব্যর্থ বা খালি হলে
+// null — তখন কম্পোনেন্ট আগের মতো নিজে আনে।
+async function fetchGalleryReviewsSafe(supabase: ReturnType<typeof createClient>) {
+  try {
+    const { data, error } = await supabase
+      .from('customer_reviews')
+      .select('id,image_url,like_count,created_at')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (error || !data || data.length === 0) return null;
+    return data as { id: number | string; image_url?: string | null; like_count?: number | string | null; created_at?: string }[];
+  } catch {
+    return null;
+  }
+}
+
 export default async function HomePage() {
   // ⚠️ আগে createClient() কলটা কোনো try/catch ছাড়াই ছিল — এটাই একমাত্র
   // জায়গা যেখানে সরাসরি "throw" হতে পারত (যেমন env var কোনো একটা সার্ভার
@@ -48,14 +65,15 @@ export default async function HomePage() {
   // করলে ProductGrid.tsx ক্লায়েন্ট থেকে চেয়ে নেয়। প্রোডাক্ট সংখ্যা কম থাকা
   // অবস্থায় (যেমন এখন) আচরণ প্রায় একই থাকবে, কিন্তু ক্যাটালগ বড় হলে হোমপেজ
   // হালকা থেকে যাবে।
-  const [productsPage, initialCategories, initialHeroCards, initialShowcase] = supabase
+  const [productsPage, initialCategories, initialHeroCards, initialShowcase, initialGallery] = supabase
     ? await Promise.all([
       fetchProductsPage(supabase, 'all', 0, PRODUCTS_PAGE_SIZE),
       fetchCategories(supabase),
       fetchHeroCards(supabase),
       fetchShowcase(supabase),
+      fetchGalleryReviewsSafe(supabase),
     ])
-    : [{ products: [], hasMore: false }, DEFAULT_CATEGORIES, DEFAULT_HERO_CARDS, DEFAULT_SHOWCASE];
+    : [{ products: [], hasMore: false }, DEFAULT_CATEGORIES, DEFAULT_HERO_CARDS, DEFAULT_SHOWCASE, null];
   const initialProducts = productsPage.products;
   const initialHasMore = productsPage.hasMore;
 
@@ -89,6 +107,7 @@ export default async function HomePage() {
         initialHeroCards={initialHeroCards}
         initialHasMore={initialHasMore}
         initialShowcase={initialShowcase}
+        initialGallery={initialGallery}
       />
     </>
   );

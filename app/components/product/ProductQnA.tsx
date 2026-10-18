@@ -25,6 +25,8 @@ import type { ProductQuestion, ProductQuestionAnswer } from '@/types';
 interface ProductQnAProps {
   productId: number | string;
   productName: string;
+  /** সার্ভার (ISR) থেকে আসা প্রশ্নোত্তর — গেস্ট-ভিজিটরে Supabase কল বাঁচায় (productId না মিললে উপেক্ষিত) */
+  initialData?: { productId: string | number; questions: ProductQuestion[] } | null;
 }
 
 function SolidChatQuestionIcon({ className = '' }: { className?: string }) {
@@ -86,7 +88,7 @@ function getReplyPreview(
   return { name: q.user_name, text: q.question, isAdminMsg: false };
 }
 
-export default function ProductQnA({ productId, productName }: ProductQnAProps) {
+export default function ProductQnA({ productId, productName, initialData }: ProductQnAProps) {
   const { t, lang } = useT();
   const supabase = useRef(createClient()).current;
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -112,6 +114,19 @@ export default function ProductQnA({ productId, productName }: ProductQnAProps) 
 
   const loadQuestionsData = useCallback(async () => {
     setLoading(true);
+
+    // 🆕 গেস্ট-ভিজিটর + সার্ভার-ডেটা মেলে (একই প্রোডাক্ট): নেটওয়ার্ক কল ছাড়াই। প্রশ্ন-উত্তর RLS-এ সবার
+    // জন্য খোলা, তাই সার্ভারের ডেটা আর ব্রাউজারের গেস্ট-কোয়েরি একই; গেস্ট অ্যাডমিন নয়; আর প্রোফাইল-ব্যাজ
+    // RPC anon-কে দেওয়া নেই (আগেও গেস্টের জন্য খালি ম্যাপ আসত)। লগইন-করা ইউজার আগের পথেই ফ্রেশ
+    // ডেটা আনে — কারণ উত্তর-দেওয়ার যোগ্যতা (টার্ন-ভিত্তিক) টাটকা ডেটার ওপর নির্ভর করে।
+    const seed = initialData && String(initialData.productId) === String(productId) ? initialData.questions : null;
+    if (seed && !currentUser?.id) {
+      setIsAdmin(false);
+      setQuestions(seed.map((q) => ({ ...q, answers: q.answers || [] })) as QuestionWithThread[]);
+      setLoading(false);
+      return;
+    }
+
     try {
       // 🛡️ withTimeout: নেটওয়ার্ক/ডিভাইস দুর্বল হলে এই কলগুলো ঝুলে থাকতে
       // পারে — ১২ সেকেন্ডের মধ্যে রেসপন্স না এলে reject করে catch ব্লকে
@@ -124,7 +139,8 @@ export default function ProductQnA({ productId, productName }: ProductQnAProps) 
             .from('product_questions')
             .select('id, product_id, user_id, user_name, question, created_at')
             .eq('product_id', productId)
-            .order('created_at', { ascending: false }),
+            .order('created_at', { ascending: false })
+            .limit(150),
         ),
         checkIsUserAdmin(supabase, currentUser?.id),
       ]);
@@ -138,7 +154,8 @@ export default function ProductQnA({ productId, productName }: ProductQnAProps) 
             .from('product_question_answers')
             .select('id, question_id, user_id, author_name, is_admin, answer, created_at')
             .in('question_id', qIds)
-            .order('created_at', { ascending: true }),
+            .order('created_at', { ascending: true })
+            .limit(1000),
         );
 
         const mapped: QuestionWithThread[] = qData.data.map((q) => ({
@@ -161,7 +178,7 @@ export default function ProductQnA({ productId, productName }: ProductQnAProps) 
       setQuestions([]);
     }
     setLoading(false);
-  }, [productId, currentUser?.id, supabase]);
+  }, [productId, currentUser?.id, supabase, initialData]);
 
   useEffect(() => {
     loadQuestionsData();

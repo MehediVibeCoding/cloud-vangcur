@@ -33,7 +33,7 @@ import LoginModal from '@/app/components/auth/LoginModal';
 import ProductQnA from '@/app/components/product/ProductQnA';
 import ProductReviews from '@/app/components/product/ProductReviews';
 import { useT } from '@/lib/i18n/useT';
-import type { Product, ProductSpecs } from '@/types';
+import type { Product, ProductSpecs, ProductReview, ProductQuestion } from '@/types';
 
 function VangcurPandaIcon({ className = '' }: { className?: string }) {
   return (
@@ -384,6 +384,8 @@ interface ProductDetailClientProps {
   initialId: string | null;
   initialProduct: Product | null;
   initialProducts?: Product[];
+  initialReviews?: { productId: string; reviews: ProductReview[] } | null;
+  initialQuestions?: { productId: string; questions: ProductQuestion[] } | null;
 }
 
 export default function ProductDetailClient({
@@ -391,6 +393,8 @@ export default function ProductDetailClient({
   initialId,
   initialProduct,
   initialProducts,
+  initialReviews,
+  initialQuestions,
 }: ProductDetailClientProps) {
   const { t, lang } = useT();
   const router = useRouter();
@@ -449,8 +453,41 @@ export default function ProductDetailClient({
       if (typeof document !== 'undefined' && document.hidden) return;
       const ids = prodsRef.current.map((p) => p.id);
       if (!ids.length) return;
+
+      // 🆕 প্রধান পথ: ক্যাশ-করা লাইভ-এন্ডপয়েন্ট (/api/live-products, ৬০ সেকেন্ড সার্ভার-ক্যাশ) —
+      // ডাটাবেজে ভিজিটর-প্রতি কোয়েরি নেই। শুধু দাম/পুরনো-দাম/স্টক/ব্যাজ রিফ্রেশ হয় (যা দ্রুত বদলায়);
+      // ছবি, কালার ইত্যাদি পেজের ISR (৫ মিনিট + অ্যাডমিন বদলালে পার্জ) থেকেই তাজা থাকে।
+      // কোনো কারণে এন্ডপয়েন্ট ব্যর্থ হলে নিচের আগের সরাসরি-ডাটাবেজ পথে ফিরে যায়।
+      try {
+        const ctl = new AbortController();
+        const timeout = setTimeout(() => ctl.abort(), 6000);
+        const res = await fetch(`/api/live-products?ids=${encodeURIComponent(ids.join(','))}`, { signal: ctl.signal });
+        clearTimeout(timeout);
+        if (res.ok) {
+          const json = (await res.json()) as {
+            items?: { id: number | string; price: number; old: number; stock: number; badge: string }[];
+            total?: number;
+          };
+          if (cancelled) return;
+          if (Array.isArray(json.items) && typeof json.total === 'number' && json.total > 0) {
+            const liveById = new Map(json.items.map((i) => [String(i.id), i]));
+            setProds((prev) => prev
+              .filter((p) => liveById.has(String(p.id)))
+              .map((p) => {
+                const live = liveById.get(String(p.id))!;
+                return { ...p, price: live.price, old: live.old, stock: live.stock, badge: live.badge };
+              }));
+            return;
+          }
+        }
+      } catch {
+        // নেটওয়ার্ক/টাইমআউট — নিচের আগের পথ
+      }
+
       const fresh = await fetchProductsByIds(supabase, ids);
       if (cancelled) return;
+      // 🛡️ ডাটাবেজও ব্যর্থ হলে (খালি তালিকা) কিছু বদলানো হবে না — নাহলে নিচের ফিল্টার সব প্রোডাক্ট মুছে দিত
+      if (!fresh.length) return;
       const freshById = new Map(fresh.map((p) => [String(p.id), p]));
 
       // 🎨 পুরনো ক্যাশ করা পেজে কালার-সিবলিং না থাকলে (পরে লিংক করা হয়েছে) তাদের এনে যোগ করা
@@ -1467,7 +1504,7 @@ export default function ProductDetailClient({
             </div>
           )}
 
-          <ProductQnA productId={prod.id} productName={prod.name} />
+          <ProductQnA productId={prod.id} productName={prod.name} initialData={initialQuestions} />
         </div>
 
         <div className="pt-8" id="ppSecReviews" ref={(el) => { sectionRefs.current.ppSecReviews = el; }}>
@@ -1475,6 +1512,7 @@ export default function ProductDetailClient({
             productId={prod.id}
             productName={prod.name}
             defaultRating={prod.rating || 4.8}
+            initialData={initialReviews}
             onOpenLogin={() => setLoginOpen(true)}
           />
         </div>

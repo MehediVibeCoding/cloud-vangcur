@@ -4,7 +4,9 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { idFromSlug, makeSlug, fetchProductById, fetchRelatedProducts } from '@/lib/productData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
-import type { Product } from '@/types';
+import { fetchProductReviews } from '@/lib/productReviewData';
+import { fetchProductQuestions } from '@/lib/productQnaData';
+import type { Product, ProductReview, ProductQuestion } from '@/types';
 import ProductDetailClient from './ProductDetailClient';
 
 const SITE_URL = 'https://vangcur.com';
@@ -54,6 +56,43 @@ const getProductReviewsSummary = cache(async (id: string) => {
       ratingValue: Number((total / count).toFixed(1)),
       reviewCount: count,
     };
+  } catch {
+    return null;
+  }
+});
+
+// 🆕 অনুমোদিত রিভিউ ও প্রশ্নোত্তর — সার্ভারে (ISR, ৫ মিনিট ক্যাশ) একবার এনে পেজের সাথে পাঠানো হয়,
+// যাতে প্রতিটি গেস্ট-ভিজিটরের ব্রাউজার থেকে আলাদা করে Supabase-এ কল না যায়।
+// anon ক্লায়েন্টে RLS শুধু অনুমোদিত রিভিউ দেখায় (নিজের/অ্যাডমিনের পেন্ডিং নয়), আর প্রশ্নোত্তর সবার জন্য
+// খোলা — ব্রাউজারের গেস্ট-কোয়েরির সাথে হুবহু একই ফলাফল। লগইন-করা ইউজার ও অ্যাডমিন আগের মতোই
+// ব্রাউজার থেকে সরাসরি ফ্রেশ ডেটা আনে (নিজের পেন্ডিং রিভিউ, উত্তর-দেওয়ার যোগ্যতা ইত্যাদির জন্য)।
+// কোনো কারণে ব্যর্থ হলে বা সীমায় (৩০০/১৫০) পৌঁছালে null — তখন ক্লায়েন্ট আগের পথেই নিজে আনে।
+const REVIEWS_CAP = 300;
+const QUESTIONS_CAP = 150;
+
+const getInitialReviews = cache(async (id: string): Promise<{ productId: string; reviews: ProductReview[] } | null> => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return null;
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const reviews = await fetchProductReviews(supabase, id, null);
+    if (reviews.length >= REVIEWS_CAP) return null;
+    return { productId: id, reviews };
+  } catch {
+    return null;
+  }
+});
+
+const getInitialQuestions = cache(async (id: string): Promise<{ productId: string; questions: ProductQuestion[] } | null> => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return null;
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const questions = await fetchProductQuestions(supabase, id);
+    if (questions.length >= QUESTIONS_CAP) return null;
+    return { productId: id, questions };
   } catch {
     return null;
   }
@@ -121,9 +160,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const initialProduct = await getProduct(id);
   if (!initialProduct) notFound();
 
-  const [liveReviewsSummary, relatedProducts] = await Promise.all([
+  const [liveReviewsSummary, relatedProducts, initialReviews, initialQuestions] = await Promise.all([
     getProductReviewsSummary(id),
     getRelatedProducts(initialProduct),
+    getInitialReviews(id),
+    getInitialQuestions(id),
   ]);
   // ক্লায়েন্টের `prods` তালিকায় বর্তমান প্রোডাক্ট নিজেও থাকতে হয় (baseProd এখান থেকেই খোঁজা হয়)
   const initialProducts = [initialProduct, ...relatedProducts];
@@ -172,6 +213,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         initialId={id}
         initialProduct={initialProduct}
         initialProducts={initialProducts || []}
+        initialReviews={initialReviews}
+        initialQuestions={initialQuestions}
       />
     </>
   );

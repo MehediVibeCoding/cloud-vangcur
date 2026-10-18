@@ -36,6 +36,8 @@ interface ProductReviewsProps {
   defaultRating?: number;
   onSummaryChange?: (summary: ReviewRatingSummary) => void;
   onOpenLogin?: () => void;
+  /** সার্ভার (ISR) থেকে আসা অনুমোদিত রিভিউ — গেস্ট-ভিজিটরে Supabase কল বাঁচায় (productId না মিললে উপেক্ষিত) */
+  initialData?: { productId: string | number; reviews: ProductReview[] } | null;
 }
 
 interface GalleryCardItem {
@@ -109,6 +111,7 @@ export default function ProductReviews({
   defaultRating = 4.8,
   onSummaryChange,
   onOpenLogin,
+  initialData,
 }: ProductReviewsProps) {
   const { t, lang } = useT();
   const supabase = useRef(createClient()).current;
@@ -162,8 +165,41 @@ export default function ProductReviews({
   // Touch Swipe for Card Slider
   const touchRef = useRef({ startX: 0, startY: 0 });
 
+  // এই ডিভাইসের লাইক-তালিকা (সার্ভারে থাকা) সেশনে একবারই মেলানো হয় — আগে প্রতিটি প্রোডাক্ট-ভিউতে
+  // একটা RPC (`get_my_likes`) যেত। ডিভাইস-আইডি কুকিতেও থাকে, তাই লোকাল-স্টোরেজ মুছে গেলেও
+  // নতুন সেশনে লাইক ফিরে আসে; এই সেশনে নতুন লাইক তো লোকালেই লেখা হয়।
+  const syncLikesOncePerSession = useCallback(() => {
+    try {
+      if (sessionStorage.getItem('vc_likes_synced_pr') === '1') return;
+    } catch {
+      // ignore
+    }
+    syncLikedReviews(supabase)
+      .then((all) => {
+        setLikedList(all);
+        try { sessionStorage.setItem('vc_likes_synced_pr', '1'); } catch { /* ignore */ }
+      })
+      .catch(() => {});
+  }, [supabase]);
+
   const loadReviewsData = useCallback(async () => {
     setLoading(true);
+
+    // 🆕 গেস্ট-ভিজিটর + সার্ভার-ডেটা মেলে (একই প্রোডাক্ট): কোনো নেটওয়ার্ক কল ছাড়াই দেখানো হয়।
+    // কেন নিরাপদ: গেস্ট RLS-এ শুধু অনুমোদিত রিভিউ দেখে — সার্ভার (anon) ঠিক সেটাই এনেছে; গেস্টের
+    // অ্যাডমিন-স্ট্যাটাস সবসময় false; আর `get_profile_completion_status` anon-কে দেওয়া নেই, তাই গেস্টের
+    // ভেরিফাইড-ব্যাজ ম্যাপ আগেও খালিই আসত। লগইন-করা ইউজার ও অ্যাডমিন নিচের আগের পথেই ফ্রেশ ডেটা আনে।
+    const seed = initialData && String(initialData.productId) === String(productId) ? initialData.reviews : null;
+    if (seed && !currentUser?.id) {
+      setReviews(seed);
+      setIsAdmin(false);
+      setLikedList(getLikedReviews());
+      syncLikesOncePerSession();
+      if (onSummaryChange) onSummaryChange(calculateReviewSummary(seed, defaultRating));
+      setLoading(false);
+      return;
+    }
+
     // 🛡️ try/finally: fetchProductReviews/checkIsReviewAdminOrMod নিজেরাই
     // try/catch + withTimeout দিয়ে সুরক্ষিত (কখনো থ্রো/ঝুলে থাকবে না), কিন্তু
     // নিচের sync কোড (calculateReviewSummary ইত্যাদি) কোনো কারণে থ্রো করলেও
@@ -176,7 +212,7 @@ export default function ProductReviews({
       setReviews(data);
       setIsAdmin(adminStatus);
       setLikedList(getLikedReviews());
-      syncLikedReviews(supabase).then((all) => setLikedList(all)).catch(() => {});
+      syncLikesOncePerSession();
 
       // 🆕 এই প্রোডাক্টের রিভিউকারীদের প্রোফাইল-সম্পূর্ণতা একবারে ব্যাচ-চেক
       fetchProfileCompletionMap(supabase, data.map((r) => r.user_id)).then(setVerifiedMap).catch(() => {});
@@ -196,7 +232,7 @@ export default function ProductReviews({
     } finally {
       setLoading(false);
     }
-  }, [productId, currentUser?.id, defaultRating, onSummaryChange, supabase]);
+  }, [productId, currentUser?.id, defaultRating, onSummaryChange, supabase, initialData, syncLikesOncePerSession]);
 
   useEffect(() => {
     loadReviewsData();

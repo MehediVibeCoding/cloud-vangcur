@@ -258,9 +258,14 @@ export function computeProductsListPaging(total: number, requestedPage: number):
 // কাস্টম অর্ডার+ক্যাটাগরি-ফিল্টার করে সঠিক ID-ক্রম বের করে, তারপর ভারী
 // GRID_COLS ডেটা শুধু ওই পেজের (limit-টা) আইডির জন্যই আনে — বাকিগুলো তখনই
 // আনা হয় যখন স্ক্রল করে বা ক্যাটাগরি বদলে সেটা দরকার হয়।
-type OrderedIdRow = { id: number | string; cat: string | null; cats: string[] | null; stock: number };
+export type OrderedIdRow = { id: number | string; cat: string | null; cats: string[] | null; stock: number };
 
-async function fetchOrderedFilteredIds(supabase: SupabaseClient, category: string): Promise<(number | string)[]> {
+/**
+ * সব প্রোডাক্টের হালকা সারি (id, cat, cats, stock) — sort_order অনুযায়ী সাজানো।
+ * ব্যর্থ হলে null (আগে এটা চুপচাপ [] দিত; এখন ক্যাশ-করা সংস্করণ যেন ব্যর্থতাকে "খালি ক্যাটালগ"
+ * ভেবে ৫ মিনিট ধরে না রাখে, তাই ব্যর্থতা আলাদা করে চেনা যায়)।
+ */
+export async function fetchOrderedRows(supabase: SupabaseClient): Promise<OrderedIdRow[] | null> {
   const rows: OrderedIdRow[] = [];
   let from = 0;
   for (;;) {
@@ -272,17 +277,63 @@ async function fetchOrderedFilteredIds(supabase: SupabaseClient, category: strin
       .order('id', { ascending: true })
       .range(from, from + SELECT_PAGE_SIZE - 1)
       .abortSignal(signal as any);
-    if (error || !data) return [];
+    if (error || !data) return null;
     rows.push(...(data as OrderedIdRow[]));
     if (data.length < SELECT_PAGE_SIZE) break; // শেষ পাতা
     from += SELECT_PAGE_SIZE;
   }
+  return rows;
+}
+
+/** সারিগুলো থেকে ক্যাটাগরি-ফিল্টার করা, স্টক-আউট শেষে নেওয়া আইডি-ক্রম (পিউর ফাংশন, ডাটাবেজ কল নেই) */
+export function orderedIdsForCategory(rows: OrderedIdRow[], category: string): (number | string)[] {
   const filtered = rows.filter((p) => prodInCat({ cat: p.cat || '', cats: p.cats || [] }, category));
   // sort_order অনুযায়ী ডাটাবেজ থেকেই সাজানো এসেছে (ওপরের .order()), তাই আলাদা করে
   // কাস্টম অর্ডার বসাতে হয় না — শুধু স্টক-আউট প্রোডাক্ট পুরো ক্যাটাগরি জুড়ে শেষে নেওয়া
   // হচ্ছে (নির্দিষ্ট পেজের ভেতরে না), stable sort বলে বাকি ক্রম অক্ষত থাকে
   const stableOrdered = [...filtered].sort((a, b) => (a.stock <= 0 ? 1 : 0) - (b.stock <= 0 ? 1 : 0));
   return stableOrdered.map((p) => p.id);
+}
+
+async function fetchOrderedFilteredIds(supabase: SupabaseClient, category: string): Promise<(number | string)[]> {
+  const rows = await fetchOrderedRows(supabase);
+  if (!rows) return [];
+  return orderedIdsForCategory(rows, category);
+}
+
+/**
+ * আইডি-তালিকা (আগে থেকে জানা) থেকে একটা পেজের ভারী GRID_COLS ডেটা আনে।
+ * strict = true হলে কোয়েরি ব্যর্থ হলে throw করে (ক্যাশ-করা কলের জন্য — যাতে ব্যর্থ ফলাফল ক্যাশে না বসে)।
+ */
+export async function fetchProductsPageFromIds(
+  supabase: SupabaseClient,
+  allIds: (number | string)[],
+  offset: number,
+  limit: number,
+  strict = false,
+): Promise<ProductsPageResult> {
+  const pageIds = allIds.slice(offset, offset + limit);
+  if (!pageIds.length) return { products: [], hasMore: false, total: allIds.length };
+
+  const signal = getTimeoutSignal(QUERY_TIMEOUT_MS);
+  const { data: sbProds, error } = await supabase
+    .from('custom_products')
+    .select(GRID_COLS)
+    .in('id', pageIds)
+    .abortSignal(signal as any);
+
+  if (error || !sbProds) {
+    logWarn('[Vangcur] fetchProductsPage fetch error:', error?.message);
+    if (strict) throw new Error(error?.message || 'products page fetch failed');
+    return { products: [], hasMore: false, total: allIds.length };
+  }
+
+  const mapped = (sbProds as unknown as RawCustomProduct[]).map(mapCustomProduct);
+  // .in() রেজাল্টের নিজস্ব ক্রম গ্যারান্টিড না — pageIds-এর ক্রম অনুযায়ী আবার সাজানো হলো
+  const byId = new Map(mapped.map((p) => [String(p.id), p]));
+  const products = pageIds.map((id) => byId.get(String(id))).filter((p): p is Product => !!p);
+
+  return { products, hasMore: offset + limit < allIds.length, total: allIds.length };
 }
 
 export async function fetchProductsPage(
@@ -293,27 +344,7 @@ export async function fetchProductsPage(
 ): Promise<ProductsPageResult> {
   try {
     const allIds = await fetchOrderedFilteredIds(supabase, category || 'all');
-    const pageIds = allIds.slice(offset, offset + limit);
-    if (!pageIds.length) return { products: [], hasMore: false, total: allIds.length };
-
-    const signal = getTimeoutSignal(QUERY_TIMEOUT_MS);
-    const { data: sbProds, error } = await supabase
-      .from('custom_products')
-      .select(GRID_COLS)
-      .in('id', pageIds)
-      .abortSignal(signal as any);
-
-    if (error || !sbProds) {
-      logWarn('[Vangcur] fetchProductsPage fetch error:', error?.message);
-      return { products: [], hasMore: false, total: allIds.length };
-    }
-
-    const mapped = (sbProds as unknown as RawCustomProduct[]).map(mapCustomProduct);
-    // .in() রেজাল্টের নিজস্ব ক্রম গ্যারান্টিড না — pageIds-এর ক্রম অনুযায়ী আবার সাজানো হলো
-    const byId = new Map(mapped.map((p) => [String(p.id), p]));
-    const products = pageIds.map((id) => byId.get(String(id))).filter((p): p is Product => !!p);
-
-    return { products, hasMore: offset + limit < allIds.length, total: allIds.length };
+    return await fetchProductsPageFromIds(supabase, allIds, offset, limit);
   } catch (e) {
     logWarn('[Vangcur] fetchProductsPage exception:', e);
     return { products: [], hasMore: false, total: 0 };

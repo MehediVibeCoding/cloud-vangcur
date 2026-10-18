@@ -442,8 +442,15 @@ export default function Navbar({
     return () => clearTimeout(t);
   }, [router, cartCount, currentUser]);
 
-  const initSearchData = useCallback(async () => {
-    if (prodsRef.current.length > 0 || searchDataLoadingRef.current) return;
+  // সার্চ-ডেটা (ক্যাটালগ-ইনডেক্স + ক্যাটাগরি) — এখন শুধু সার্চ বক্স ব্যবহারের সময় লোড হয়
+  // (ফোকাস/হোভার/টাইপ/মোবাইল-সার্চ খোলা)। আগে প্রতিটি ভিজিটরের জন্য ১.৫ সেকেন্ড পর নিজে
+  // থেকে লোড হতো, সার্চ না করলেও — তাতে প্রতি ভিজিটরে একটা Worker-রিকোয়েস্ট ও KV-রিড যেত।
+  // চলতি লোডের Promise রেখে দেওয়া হয়, যাতে প্রথম কী-স্ট্রোকের সার্চ লোড শেষ হওয়া পর্যন্ত
+  // অপেক্ষা করে (ফাঁকা ফলাফল না দেখায়)।
+  const searchDataPromiseRef = useRef<Promise<void> | null>(null);
+  const initSearchData = useCallback((): Promise<void> => {
+    if (prodsRef.current.length > 0) return Promise.resolve();
+    if (searchDataPromiseRef.current) return searchDataPromiseRef.current;
 
     const cached = getCachedSearchData();
     if (cached.prods && cached.prods.length) {
@@ -451,29 +458,34 @@ export default function Navbar({
       if (cached.cats && cached.cats.length) {
         catsRef.current = cached.cats;
       }
-      return;
+      return Promise.resolve();
     }
 
     searchDataLoadingRef.current = true;
-    try {
-      const [customRows, catList] = await Promise.all([
-        fetchCatalogIndex(supabase),
-        fetchCategories(supabase),
-      ]);
+    const promise = (async () => {
+      try {
+        const [customRows, catList] = await Promise.all([
+          fetchCatalogIndex(supabase),
+          fetchCategories(supabase),
+        ]);
 
-      if (customRows && customRows.length) {
-        prodsRef.current = customRows;
-      }
-      if (catList && catList.length) {
-        catsRef.current = catList;
-      }
+        if (customRows && customRows.length) {
+          prodsRef.current = customRows;
+        }
+        if (catList && catList.length) {
+          catsRef.current = catList;
+        }
 
-      setCachedSearchData(prodsRef.current, catsRef.current);
-    } catch {
-      // fail safe
-    } finally {
-      searchDataLoadingRef.current = false;
-    }
+        setCachedSearchData(prodsRef.current, catsRef.current);
+      } catch {
+        // fail safe
+      } finally {
+        searchDataLoadingRef.current = false;
+        searchDataPromiseRef.current = null;
+      }
+    })();
+    searchDataPromiseRef.current = promise;
+    return promise;
   }, [supabase]);
 
   useEffect(() => {
@@ -483,13 +495,10 @@ export default function Navbar({
       if (cached.cats && cached.cats.length) {
         catsRef.current = cached.cats;
       }
-    } else {
-      const idleTimer = setTimeout(() => {
-        initSearchData();
-      }, 1500);
-      return () => clearTimeout(idleTimer);
     }
-  }, [initSearchData]);
+    // ক্যাশ না থাকলে এখানে আর নিজে থেকে লোড করা হয় না — সার্চ বক্সে ফোকাস/হোভার/টাইপ করলে
+    // initSearchData() চলবে (নিচের হ্যান্ডলারগুলো)।
+  }, []);
 
   useEffect(() => {
     setRecentSearches(getRecentSearches());
@@ -683,7 +692,9 @@ export default function Navbar({
       setCatResults([]);
       return;
     }
-    debounceTimerRef.current = setTimeout(() => runSearch(clean), 280);
+    debounceTimerRef.current = setTimeout(() => {
+      initSearchData().then(() => runSearch(clean));
+    }, 280);
   }, [runSearch, router, lang, initSearchData]);
 
   const goToCat = (catId: string) => {

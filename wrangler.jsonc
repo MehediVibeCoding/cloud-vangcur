@@ -21,6 +21,23 @@
       "id": "61a2a76be19045868b53e10b0cf2444f"
     }
   ],
+  // 🗂️ ক্যাশ-পার্জের ট্যাগ-খাতা (D1) — open-next.config.ts-এর tagCache এটা ব্যবহার করে।
+  // টেবিল `revalidations` Cloudflare ড্যাশবোর্ড কনসোল থেকে আগেই বানানো হয়েছে।
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "vangcur-tags",
+      "database_id": "f18d04c1-9ca5-4f46-a0f3-f9a028bf3c20"
+    }
+  ],
+  // 🔁 ISR রিফ্রেশের জন্য Worker-এর নিজেকে ডাকার অনুমতি (open-next.config.ts-এর memory-queue
+  // এটা ছাড়া কাজ করে না)। "service" অবশ্যই এই Worker-এর নাম (উপরের "name") হতে হবে।
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "cloud-vangcur"
+    }
+  ],
   // 🛠️ এই vars গুলো শুধুই রানটাইমে (সার্ভার সাইড: middleware.ts, server.ts,
   // serviceClient.ts ইত্যাদি) Worker-এর env অবজেক্টে পাওয়া যায়। প্রতিটা
   // `wrangler deploy`-তে এই ফাইলটাই সোর্স অফ ট্রুথ হিসেবে কাজ করে, তাই
