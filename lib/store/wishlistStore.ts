@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import type { Product, WishlistItem } from '@/types';
 import { showToast } from '@/lib/toast';
 import { translate } from '@/lib/i18n/translate';
+import { subscribeTabSync, notifyTabSync } from '@/lib/crossTabSync';
 
 const WISH_KEY = 'vc_wish';
+const WISH_CHANNEL = 'vc-wish-sync';
 
 function loadWishlist(): WishlistItem[] {
   if (typeof window === 'undefined') return [];
@@ -20,6 +22,8 @@ function persist(w: WishlistItem[]): void {
   } catch {
     // storage unavailable, ignore
   }
+  // 🔄 অন্য খোলা ট্যাবকে জানানো
+  notifyTabSync(WISH_CHANNEL);
 }
 
 interface WishlistState {
@@ -42,6 +46,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   hydrate: () => {
     if (get().hydrated) return;
     set({ wishlist: loadWishlist(), hydrated: true });
+    // 🔄 অন্য ট্যাবে উইশলিস্টে যোগ/বাদ দিলে এই ট্যাবও সাথে সাথে মিলে যাবে
+    subscribeTabSync(WISH_CHANNEL, WISH_KEY, () => {
+      set({ wishlist: loadWishlist() });
+    });
   },
 
   setWishlist: (wishlist) => {
