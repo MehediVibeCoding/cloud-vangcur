@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import type { CurrentUser } from '@/types';
+import { subscribeTabSync, notifyTabSync } from '@/lib/crossTabSync';
 
 const USER_KEY = 'vc_user';
+const AUTH_CHANNEL = 'vc-auth-sync';
 
 function loadUser(): CurrentUser | null {
   if (typeof window === 'undefined') return null;
@@ -19,6 +21,8 @@ function persist(user: CurrentUser | null): void {
   } catch {
     // storage unavailable, ignore
   }
+  // 🔄 অন্য খোলা ট্যাবকে জানানো — যেমন এক ট্যাবে লগআউট করলে আরেক ট্যাবও লগইন-স্টেট হারায়
+  notifyTabSync(AUTH_CHANNEL);
 }
 
 interface AuthState {
@@ -41,6 +45,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   hydrate: () => {
     if (get().hydrated) return;
     set({ currentUser: loadUser(), hydrated: true });
+    // 🔄 অন্য ট্যাবে লগইন/লগআউট হলে এই ট্যাবও সাথে সাথে একই অবস্থায় চলে আসবে
+    subscribeTabSync(AUTH_CHANNEL, USER_KEY, () => {
+      set({ currentUser: loadUser() });
+    });
   },
 
   setCurrentUser: (user) => {
