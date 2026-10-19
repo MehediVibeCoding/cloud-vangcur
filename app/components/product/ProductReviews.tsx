@@ -9,6 +9,7 @@ import { showToast } from '@/lib/toast';
 import { lockBody, unlockBody } from '@/lib/bodyScrollLock';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
 import { uploadReviewImageToR2 } from '@/lib/reviewImageUpload';
+import { cleanupReviewImages } from '@/lib/reviewImageCleanup';
 import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } from '@/lib/wishHeartBurst';
 import UserAvatar from './UserAvatar';
 import { VerifiedCustomerBadge } from './VerifiedBadges';
@@ -21,6 +22,7 @@ import { ReviewGallerySkeleton } from '@/app/components/ui/Skeletons';
 import {
   fetchProductReviews,
   submitProductReview,
+  precheckReviewAllowed,
   deleteProductReview,
   toggleReviewLike,
   getLikedReviews,
@@ -503,6 +505,19 @@ export default function ProductReviews({
     try {
       const uploadedUrls: string[] = [];
       if (selectedFiles.length > 0) {
+        // 🆕 ছবি আপলোডের আগে সীমা/ডুপ্লিকেট আগাম যাচাই — সীমা-পেরোনো ইউজারের ছবি আপলোড হয়ে R2-তে অনাথ
+        // হয়ে থাকবে না। ছবি ছাড়া রিভিউয়ের পথ আগের মতোই (সরাসরি submitProductReview)।
+        const pre = await precheckReviewAllowed(supabase, productId, currentUser.id);
+        if (!pre.ok) {
+          setSubmitting(false);
+          if (pre.limitExceeded) {
+            setWriteModalOpen(false);
+            setLimitModalOpen(true);
+            return;
+          }
+          setErrorMessage(pre.error || t('তথ্য জমা দেওয়া সম্ভব হয়নি, আবার চেষ্টা করুন'));
+          return;
+        }
         for (let idx = 0; idx < selectedFiles.length; idx += 1) {
           const file = selectedFiles[idx];
           try {
@@ -518,6 +533,7 @@ export default function ProductReviews({
               error: uploadErr,
             });
             setSubmitting(false);
+            cleanupReviewImages(uploadedUrls); // আগের ছবিগুলো আপলোড হয়ে গিয়েছিল — সেগুলো আর কাজে লাগবে না
             const reason = uploadErr?.message || t('ছবি আপলোড ব্যর্থ হয়েছে');
             setErrorMessage(
               selectedFiles.length > 1
@@ -542,6 +558,7 @@ export default function ProductReviews({
 
       if (!res.ok || !res.data) {
         console.error('[Review] সাবমিট ব্যর্থ (ডাটাবেজ ধাপ)', { imageCount: uploadedUrls.length, result: res });
+        cleanupReviewImages(uploadedUrls); // রিভিউ সেভ হয়নি — আপলোড-করা ছবিগুলো R2 থেকে মুছে ফেলা
         if (res.limitExceeded) {
           setWriteModalOpen(false);
           setLimitModalOpen(true);
