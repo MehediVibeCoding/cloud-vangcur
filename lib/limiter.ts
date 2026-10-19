@@ -132,6 +132,42 @@ async function redisEval(script: string, keys: string[], args: (string | number)
   return json.result.map(Number);
 }
 
+// ───────────────────── সার্কিট ব্রেকার (Upstash টানা ব্যর্থ হলে সাময়িক বাইপাস) ─────────────────────
+// কেন দরকার: আগে Redis কল ব্যর্থ/স্লো হলেও প্রতিটা আলাদা রিকোয়েস্ট নিজে থেকে নতুন করে
+// Redis-এ চেষ্টা করত এবং সর্বোচ্চ ১.২ সেকেন্ড (AbortSignal.timeout) অপেক্ষা করে তারপর
+// মেমোরি-ফলব্যাকে যেত। Upstash কয়েক মিনিটের জন্য ডাউন/স্লো থাকলে checkout/coupon/
+// lead-capture-এর মতো একাধিক পথের প্রতিটা রিকোয়েস্ট আলাদাভাবে এই ১.২ সেকেন্ড গুনত —
+// আসল সমস্যা Redis-এ না হলেও পুরো সাইট স্লো অনুভূত হতো। এখন পরপর কয়েকবার ব্যর্থ হলে
+// ব্রেকার কিছু সময়ের জন্য খুলে যায়: ততক্ষণ Redis-এ হাতই দেওয়া হয় না, সরাসরি
+// মেমোরি-ফলব্যাকে চলে যাওয়া হয় (তাৎক্ষণিক)। সময় শেষ হলে একটা ট্রায়াল কল যেতে দেওয়া হয়
+// (half-open) — Redis ফিরে এসেছে কিনা যাচাই করতে।
+const BREAKER_FAIL_THRESHOLD = 3; // টানা এতবার ব্যর্থ হলে ব্রেকার খোলে
+const BREAKER_OPEN_MS = 20_000; // এই সময় পর্যন্ত Redis স্কিপ করে সরাসরি ফলব্যাকে যাওয়া হয়
+let breakerFailCount = 0;
+let breakerOpenUntil = 0; // 0 মানে ব্রেকার বন্ধ (Redis স্বাভাবিকভাবে ট্রাই হবে)
+
+function breakerIsOpen(): boolean {
+  if (breakerOpenUntil === 0) return false;
+  if (Date.now() >= breakerOpenUntil) {
+    // half-open: একটা ট্রায়াল কল যেতে দাও, Redis ফিরেছে কিনা যাচাই করতে
+    breakerOpenUntil = 0;
+    return false;
+  }
+  return true;
+}
+
+function breakerRecordSuccess(): void {
+  breakerFailCount = 0;
+  breakerOpenUntil = 0;
+}
+
+function breakerRecordFailure(): void {
+  breakerFailCount += 1;
+  if (breakerFailCount >= BREAKER_FAIL_THRESHOLD) {
+    breakerOpenUntil = Date.now() + BREAKER_OPEN_MS;
+  }
+}
+
 // ───────────────────── ফলব্যাক: ইনস্ট্যান্স-মেমোরি (Upstash না থাকলে/ব্যর্থ হলে) ─────────────────────
 
 const memWindows = new Map<string, number>(); // `${key}:${windowId}` -> count
@@ -201,7 +237,7 @@ export async function slidingWindowLimit(
   cost = 1,
 ): Promise<RateLimitOutcome> {
   const k = safeKey(key);
-  if (redisConfig()) {
+  if (redisConfig() && !breakerIsOpen()) {
     try {
       const now = Date.now();
       const windowMs = windowSec * 1000;
@@ -212,6 +248,7 @@ export async function slidingWindowLimit(
         [`${PREFIX}sw:${k}:${id}`, `${PREFIX}sw:${k}:${id - 1}`],
         [limit, windowMs, frac.toFixed(6), cost],
       );
+      breakerRecordSuccess();
       return {
         allowed: ok === 1,
         remaining,
@@ -219,6 +256,7 @@ export async function slidingWindowLimit(
       };
     } catch {
       // Upstash সাময়িক ব্যর্থ — নিচে মেমোরি-ফলব্যাক; সাইট কখনো আটকায় না
+      breakerRecordFailure();
     }
   }
   return memSliding(k, limit, windowSec, cost);
@@ -235,7 +273,7 @@ export async function tokenBucketLimit(
   cost = 1,
 ): Promise<RateLimitOutcome> {
   const k = safeKey(key);
-  if (redisConfig()) {
+  if (redisConfig() && !breakerIsOpen()) {
     try {
       const ttlMs = Math.max(60_000, Math.ceil((capacity / refillPerSec) * 1000) * 2);
       const [ok, remaining, retryMs] = await redisEval(
@@ -243,6 +281,7 @@ export async function tokenBucketLimit(
         [`${PREFIX}tb:${k}`],
         [Date.now(), capacity, refillPerSec / 1000, cost, ttlMs],
       );
+      breakerRecordSuccess();
       return {
         allowed: ok === 1,
         remaining,
@@ -250,6 +289,7 @@ export async function tokenBucketLimit(
       };
     } catch {
       // ফলব্যাক
+      breakerRecordFailure();
     }
   }
   return memBucket(k, capacity, refillPerSec, cost);
