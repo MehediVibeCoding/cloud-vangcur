@@ -30,6 +30,7 @@ interface R2BucketLike {
     value: ArrayBuffer,
     options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
   ): Promise<unknown>;
+  delete(keys: string | string[]): Promise<void>;
 }
 
 function getBucketBinding(): R2BucketLike | null {
@@ -102,3 +103,53 @@ export async function uploadToR2(file: File, prefix: string, ext: string): Promi
     return { ok: false, message: e instanceof Error ? e.message : 'R2 আপলোড ব্যর্থ' };
   }
 }
+
+/**
+ * পাবলিক URL (https://img.vangcur.com/reviews/xxx.webp) থেকে R2-এর key ('reviews/xxx.webp') বের করে।
+ * শুধু আমাদের নিজের পাবলিক হোস্ট এবং `reviews/` prefix-এর নিরাপদ-নামের ফাইল গ্রহণযোগ্য — অন্য সবকিছুতে null,
+ * যাতে এই ফাংশন দিয়ে bucket-এর অন্য কোনো অবজেক্ট মোছার সুযোগ না থাকে।
+ */
+export function r2ReviewKeyFromUrl(url: string): string | null {
+  try {
+    const base = new URL(process.env.R2_PUBLIC_BASE_URL || DEFAULT_PUBLIC_BASE);
+    const u = new URL(url);
+    if (u.protocol !== 'https:' || u.host !== base.host) return null;
+    const key = decodeURIComponent(u.pathname.replace(/^\//, ''));
+    return /^reviews\/[A-Za-z0-9_.-]{1,120}$/.test(key) ? key : null;
+  } catch {
+    return null;
+  }
+}
+
+/** R2 থেকে একগুচ্ছ অবজেক্ট মোছে (key-গুলো r2ReviewKeyFromUrl দিয়ে যাচাই-করা হওয়া উচিত)। ব্যর্থ হলে false */
+export async function deleteFromR2(keys: string[]): Promise<boolean> {
+  if (!keys.length) return true;
+  try {
+    const bucket = getBucketBinding();
+    if (bucket) {
+      await bucket.delete(keys);
+      return true;
+    }
+    // লোকাল ডেভ ফলব্যাক (S3 API)
+    const accountId = process.env.R2_ACCOUNT_ID;
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+    const bucketName = process.env.R2_BUCKET_NAME;
+    if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) return false;
+    const { S3Client, DeleteObjectsCommand } = await import('@aws-sdk/client-s3');
+    const client = new S3Client({
+      region: 'auto',
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId, secretAccessKey },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+    });
+    await client.send(
+      new DeleteObjectsCommand({ Bucket: bucketName, Delete: { Objects: keys.map((Key) => ({ Key })) } }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+

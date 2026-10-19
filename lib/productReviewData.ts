@@ -4,6 +4,7 @@ import { sanitizeInput, sanitizePlainName, MAX_NAME_LEN } from './security';
 import { logWarn } from './logger';
 import { getDeviceId, fetchMyLikedIds } from './deviceId';
 import { withTimeout } from './withTimeout';
+import { cleanupReviewImages } from './reviewImageCleanup';
 
 const MIN_REVIEW_LEN = 10;
 const MAX_REVIEW_LEN = 200;
@@ -185,6 +186,51 @@ export async function checkUnverifiedReviewDailyLimit(
   }
 }
 
+/**
+ * ছবি আপলোডের আগে চালানো "আগাম যাচাই": রিভিউ আসলেই জমা দেওয়া যাবে কি না (সীমা/ডুপ্লিকেট),
+ * যাতে সীমা পেরোনো বা আগে থেকে রিভিউ-দেওয়া ইউজারের ছবি আপলোড হয়ে অনাথ হয়ে না থাকে।
+ * শুধু পড়ে, কিছু লেখে না। ডাটাবেজের ট্রিগার (enforce_product_review_rules) আসল সীমা-প্রয়োগকারী হিসেবে
+ * আগের মতোই থাকছে — এটা শুধু আগেভাগে থামানোর সুবিধা। যাচাই নিজে ব্যর্থ হলে "অনুমতি আছে" ধরা হয়
+ * (সাবমিটের আসল যাচাই তো পরে হবেই)।
+ */
+export async function precheckReviewAllowed(
+  supabase: SupabaseClient,
+  productId: number | string,
+  userId: string,
+): Promise<{ ok: boolean; limitExceeded?: boolean; error?: string }> {
+  try {
+    if (!userId) return { ok: true };
+    const isPrivileged = await checkIsReviewAdminOrMod(supabase, userId);
+    if (isPrivileged) return { ok: true };
+
+    // এই প্রোডাক্টে নিজের রিভিউ আগে থেকেই আছে কি? (RLS-এ নিজের সারি সবসময় দেখা যায়)
+    const { data: mine } = await supabase
+      .from('product_reviews')
+      .select('id')
+      .eq('product_id', productId)
+      .eq('user_id', userId)
+      .limit(1);
+    if (mine && mine.length > 0) {
+      return { ok: false, error: 'আপনি ইতিমধ্যে এই প্রোডাক্টটিতে একটি রিভিউ দিয়েছেন।' };
+    }
+
+    const isVerified = await checkIsVerifiedBuyer(supabase, productId, userId);
+    if (!isVerified) {
+      const limitCheck = await checkUnverifiedReviewDailyLimit(supabase, userId);
+      if (!limitCheck.allowed) {
+        return {
+          ok: false,
+          limitExceeded: true,
+          error: 'আপনি ইতিমধ্যে আজকের জন্য সর্বোচ্চ ২টি আন-অর্ডারড প্রোডাক্টে রিভিউ দিয়েছেন।',
+        };
+      }
+    }
+    return { ok: true };
+  } catch {
+    return { ok: true };
+  }
+}
+
 export interface SubmitReviewPayload {
   productId: number | string;
   userId: string;
@@ -277,6 +323,19 @@ export async function deleteProductReview(
   try {
     const isPrivileged = await checkIsReviewAdminOrMod(supabase, userId);
 
+    // মোছার আগে ছবির লিংক মনে রাখা (সারি মুছে গেলে আর পড়া যাবে না) — মোছা সফল হলে R2 থেকেও ছবি মোছা হবে
+    let imageUrlsToClean: string | null = null;
+    try {
+      const { data: prev } = await supabase
+        .from('product_reviews')
+        .select('image_url')
+        .eq('id', reviewId)
+        .maybeSingle();
+      imageUrlsToClean = (prev as { image_url?: string | null } | null)?.image_url || null;
+    } catch {
+      imageUrlsToClean = null;
+    }
+
     let q = supabase.from('product_reviews').delete().eq('id', reviewId);
     if (!isPrivileged && userId) {
       q = q.eq('user_id', userId);
@@ -287,6 +346,8 @@ export async function deleteProductReview(
       logWarn('[Review] deleteProductReview error:', error);
       return { ok: false, error: 'রিভিউটি মুছে ফেলা সম্ভব হয়নি।' };
     }
+    // R2 থেকে ছবি মোছা — ফায়ার-অ্যান্ড-ফরগেট; সার্ভার নিজে যাচাই করে ছবিটা আর কোনো রিভিউতে নেই
+    if (imageUrlsToClean) cleanupReviewImages(imageUrlsToClean);
     return { ok: true };
   } catch (e) {
     logWarn('[Review] deleteProductReview exception:', e);
