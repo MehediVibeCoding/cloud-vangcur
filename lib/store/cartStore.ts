@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import type { CartItem, Product } from '@/types';
 import { MAX_QTY_PER_PRODUCT } from '@/lib/cartLimits';
+import { subscribeTabSync, notifyTabSync } from '@/lib/crossTabSync';
 
 const CART_KEY = 'vc_cart';
+const CART_CHANNEL = 'vc-cart-sync';
 
 // আগে থেকে সেভ হওয়া কার্টে সীমার বেশি পরিমাণ থাকলে নামিয়ে আনা।
 function clampCart(cart: CartItem[]): CartItem[] {
@@ -30,6 +32,8 @@ function persist(cart: CartItem[]): void {
   } catch {
     // storage unavailable, ignore
   }
+  // 🔄 অন্য খোলা ট্যাবকে জানানো — persistDebounced-এর ফ্লাশও শেষমেশ এখানেই আসে, তাই একটাই জায়গা যথেষ্ট
+  notifyTabSync(CART_CHANNEL);
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -95,6 +99,10 @@ export const useCartStore = create<CartState>((set, get) => ({
   hydrate: () => {
     if (get().hydrated) return;
     set({ cart: loadCart(), hydrated: true });
+    // 🔄 অন্য ট্যাবে কার্ট বদলালে (অ্যাড/রিমুভ/কোয়ান্টিটি) এই ট্যাবও সাথে সাথে মিলে যাবে
+    subscribeTabSync(CART_CHANNEL, CART_KEY, () => {
+      set({ cart: loadCart() });
+    });
   },
 
   setCart: (cart) => {
