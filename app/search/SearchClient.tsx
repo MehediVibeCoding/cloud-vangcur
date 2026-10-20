@@ -63,7 +63,7 @@ function SearchHeader({ query, onQueryChange }: { query: string; onQueryChange: 
     <div className="sticky top-[14px] z-[900] mx-2 mb-1.5 mt-[14px] max-[400px]:mx-1.5 sm:mx-3">
       <nav className="navbar-glass relative z-[900] rounded-[35px] border border-white/70 bg-white/80 shadow-sh1 backdrop-blur-[10px]">
         <div className="mx-auto flex h-[62px] max-w-[1300px] items-center gap-2.5 px-3 sm:gap-3 sm:px-5">
-          <Link
+          <Link prefetch={false}
             href="/"
             onClick={handleBackToHome}
             aria-label={lang === 'en' ? 'Back to Home' : 'ফিরে যান'}
@@ -173,7 +173,7 @@ function NoQueryState() {
         {t('অথবা')}
         <span className="h-px flex-1 bg-border-base" />
       </div>
-      <Link href="/" className={brandCtaBtnClass}>
+      <Link prefetch={false} href="/" className={brandCtaBtnClass}>
         {t('ওয়েবসাইটের হোম পেইজে ফিরে যান')} <ArrowRightIcon />
       </Link>
     </div>
@@ -189,7 +189,7 @@ function ZeroResultsState({ query }: { query: string }) {
         {lang === 'en' ? <>No products found for &quot;{query}&quot;</> : <>&quot;{query}&quot; এর জন্য কোনো পণ্য পাওয়া যায়নি</>}
       </p>
       <p className="max-w-sm text-[13px] text-muted">{t('অন্য কোনো নাম দিয়ে উপরের সার্চ বক্সে খুঁজে দেখুন, অথবা নিচের বাটনে ক্লিক করে ওয়েবসাইটের হোম পেইজে ফিরে যান।')}</p>
-      <Link href="/" className={`mt-1 ${brandCtaBtnClass}`}>
+      <Link prefetch={false} href="/" className={`mt-1 ${brandCtaBtnClass}`}>
         {t('ওয়েবসাইটের হোম পেইজে ফিরে যান')} <ArrowRightIcon />
       </Link>
     </div>
@@ -201,7 +201,7 @@ function EndOfResults() {
   return (
     <div className="col-span-full flex flex-col items-center gap-3.5 px-4 pb-2 pt-7 text-center">
       <p className="font-body text-[13.5px] font-medium text-muted">{t('আর কোনো প্রোডাক্ট নেই')}</p>
-      <Link href="/" className={brandCtaBtnClass}>
+      <Link prefetch={false} href="/" className={brandCtaBtnClass}>
         {t('ওয়েবসাইটের হোম পেইজে ফিরে যান')} <ArrowRightIcon />
       </Link>
     </div>

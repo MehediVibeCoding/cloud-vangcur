@@ -320,7 +320,7 @@ function SearchDropdown({
             </div>
             <div className="px-3.5 pb-1 pt-1.5 text-[10.5px] font-bold uppercase tracking-[.7px] text-muted">{t('পণ্য')}</div>
             {searchResults.map((p) => (
-              <Link
+              <Link prefetch={false}
                 key={p.id}
                 href={productHref(p)}
                 className="flex items-center gap-3 px-3.5 py-2.5 text-inherit no-underline transition-colors hover:bg-surface-muted"
@@ -428,11 +428,6 @@ export default function Navbar({
   useEffect(() => {
     const run = () => {
       if (cartCount > 0) router.prefetch('/checkout');
-      router.prefetch('/track-order');
-      if (currentUser) {
-        router.prefetch('/account');
-        router.prefetch('/account/orders');
-      }
     };
     if ('requestIdleCallback' in window) {
       const id = window.requestIdleCallback(run, { timeout: 5000 });
@@ -440,7 +435,7 @@ export default function Navbar({
     }
     const t = setTimeout(run, 3000);
     return () => clearTimeout(t);
-  }, [router, cartCount, currentUser]);
+  }, [router, cartCount]);
 
   // সার্চ-ডেটা (ক্যাটালগ-ইনডেক্স + ক্যাটাগরি) — এখন শুধু সার্চ বক্স ব্যবহারের সময় লোড হয়
   // (ফোকাস/হোভার/টাইপ/মোবাইল-সার্চ খোলা)। আগে প্রতিটি ভিজিটরের জন্য ১.৫ সেকেন্ড পর নিজে
@@ -827,7 +822,7 @@ export default function Navbar({
           <div className="flex w-full items-center justify-between gap-2 max-[400px]:gap-1.5 sm:gap-3">
             
             {showHomeButton ? (
-              <Link
+              <Link prefetch={false}
                 href="/"
                 onClick={handleBackToHome}
                 aria-label={lang === 'en' ? 'Back to Home' : 'ফিরে যান'}

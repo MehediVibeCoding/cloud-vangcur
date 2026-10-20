@@ -274,12 +274,12 @@ export default function TermsClient() {
           {lang === 'en' ? (
             <>
               Claim requirements (original box, official invoice paper, continuous unboxing video), warranty types and the claim procedure are explained in full on our{' '}
-              <Link href="/warranty" className="font-bold text-brand-light hover:underline">Warranty Policy</Link> page.
+              <Link prefetch={false} href="/warranty" className="font-bold text-brand-light hover:underline">Warranty Policy</Link> page.
             </>
           ) : (
             <>
               ক্লেইমের শর্ত (অরিজিনাল বক্স, অফিসিয়াল ইনভয়েস পেপার, একটানা আনবক্সিং ভিডিও), ওয়ারেন্টির ধরন ও ক্লেইম করার নিয়ম বিস্তারিত দেখুন আমাদের{' '}
-              <Link href="/warranty" className="font-bold text-brand-light hover:underline">ওয়ারেন্টি নীতিমালা</Link> পেজে।
+              <Link prefetch={false} href="/warranty" className="font-bold text-brand-light hover:underline">ওয়ারেন্টি নীতিমালা</Link> পেজে।
             </>
           )}
         </PolicyNote>
@@ -296,8 +296,8 @@ export default function TermsClient() {
         </p>
         <p className={policyPClass}>
           {lang === 'en'
-            ? <>For complete step-by-step replacement procedures, please review our dedicated <Link href="/refund-policy" className="font-bold text-brand-light hover:underline">Return &amp; Refund Policy</Link>.</>
-            : <>রিটার্ন ও রিপ্লেসমেন্টের পূর্ণাঙ্গ আইনি নীতিমালা জানতে আমাদের পৃথক <Link href="/refund-policy" className="font-bold text-brand-light hover:underline">রিটার্ন ও রিফান্ড পলিসি</Link> দেখুন।</>}
+            ? <>For complete step-by-step replacement procedures, please review our dedicated <Link prefetch={false} href="/refund-policy" className="font-bold text-brand-light hover:underline">Return &amp; Refund Policy</Link>.</>
+            : <>রিটার্ন ও রিপ্লেসমেন্টের পূর্ণাঙ্গ আইনি নীতিমালা জানতে আমাদের পৃথক <Link prefetch={false} href="/refund-policy" className="font-bold text-brand-light hover:underline">রিটার্ন ও রিফান্ড পলিসি</Link> দেখুন।</>}
         </p>
       </PolicySection>
 

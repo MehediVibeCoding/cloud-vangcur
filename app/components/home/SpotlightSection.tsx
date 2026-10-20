@@ -74,7 +74,7 @@ function SpotlightRow({ s, reverse, first }: { s: ShowcaseSpotlight; reverse: bo
         className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-[1200ms] ease-brand group-hover:scale-[1.05]"
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" aria-hidden="true" />
-      <Link href={href} aria-label={title} tabIndex={-1} className="absolute inset-0" />
+      <Link prefetch={false} href={href} aria-label={title} tabIndex={-1} className="absolute inset-0" />
 
     </div>
   );
@@ -124,7 +124,7 @@ function SpotlightRow({ s, reverse, first }: { s: ShowcaseSpotlight; reverse: bo
         </div>
       )}
 
-      <Link
+      <Link prefetch={false}
         href={href}
         className="group mt-1 inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-brand-light px-7 py-3 font-body text-[14px] font-bold text-white shadow-sh2 transition-[background-color,transform,box-shadow] duration-brand hover:bg-[#3C93DE] hover:shadow-sh3 active:scale-95 sm:w-fit sm:py-3.5 sm:text-[15px]"
       >

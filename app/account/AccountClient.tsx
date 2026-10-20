@@ -425,7 +425,7 @@ export default function AccountClient() {
         <nav className="navbar-glass relative rounded-[35px] border border-white/70 bg-white/80 shadow-sh1 backdrop-blur-[10px]">
           <div className="mx-auto flex h-[62px] max-w-[1300px] items-center justify-between gap-3 px-3 sm:px-5">
             {/* ব্যাক টু হোম বাটন */}
-            <Link
+            <Link prefetch={false}
               href="/"
               aria-label={t('হোম')}
               onClick={(e) => {
@@ -1044,7 +1044,7 @@ export default function AccountClient() {
                     </span>
                   </div>
                   {orders.length > 0 && (
-                    <Link
+                    <Link prefetch={false}
                       href="/account/orders"
                       className="font-body text-[12.5px] font-bold text-brand-light hover:underline"
                     >
@@ -1062,7 +1062,7 @@ export default function AccountClient() {
                         </div>
                         <div className="mb-1 font-body text-sm font-bold text-ink">{t('এখনো কোনো অর্ডার নেই')}</div>
                         <div className="mb-5 font-body text-xs text-muted">{t('অর্ডার করলে এখানে দেখাবে')}</div>
-                        <Link
+                        <Link prefetch={false}
                           href="/"
                           className="inline-block rounded-full bg-gradient-to-r from-info to-brand-light px-6 py-2.5 font-body text-xs font-bold text-white shadow-sh1 transition-all hover:brightness-105 active:scale-95"
                         >

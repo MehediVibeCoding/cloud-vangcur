@@ -113,7 +113,7 @@ export default function ProductsPageClient({ products, paging, activeCat, catego
                 <EmptyBoxIcon />
               </div>
               <p className="text-sm text-muted">{t('এই ক্যাটাগরিতে এখন কোনো পণ্য নেই')}</p>
-              <Link
+              <Link prefetch={false}
                 href="/"
                 className="inline-flex items-center gap-2 rounded-full border-none bg-gradient-to-r from-info to-brand-light px-7 py-3 font-body text-sm font-bold text-white shadow-sh2 transition-brand duration-brand hover:brightness-[1.03] no-underline"
               >
@@ -127,7 +127,7 @@ export default function ProductsPageClient({ products, paging, activeCat, catego
               {totalPages > 1 && (
                 <nav aria-label="Pagination" className="mt-9 flex flex-wrap items-center justify-center gap-1.5">
                   {page > 1 ? (
-                    <Link href={buildHref(page - 1, activeCat)} className={pagerBtnClass} aria-label={lang === 'en' ? 'Previous page' : 'আগের পেজ'}>
+                    <Link prefetch={false} href={buildHref(page - 1, activeCat)} className={pagerBtnClass} aria-label={lang === 'en' ? 'Previous page' : 'আগের পেজ'}>
                       <ChevronLeftIcon />
                     </Link>
                   ) : (
@@ -140,12 +140,12 @@ export default function ProductsPageClient({ products, paging, activeCat, catego
                     ) : p === page ? (
                       <span key={p} className={pagerBtnActiveClass} aria-current="page">{p}</span>
                     ) : (
-                      <Link key={p} href={buildHref(p, activeCat)} className={pagerBtnClass}>{p}</Link>
+                      <Link prefetch={false} key={p} href={buildHref(p, activeCat)} className={pagerBtnClass}>{p}</Link>
                     )
                   )}
 
                   {page < totalPages ? (
-                    <Link href={buildHref(page + 1, activeCat)} className={pagerBtnClass} aria-label={lang === 'en' ? 'Next page' : 'পরের পেজ'}>
+                    <Link prefetch={false} href={buildHref(page + 1, activeCat)} className={pagerBtnClass} aria-label={lang === 'en' ? 'Next page' : 'পরের পেজ'}>
                       <ChevronRightIcon />
                     </Link>
                   ) : (

@@ -158,7 +158,7 @@ function NotificationRow({
         }}
         className="relative bg-white"
       >
-        <Link
+        <Link prefetch={false}
           href={item.href}
           onClick={(e) => {
             if (Math.abs(dragX) > 6) {

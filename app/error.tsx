@@ -103,7 +103,7 @@ export default function GlobalError({
         <HeaderDecor />
 
         <div className="relative z-10 mx-auto mb-4 flex justify-center">
-          <Link href="/" className="inline-block">
+          <Link prefetch={false} href="/" className="inline-block">
             <VangcurLogoMark
               aria-label="Vangcur Gadgets"
               className="h-8 w-auto select-none text-brand-light"
@@ -135,7 +135,7 @@ export default function GlobalError({
             <span>{lang === 'en' ? 'Try Again' : 'আবার চেষ্টা করুন'}</span>
           </button>
 
-          <Link
+          <Link prefetch={false}
             href="/"
             className="flex w-full items-center justify-center gap-2 rounded-full border border-border-base bg-white/85 py-[12px] font-body text-[13.5px] font-bold text-ink shadow-xs transition-colors hover:border-brand-light hover:bg-white active:scale-95 no-underline"
           >

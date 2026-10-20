@@ -15,7 +15,7 @@ export async function GET() {
     const products = await getCachedCatalogIndex();
     return NextResponse.json(
       { products },
-      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
+      { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300' } },
     );
   } catch {
     return NextResponse.json({ products: [] }, { headers: { 'Cache-Control': 'no-store' } });

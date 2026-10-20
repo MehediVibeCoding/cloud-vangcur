@@ -90,7 +90,7 @@ export default function CategoryShowcase({ heading, cards }: Props) {
           const titleLines = splitTitleLines(title);
           return (
             <ScrollReveal key={`${c.collectionId}-${i}`} delay={i * 0.06} className="h-full">
-              <Link
+              <Link prefetch={false}
                 href={collectionHref(c.collectionId)}
                 aria-label={title}
                 className="group relative block aspect-[5/8] w-full overflow-hidden rounded-[22px] bg-slate-200 shadow-sh2 ring-1 ring-white/70 outline-none transition-[transform,box-shadow] duration-500 ease-brand focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 active:scale-[0.985] sm:rounded-[28px] [@media(hover:hover)]:hover:-translate-y-1 [@media(hover:hover)]:hover:shadow-sh3"

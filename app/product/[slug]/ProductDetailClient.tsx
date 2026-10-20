@@ -412,11 +412,6 @@ export default function ProductDetailClient({
   );
 
   useEffect(() => {
-    router.prefetch('/checkout');
-    router.prefetch('/');
-  }, [router]);
-
-  useEffect(() => {
     let cancelled = false;
 
     if (!initialProducts || initialProducts.length === 0) {
@@ -903,7 +898,7 @@ export default function ProductDetailClient({
             </svg>
           </div>
           <p className="text-sm text-muted">{t('এই প্রোডাক্টটি খুঁজে পাওয়া যায়নি')}</p>
-          <Link
+          <Link prefetch={false}
             href="/"
             className="inline-flex items-center gap-2 rounded-full bg-brand-light px-7 py-3 font-body text-sm font-bold text-white no-underline shadow-sh2 transition-brand duration-brand hover:-translate-y-0.5 hover:bg-brand-light-hover hover:shadow-sh3"
           >
@@ -1053,7 +1048,7 @@ export default function ProductDetailClient({
                       {label}
                     </span>
                   ) : (
-                    <Link
+                    <Link prefetch={false}
                       key={v.id}
                       href={productHref(v)}
                       className="flex items-center gap-1.5 rounded-full border border-brand-light/25 bg-white/60 px-3 py-1.5 text-[12.5px] font-semibold text-ink shadow-2xs backdrop-blur-[6px] transition-brand duration-brand hover:border-brand-light/60 hover:bg-brand-bg/40 hover:shadow-xs"

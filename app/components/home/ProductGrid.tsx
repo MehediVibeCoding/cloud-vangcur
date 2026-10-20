@@ -283,7 +283,7 @@ export default function ProductGrid({ initialProducts, initialCategory, initialH
 
       {showViewAllCta && (
         <div className="mt-8 flex flex-col items-center gap-2 text-center">
-          <Link href={viewAllHref} className={viewAllBtnClass}>
+          <Link prefetch={false} href={viewAllHref} className={viewAllBtnClass}>
             <ViewAllLabel>
               {activeCat === 'all' ? t('সকল প্রোডাক্ট দেখুন') : t('এই ক্যাটাগরির সকল প্রোডাক্ট দেখুন')}
             </ViewAllLabel>

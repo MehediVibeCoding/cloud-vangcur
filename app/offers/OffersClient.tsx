@@ -228,7 +228,7 @@ export default function OffersClient() {
             <HeaderDecor />
 
             <div className="relative z-10 mb-4 flex items-center justify-between border-b border-ink/10 pb-3.5">
-              <Link
+              <Link prefetch={false}
                 href="/"
                 className="group inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/85 py-1.5 pl-2.5 pr-4 font-body text-xs font-bold text-ink shadow-xs backdrop-blur-md transition-all duration-brand hover:border-brand-light hover:bg-white hover:text-brand-light active:scale-95 no-underline"
               >
@@ -333,7 +333,7 @@ export default function OffersClient() {
               {config.active_model === 'model3' && model3Product && (
                 <div className="overflow-hidden rounded-[24px] border border-white/90 bg-white/90 p-5 sm:p-7 shadow-sh2 backdrop-blur-md">
                   <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-center">
-                    <Link
+                    <Link prefetch={false}
                       href={productHref(model3Product)}
                       className="group relative block aspect-square w-full overflow-hidden rounded-[18px] bg-surface-muted shadow-xs no-underline"
                     >
@@ -356,7 +356,7 @@ export default function OffersClient() {
                         <span>{lang === 'en' ? 'Hot Deal of the Week' : 'সপ্তাহের সেরা ডিল'}</span>
                       </div>
 
-                      <Link
+                      <Link prefetch={false}
                         href={productHref(model3Product)}
                         className="font-body text-lg sm:text-xl font-extrabold text-ink leading-snug hover:text-brand-light transition-colors no-underline"
                       >
@@ -385,7 +385,7 @@ export default function OffersClient() {
                           <ArrowRightIcon />
                         </motion.button>
 
-                        <Link
+                        <Link prefetch={false}
                           href={productHref(model3Product)}
                           className="rounded-full border border-border-base bg-white/80 px-5 py-3 font-body text-[13px] font-bold text-ink transition-colors hover:border-brand-light hover:bg-white no-underline text-center"
                         >
@@ -414,7 +414,7 @@ export default function OffersClient() {
                   ? 'Our promotional campaigns are updated periodically. Please explore our regular gadget catalog or check back soon!'
                   : 'আমাদের নতুন অফার বা ক্যাম্পেইন শুরু হলে এই পেজে স্বয়ংক্রিয়ভাবে দেখতে পাবেন। এখনই আমাদের সেরা গ্যাজেট সম্ভার ঘুরে দেখুন!'}
               </p>
-              <Link
+              <Link prefetch={false}
                 href="/"
                 className="shimmer-sheen inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-info to-brand-light px-7 py-3 font-body text-[14px] font-bold text-white shadow-sh2 transition-[filter] duration-brand hover:brightness-[1.03] no-underline"
               >

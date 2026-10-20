@@ -13,6 +13,7 @@ import { useWishlistStore } from '@/lib/store/wishlistStore';
 import { useCartStore } from '@/lib/store/cartStore';
 import { showToast } from '@/lib/toast';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import { useProductSeedStore, OPTIMISTIC_PRODUCT_SHELL_ENABLED } from '@/lib/store/productSeedStore';
 import { useT } from '@/lib/i18n/useT';
 import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } from '@/lib/wishHeartBurst';
 import type { Product } from '@/types';
@@ -108,6 +109,23 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
   const [cartPop, setCartPop] = useState<number | null>(null);
   const cartPopSeedRef = useRef(0);
   const cartPopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 🛡️ রিকোয়েস্ট-সেভিং ইন্টেন্ট-প্রিফেচ: মাউস শুধু পাশ দিয়ে গেলে বা আঙুল স্ক্রল করতে কার্ড ছুঁলে
+  // প্রিফেচ হবে না; কয়েক মিলিসেকেন্ড ধরে থাকলে তবেই এই একটা কার্ডের পেজ প্রিফেচ হয়।
+  const intentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelIntentPrefetch = () => {
+    if (intentTimerRef.current) {
+      clearTimeout(intentTimerRef.current);
+      intentTimerRef.current = null;
+    }
+  };
+  const scheduleIntentPrefetch = (delayMs: number) => {
+    cancelIntentPrefetch();
+    intentTimerRef.current = setTimeout(() => {
+      intentTimerRef.current = null;
+      router.prefetch(href);
+    }, delayMs);
+  };
+  useEffect(() => cancelIntentPrefetch, []);
 
   useEffect(() => {
     setWished(rawWished);
@@ -122,6 +140,21 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
   const discPct = p.old > p.price ? Math.round((1 - p.price / p.old) * 100) : 0;
   const showDiscBadge = discPct >= 5 && !sold;
   const href = productHref(p);
+
+  // ⚡ ক্লিকের সাথে সাথে তাৎক্ষণিক শেল (নাম/দাম/ছবি কার্ড থেকে) — আসল পেজ আসার আগেই ইউজার সাড়া পায়।
+  // শুধু সাধারণ বাঁ-ক্লিক/ট্যাপে; Ctrl/Cmd/Shift/মিডল-ক্লিক (নতুন ট্যাব) এ নয়। দেখুন ProductNavShell।
+  const beginOpenShell = (e: React.MouseEvent) => {
+    if (!OPTIMISTIC_PRODUCT_SHELL_ENABLED) return;
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const first = (p.imgs || [])[0];
+    useProductSeedStore.getState().begin({
+      href,
+      name: p.name,
+      price: p.price,
+      old: p.old,
+      img: typeof first === 'string' && first.startsWith('http') ? optimizeCloudinaryUrl(first, 380) : undefined,
+    });
+  };
 
   const handleWish = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -185,16 +218,18 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
   return (
     <div
       data-pid={p.id}
-      onMouseEnter={() => {
-        router.prefetch('/checkout');
-        router.prefetch(href);
-      }}
-      onTouchStart={() => router.prefetch(href)}
+      onMouseEnter={() => scheduleIntentPrefetch(120)}
+      onMouseLeave={cancelIntentPrefetch}
+      onTouchStart={() => scheduleIntentPrefetch(70)}
+      onTouchMove={cancelIntentPrefetch}
+      onTouchEnd={cancelIntentPrefetch}
+      onTouchCancel={cancelIntentPrefetch}
       className={`card-hover-glow group rounded-[18px] bg-white p-1 shadow-[0_4px_14px_rgba(0,88,199,.12)] [contain:content] ${isAnimatingTransform ? 'transform-gpu' : ''}`}
     >
       <div className="relative aspect-[0.57] overflow-hidden rounded-[14px] bg-surface-muted [contain:paint_layout]">
-        <Link
+        <Link prefetch={false}
           href={href}
+          onClick={beginOpenShell}
           className="absolute inset-0 block cursor-pointer transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:scale-[1.06]"
         >
           <ProdImg imgVal={(p.imgs || ['📦'])[0]} name={p.name} lazy={!isFirst && index >= 2} />
@@ -250,8 +285,9 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
         </div>
 
         <div className="absolute inset-x-0 bottom-0 z-[2] p-2 sm:p-3">
-          <Link
+          <Link prefetch={false}
             href={href}
+            onClick={beginOpenShell}
             title={p.name}
             className="block w-full cursor-pointer truncate overflow-hidden text-ellipsis whitespace-nowrap font-body text-[11px] font-extrabold leading-tight text-white no-underline hover:underline sm:text-sm xl:text-xs"
           >

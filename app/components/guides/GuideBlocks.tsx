@@ -430,7 +430,7 @@ function ProductRecommendationBlockView({
   return (
     <Container className="py-8">
       <BlockHeading text={block.heading} lang={lang} icon={block.headingIcon} />
-      <Link
+      <Link prefetch={false}
         href={product.href}
         className="flex flex-col gap-4 overflow-hidden rounded-2xl border border-brand-light/30 bg-gradient-to-br from-[#F0F7FF] via-white to-white p-4 shadow-sh1 transition-transform hover:scale-[1.01] sm:flex-row sm:items-center"
       >
@@ -530,7 +530,7 @@ function RelatedLinksBlockView({
           const resolvedHref = (item.targetPageId && hrefMap?.[item.targetPageId]) || item.href || '#';
           return (
             <li key={i}>
-              <Link
+              <Link prefetch={false}
                 href={resolvedHref}
                 className="group inline-flex items-center gap-1.5 font-body text-[14.5px] font-semibold text-brand-light underline decoration-brand-light/40 underline-offset-2 hover:decoration-brand-light sm:text-[15px]"
               >
@@ -569,7 +569,7 @@ function CtaBlockView({ block, lang, hrefMap }: { block: CtaBlock; lang: Lang; h
     <Container className="py-8">
       <div className="flex flex-col items-center gap-4 rounded-3xl bg-gradient-to-br from-[#F0F7FF] via-white to-white p-8 text-center shadow-sh1 ring-1 ring-brand-light/20">
         <h2 className="font-body text-[19px] font-extrabold text-ink">{t(block.heading, lang)}</h2>
-        <Link
+        <Link prefetch={false}
           href={resolvedHref}
           className="shimmer-sheen rounded-full bg-gradient-to-r from-info to-brand-light px-7 py-[13.5px] font-body text-[15px] font-bold text-white shadow-sh2 transition-[filter] duration-brand hover:brightness-[1.03] active:scale-95"
         >
