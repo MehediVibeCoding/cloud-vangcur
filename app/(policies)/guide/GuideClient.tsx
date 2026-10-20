@@ -346,8 +346,8 @@ export default function GuideClient() {
         <ul className={policyUlClass}>
           <PolicyBulletPoint>
             {lang === 'en'
-              ? <>Track Order Page (/track-order): Monitor your recent browser orders automatically on our <Link href="/track-order" className="font-bold text-brand-light hover:underline">Track Order</Link> page, or search easily with your order number.</>
-              : <>অর্ডার ট্র্যাক পেজ: ওয়েবসাইটের <Link href="/track-order" className="font-bold text-brand-light hover:underline">অর্ডার ট্র্যাক</Link> পেজে বর্তমান ডিভাইসের সাম্প্রতিক অর্ডার স্বয়ংক্রিয়ভাবে ফুটে ওঠে অথবা অর্ডার নম্বর দিয়ে লাইভ স্ট্যাটাস দেখা যায়।</>}
+              ? <>Track Order Page (/track-order): Monitor your recent browser orders automatically on our <Link prefetch={false} href="/track-order" className="font-bold text-brand-light hover:underline">Track Order</Link> page, or search easily with your order number.</>
+              : <>অর্ডার ট্র্যাক পেজ: ওয়েবসাইটের <Link prefetch={false} href="/track-order" className="font-bold text-brand-light hover:underline">অর্ডার ট্র্যাক</Link> পেজে বর্তমান ডিভাইসের সাম্প্রতিক অর্ডার স্বয়ংক্রিয়ভাবে ফুটে ওঠে অথবা অর্ডার নম্বর দিয়ে লাইভ স্ট্যাটাস দেখা যায়।</>}
           </PolicyBulletPoint>
           <PolicyBulletPoint>
             {lang === 'en'
@@ -409,70 +409,70 @@ export default function GuideClient() {
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 font-body text-xs">
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               / (হোমপেজ)
             </Link>
             <span className="text-muted">হিরো স্লাইডার, ক্যাটাগরি, প্রোডাক্ট গ্রিড, রিভিউ গ্যালারি ও এফএকিউ।</span>
           </div>
 
           <div className="rounded-[12px] border border-brand-light/35 bg-brand-bg/20 p-3 shadow-2xs">
-            <Link href="/offers" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/offers" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /offers (চলতি অফারসমূহ)
             </Link>
             <span className="text-muted">বিশেষ ক্যাম্পেইন, প্রমোশনাল ব্যানার ও সপ্তাহের সেরা হট ডিল হাব।</span>
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/shipping" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/shipping" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /shipping (অর্ডার ও শিপিং তথ্য)
             </Link>
             <span className="text-muted">ডেলিভারি এলাকা, সময়সীমা, চার্জ ও কুরিয়ার ট্র্যাকিং নীতিমালা।</span>
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/refund-policy" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/refund-policy" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /refund-policy (রিটার্ন ও রিফান্ড)
             </Link>
             <span className="text-muted">রিটার্ন, ১০০% ফ্রি রিপ্লেসমেন্ট ও আনবক্সিং ভিডিওর আইনি শর্তাবলী।</span>
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/warranty" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/warranty" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /warranty (ওয়ারেন্টি নীতিমালা)
             </Link>
             <span className="text-muted">ওয়ারেন্টির ধরন, মেয়াদ, কভারেজ ও ক্লেইম করার নিয়ম।</span>
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/terms" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/terms" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /terms (শর্তাবলী)
             </Link>
             <span className="text-muted">ডিজিটাল কমার্স পরিচালনা চুক্তি ও আইনি শর্তাবলী।</span>
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/privacy-policy" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/privacy-policy" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /privacy-policy (প্রাইভেসি পলিসি)
             </Link>
             <span className="text-muted">ব্যক্তিগত তথ্যের সুরক্ষা, এনক্রিপশন ও গোপনীয়তা প্রতিশ্রুতি।</span>
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/track-order" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/track-order" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /track-order (অর্ডার ট্র্যাক)
             </Link>
             <span className="text-muted">অর্ডার নম্বর দিয়ে লাইভ পার্সেল ডেলিভারি স্ট্যাটাস ট্র্যাকিং।</span>
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/account" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/account" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /account (প্রোফাইল ড্যাশবোর্ড)
             </Link>
             <span className="text-muted">কাস্টমার প্রোফাইল, লাইভ ওয়েদার কার্ড, অর্ডার মেমো ও মেম্বারশিপ স্পিনার।</span>
           </div>
 
           <div className="rounded-[12px] border border-border-base bg-white p-3 shadow-2xs">
-            <Link href="/search" className="font-extrabold text-brand-light hover:underline block mb-0.5">
+            <Link prefetch={false} href="/search" className="font-extrabold text-brand-light hover:underline block mb-0.5">
               /search (সার্চ পেজ)
             </Link>
             <span className="text-muted">বাংলা ও ইংরেজি কিওয়ার্ড দিয়ে প্রোডাক্ট সার্চ রেজাল্ট পেজ।</span>

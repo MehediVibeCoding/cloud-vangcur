@@ -42,7 +42,7 @@ function needsAuthRefresh(pathname: string): boolean {
 // 🛡️ এজ মেমোরি রেট লিমিট কনফিগ
 const RATE_LIMIT_WINDOW_MS = 10 * 1000; // ১০ সেকেন্ডের উইন্ডো
 const MAX_API_REQUESTS = 30;            // API রুটে ১০ সেকেন্ডে সর্বোচ্চ ৩০টি রিকোয়েস্ট
-const MAX_PAGE_REQUESTS = 120;          // সাধারণ পেজে ১০ সেকেন্ডে সর্বোচ্চ ১২০টি রিকোয়েস্ট
+const MAX_PAGE_REQUESTS = 240;          // সাধারণ পেজে ১০ সেকেন্ডে সর্বোচ্চ ২৪০টি রিকোয়েস্ট (বাংলাদেশে মোবাইল অপারেটরের শেয়ার্ড IP-তে বৈধ ইউজার যেন ভুলে ব্লক না হয়)
 
 const edgeRequestTracker = new Map<string, { count: number; resetAt: number }>();
 
@@ -89,27 +89,31 @@ export async function middleware(request: NextRequest) {
   const isKnownSearchBot = KNOWN_SEARCH_BOT_UA_REGEX.test(userAgent);
   const shouldSkipRateLimit = isKnownSearchBot && !isApiRoute;
 
+  // 🆕 পাবলিক, ক্যাশ-করা, শুধু-পড়ার API (/api/live-products, /api/search-index): Redis লাগবে না —
+  // ইন-মেমরি লিমিটই যথেষ্ট (নিচে দেখুন)।
+  const isPublicCachedApi =
+    isApiRoute && SESSIONLESS_PUBLIC_API_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const isInternalSecretProtectedApi =
     isApiRoute && INTERNAL_SECRET_PROTECTED_API_PATHS.some((p) => pathname.startsWith(p));
 
   if (!shouldSkipRateLimit) {
     let blocked = false;
     let retryAfter = 10;
-    if (isApiRoute && !isInternalSecretProtectedApi) {
+    if (isApiRoute && !isInternalSecretProtectedApi && !isPublicCachedApi) {
       const rl = await slidingWindowLimit(`mw:api:${clientIp}`, MAX_API_REQUESTS, RATE_LIMIT_WINDOW_MS / 1000);
       blocked = !rl.allowed;
       retryAfter = rl.retryAfterSec || 10;
-    } else if (isInternalSecretProtectedApi) {
-      // সিক্রেট-সুরক্ষিত internal রুট — মেমোরি-ফলব্যাকই যথেষ্ট, Redis খরচ লাগবে না (H4)
+    } else if (isInternalSecretProtectedApi || isPublicCachedApi) {
+      // সিক্রেট-সুরক্ষিত internal রুট (H4) এবং পাবলিক ক্যাশ-করা শুধু-পড়ার API — ইন-মেমরি লিমিটই যথেষ্ট, Redis খরচ লাগবে না
       blocked = !checkEdgeRateLimit(clientIp, true);
     } else {
-      // 🔒 ফিক্স (C3): আগে পেজ-রিকোয়েস্টের লিমিট শুধু `new Map()`-এ (প্রতি Vercel
-      // ইনস্ট্যান্সে আলাদা, cold start হলে মুছে যায়) — তাই বহু ইনস্ট্যান্স মিলিয়ে আসল
-      // সীমা ১২০-এর বহুগুণ হয়ে যেত, কার্যত অকার্যকর। এখন API রুটের মতোই Redis-ব্যাকড
-      // sliding-window (Upstash না থাকলে/ব্যর্থ হলে একই মেমোরি-ফলব্যাকে নামে, সাইট কখনো আটকায় না)।
-      const rl = await slidingWindowLimit(`mw:page:${clientIp}`, MAX_PAGE_REQUESTS, RATE_LIMIT_WINDOW_MS / 1000);
-      blocked = !rl.allowed;
-      retryAfter = rl.retryAfterSec || 10;
+      // 🛡️ রিকোয়েস্ট-সেভিং (২০২৬-১০): আগে প্রতিটা পেজ/প্রিফেচ রিকোয়েস্টে Upstash Redis-এ একটা
+      // নেটওয়ার্ক-কল হতো — প্রতি পেজ-ভিউতে বাড়তি দেরি + Upstash কোটা খরচ। পেজগুলো ISR-ক্যাশড ও
+      // সস্তা; আর Worker-এর ভেতরের এই চেক রিকোয়েস্ট-কোটা বাঁচায়ও না (ব্লক হলেও Worker চলেছে ধরা হয়)।
+      // তাই পেজে শুধু ইন-মেমরি লিমিট (Redis ব্যর্থ হলে আগেও এটাই ফলব্যাক ছিল)। আসল বট-ঠেকানো
+      // Cloudflare ড্যাশবোর্ডের Rate Limiting রুল দিয়ে হয় — Worker-এর আগেই কাজ করে। Redis শুধু
+      // লেখা/সংবেদনশীল /api/* রুটে থাকলো।
+      blocked = !checkEdgeRateLimit(clientIp, false);
     }
     if (blocked) {
       return new NextResponse('Too many requests. Please slow down.', {

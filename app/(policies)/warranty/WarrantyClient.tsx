@@ -294,12 +294,12 @@ export default function WarrantyClient() {
           {en ? (
             <>
               Warranty covers genuine defects and is solved by a replacement or service. If the product has no defect, returns and refunds are not available for personal preference or a change of mind. Read the full rules on our{' '}
-              <Link href="/refund-policy" className={linkClass}>Returns &amp; Refunds</Link> page.
+              <Link prefetch={false} href="/refund-policy" className={linkClass}>Returns &amp; Refunds</Link> page.
             </>
           ) : (
             <>
               ওয়ারেন্টি শুধু প্রকৃত ত্রুটির জন্য, আর তার সমাধান হয় রিপ্লেসমেন্ট বা সার্ভিসের মাধ্যমে। পণ্যে কোনো ত্রুটি না থাকলে শুধু পছন্দ না হওয়া বা মন পরিবর্তনের কারণে রিটার্ন বা রিফান্ড হয় না। পূর্ণ নিয়ম দেখুন আমাদের{' '}
-              <Link href="/refund-policy" className={linkClass}>রিটার্ন ও রিফান্ড নীতিমালা</Link> পেজে।
+              <Link prefetch={false} href="/refund-policy" className={linkClass}>রিটার্ন ও রিফান্ড নীতিমালা</Link> পেজে।
             </>
           )}
         </p>
@@ -309,12 +309,12 @@ export default function WarrantyClient() {
         {en ? (
           <>
             This warranty policy applies together with our{' '}
-            <Link href="/terms" className={linkClass}>Terms &amp; Conditions</Link>. Vangcur may update it from time to time.
+            <Link prefetch={false} href="/terms" className={linkClass}>Terms &amp; Conditions</Link>. Vangcur may update it from time to time.
           </>
         ) : (
           <>
             এই ওয়ারেন্টি নীতিমালা আমাদের{' '}
-            <Link href="/terms" className={linkClass}>শর্তাবলী</Link>-র সাথে একত্রে প্রযোজ্য। ভাঙচুর কর্তৃপক্ষ প্রয়োজনে এটি হালনাগাদ করতে পারে।
+            <Link prefetch={false} href="/terms" className={linkClass}>শর্তাবলী</Link>-র সাথে একত্রে প্রযোজ্য। ভাঙচুর কর্তৃপক্ষ প্রয়োজনে এটি হালনাগাদ করতে পারে।
           </>
         )}
       </div>

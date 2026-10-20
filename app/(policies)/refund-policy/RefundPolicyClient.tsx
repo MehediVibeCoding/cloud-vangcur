@@ -206,8 +206,8 @@ export default function RefundPolicyClient() {
       >
         <p className={policyPClass}>
           {lang === 'en'
-            ? <>For technical issues arising after the initial 7-day period, coverage is handled under the respective product’s warranty timeline (up to 6 months, 1 year, or 2 years). Full warranty conditions are outlined on our <Link href="/warranty" className="font-bold text-brand-light hover:underline">Warranty Policy</Link> page.</>
-            : <>প্রাথমিক ৭ দিনের পরও পণ্যের মেয়াদের মধ্যে (প্রোডাক্টভেদে ৬ মাস / ১ বছর / ২ বছর) কোনো অভ্যন্তরীণ টেকনিক্যাল সমস্যা দেখা দিলে একই নিয়মে ওয়ারেন্টি সাপোর্ট পাওয়া যাবে। বিস্তারিত জানতে আমাদের <Link href="/warranty" className="font-bold text-brand-light hover:underline">ওয়ারেন্টি নীতিমালা পেজ</Link> দেখুন।</>}
+            ? <>For technical issues arising after the initial 7-day period, coverage is handled under the respective product’s warranty timeline (up to 6 months, 1 year, or 2 years). Full warranty conditions are outlined on our <Link prefetch={false} href="/warranty" className="font-bold text-brand-light hover:underline">Warranty Policy</Link> page.</>
+            : <>প্রাথমিক ৭ দিনের পরও পণ্যের মেয়াদের মধ্যে (প্রোডাক্টভেদে ৬ মাস / ১ বছর / ২ বছর) কোনো অভ্যন্তরীণ টেকনিক্যাল সমস্যা দেখা দিলে একই নিয়মে ওয়ারেন্টি সাপোর্ট পাওয়া যাবে। বিস্তারিত জানতে আমাদের <Link prefetch={false} href="/warranty" className="font-bold text-brand-light hover:underline">ওয়ারেন্টি নীতিমালা পেজ</Link> দেখুন।</>}
         </p>
       </PolicySection>
 

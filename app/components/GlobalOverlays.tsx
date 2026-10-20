@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import FloatCartBadge from './cart/FloatCartBadge';
 import ConfirmDialog from './ui/ConfirmDialog';
+import ProductNavShell from './product/ProductNavShell';
 import { OPEN_CART_EVENT, OPEN_WISHLIST_EVENT, OPEN_TRACK_ORDER_EVENT } from '@/lib/uiEvents';
 import { useLanguageStore } from '@/lib/store/languageStore';
 import { useThemeStore } from '@/lib/store/themeStore';
@@ -99,27 +100,11 @@ export default function GlobalOverlays() {
   
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
-  const router = useRouter();
   const lang = useLanguageStore((s) => s.lang);
 
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
-
-  // ইনস্ট্যান্ট চেকআউট ট্রানজিশনের জন্য প্রি-ফেচ
-  // শুধু ব্রাউজার idle হলে প্রি-ফেচ — প্রথম লোডের (LCP/হাইড্রেশন) সাথে নেটওয়ার্ক-প্রতিযোগিতা এড়াতে
-  useEffect(() => {
-    const run = () => {
-      router.prefetch('/checkout');
-      router.prefetch('/');
-    };
-    if ('requestIdleCallback' in window) {
-      const id = window.requestIdleCallback(run, { timeout: 4000 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const t = setTimeout(run, 2500);
-    return () => clearTimeout(t);
-  }, [router]);
 
   useEffect(() => {
     useLanguageStore.getState().hydrateLanguage();
@@ -239,6 +224,7 @@ export default function GlobalOverlays() {
       <TrackOrderModal isOpen={trackOpen} onClose={() => setTrackOpen(false)} />
       <PendingLockModal />
       <ConfirmDialog />
+      <ProductNavShell />
       
       {!hideFloatingBadges && !isGuidePage && <FloatCartBadge />}
 

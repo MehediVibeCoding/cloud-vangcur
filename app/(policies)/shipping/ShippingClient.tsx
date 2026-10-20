@@ -194,8 +194,8 @@ export default function ShippingClient() {
       >
         <p className={policyPClass}>
           {lang === 'en'
-            ? <>Once your parcel is handed over and booked, an automated courier tracking link is sent via SMS by Pathao Courier. Additionally, you can monitor live delivery status directly from our website&apos;s <Link href="/track-order" className="font-bold text-brand-light hover:underline">Track Order</Link> page on your device or log in to track from any device anytime.</>
-            : <>পার্সেল কুরিয়ারে হস্তান্তর ও বুকিং হওয়ার পর পাঠাও কুরিয়ারের পক্ষ থেকে স্বয়ংক্রিয় ট্র্যাকিং এসএমএস পাঠানো হয়। এছাড়া আমাদের ওয়েবসাইটের <Link href="/track-order" className="font-bold text-brand-light hover:underline">অর্ডার ট্র্যাক</Link> পেজে আপনার ব্রাউজারের সাম্প্রতিক অর্ডারগুলো সরাসরি লাইভ দেখতে পারবেন অথবা লগইন করে যেকোনো ডিভাইস থেকে সার্বক্ষণিক ট্র্যাক করতে পারবেন।</>}
+            ? <>Once your parcel is handed over and booked, an automated courier tracking link is sent via SMS by Pathao Courier. Additionally, you can monitor live delivery status directly from our website&apos;s <Link prefetch={false} href="/track-order" className="font-bold text-brand-light hover:underline">Track Order</Link> page on your device or log in to track from any device anytime.</>
+            : <>পার্সেল কুরিয়ারে হস্তান্তর ও বুকিং হওয়ার পর পাঠাও কুরিয়ারের পক্ষ থেকে স্বয়ংক্রিয় ট্র্যাকিং এসএমএস পাঠানো হয়। এছাড়া আমাদের ওয়েবসাইটের <Link prefetch={false} href="/track-order" className="font-bold text-brand-light hover:underline">অর্ডার ট্র্যাক</Link> পেজে আপনার ব্রাউজারের সাম্প্রতিক অর্ডারগুলো সরাসরি লাইভ দেখতে পারবেন অথবা লগইন করে যেকোনো ডিভাইস থেকে সার্বক্ষণিক ট্র্যাক করতে পারবেন।</>}
         </p>
       </PolicySection>
 

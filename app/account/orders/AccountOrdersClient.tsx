@@ -165,7 +165,7 @@ export default function AccountOrdersClient() {
                     </svg>
                     <div className="mb-1 font-body text-sm font-bold text-ink">{t('এখনো কোনো অর্ডার নেই')}</div>
                     <div className="mb-5 font-body text-xs text-muted">{t('অর্ডার করলে এখানে দেখাবে')}</div>
-                    <Link
+                    <Link prefetch={false}
                       href="/"
                       className="inline-block rounded-full bg-gradient-to-r from-info to-brand-light px-6 py-2.5 font-body text-[13px] font-bold text-white shadow-sh1 transition-all hover:brightness-105 active:scale-95"
                     >

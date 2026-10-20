@@ -68,7 +68,7 @@ export default function NotFound() {
         <HeaderDecor />
 
         <div className="relative z-10 mx-auto mb-4 flex justify-center">
-          <Link href="/" className="inline-block">
+          <Link prefetch={false} href="/" className="inline-block">
             <VangcurLogoMark
               aria-label="Vangcur Gadgets"
               className="h-8 w-auto select-none text-brand-light"
@@ -95,7 +95,7 @@ export default function NotFound() {
         </p>
 
         <div className="relative z-10 flex flex-col gap-2.5">
-          <Link
+          <Link prefetch={false}
             href="/"
             className="shimmer-sheen flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-info to-brand-light py-[13px] font-body text-[14.5px] font-bold text-white shadow-sh2 transition-[filter] duration-brand hover:brightness-[1.03] active:scale-95 no-underline"
           >
@@ -103,7 +103,7 @@ export default function NotFound() {
             <span>{lang === 'en' ? 'Back to Homepage' : 'হোমপেজে ফিরে যান'}</span>
           </Link>
 
-          <Link
+          <Link prefetch={false}
             href="/search"
             className="flex w-full items-center justify-center gap-2 rounded-full border border-border-base bg-white/85 py-[12px] font-body text-[13.5px] font-bold text-ink shadow-xs transition-colors hover:border-brand-light hover:bg-white active:scale-95 no-underline"
           >

@@ -70,7 +70,7 @@ export default function CollectionPageClient({ title, titleEn, products }: Props
                 <EmptyBoxIcon />
               </div>
               <p className="text-sm text-muted">{en ? 'No products in this collection yet' : 'এই কালেকশনে এখন কোনো পণ্য নেই'}</p>
-              <Link
+              <Link prefetch={false}
                 href="/"
                 className="inline-flex items-center gap-2 rounded-full border-none bg-gradient-to-r from-info to-brand-light px-7 py-3 font-body text-sm font-bold text-white no-underline shadow-sh2 transition-brand duration-brand hover:brightness-[1.03]"
               >

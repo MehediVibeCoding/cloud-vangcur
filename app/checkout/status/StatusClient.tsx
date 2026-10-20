@@ -588,7 +588,7 @@ export default function StatusClient() {
                 </div>
               </div>
 
-              <Link
+              <Link prefetch={false}
                 href="/"
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-info to-brand-light py-[13.5px] font-body text-[14.5px] font-bold text-white shadow-sh2 transition-all duration-brand hover:brightness-[1.03] active:scale-95 no-underline"
               >

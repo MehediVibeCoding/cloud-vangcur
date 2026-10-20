@@ -95,11 +95,6 @@ export default function WishlistDrawer({ isOpen, onClose }: WishlistDrawerProps)
 
   useHistoryModal(isOpen, onClose, 'wishlist-drawer');
 
-  useEffect(() => {
-    router.prefetch('/checkout');
-    router.prefetch('/');
-  }, [router]);
-
   // 🖼️ উইশলিস্ট খোলার সময় আইটেমের ছবি সর্বশেষ ছবিতে হালনাগাদ (৫ মিনিট ক্যাশসহ)
   useEffect(() => {
     if (isOpen) refreshWishlistImages();

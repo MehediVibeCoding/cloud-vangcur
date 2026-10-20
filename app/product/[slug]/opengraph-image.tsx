@@ -7,7 +7,7 @@ import { idFromSlug } from '@/lib/productData';
 // যেটা পূর্ণাঙ্গ Node API সাপোর্ট করে) — তাই `export const runtime = 'edge'`
 // থাকলে build-ই ফেল করে ("cannot use the edge runtime")। এই লাইন বাদ দিলে
 // next/og-এর ImageResponse Node.js runtime-এই স্বাভাবিকভাবে কাজ করে।
-export const revalidate = 300;
+export const revalidate = 7200; // পেজের সাথে মিলিয়ে ২ ঘণ্টা (আগে ৫ মিনিট)
 export const alt = 'Vangcur Product';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
