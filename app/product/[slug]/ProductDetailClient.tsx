@@ -307,14 +307,14 @@ function FeatureItem({ text }: { text: string }) {
   );
 }
 
-function GalleryImg({ val, name, isThumb }: { val?: string; name: string; isThumb: boolean }) {
+function GalleryImg({ val, alt, isThumb }: { val?: string; alt: string; isThumb: boolean }) {
   const [broken, setBroken] = useState(false);
   const isUrl = typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'));
   if (isUrl && !broken) {
     return (
       <img
         src={optimizeCloudinaryUrl(val, isThumb ? 200 : 900)}
-        alt={name || ''}
+        alt={alt || ''}
         loading="lazy"
         className={isThumb ? 'h-full w-full rounded-[8px] object-cover object-top' : 'block h-full w-full object-cover object-top select-none'}
         onError={() => setBroken(true)}
@@ -410,6 +410,11 @@ export default function ProductDetailClient({
   const [prodsLoaded, setProdsLoaded] = useState(
     !!initialProduct || (initialProducts && initialProducts.length > 0)
   );
+
+  useEffect(() => {
+    router.prefetch('/checkout');
+    router.prefetch('/');
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -898,7 +903,7 @@ export default function ProductDetailClient({
             </svg>
           </div>
           <p className="text-sm text-muted">{t('এই প্রোডাক্টটি খুঁজে পাওয়া যায়নি')}</p>
-          <Link prefetch={false}
+          <Link
             href="/"
             className="inline-flex items-center gap-2 rounded-full bg-brand-light px-7 py-3 font-body text-sm font-bold text-white no-underline shadow-sh2 transition-brand duration-brand hover:-translate-y-0.5 hover:bg-brand-light-hover hover:shadow-sh3"
           >
@@ -912,6 +917,10 @@ export default function ProductDetailClient({
   }
 
   const imgs = prod.imgs && prod.imgs.length ? prod.imgs : ['📦'];
+  // 🆕 প্রতিটা ছবির নিজস্ব alt text (img_alts) — খালি/না-থাকা ইনডেক্সে প্রোডাক্টের
+  // নামে ফলব্যাক করে, যাতে পুরনো প্রোডাক্ট (যেগুলোর alt এখনো লেখা হয়নি) ভেঙে না যায়
+  const imgAlts = prod.imgAlts || [];
+  const altFor = (i: number) => (imgAlts[i] && imgAlts[i].trim()) || prod.name;
   const techRows = getTechSpecRows(prod.specs);
   const pkg = getPackagingContent(prod.packagingContent, prod.specs);
   const features = Array.isArray(prod.features) ? prod.features : [];
@@ -976,7 +985,7 @@ export default function ProductDetailClient({
               className="flex h-full w-full items-center justify-center transition-transform duration-300"
               style={{ transformOrigin, transform: zoomed ? 'scale(2)' : 'scale(1)' }}
             >
-              <GalleryImg val={imgs[curImgIdx]} name={prod.name} isThumb={false} />
+              <GalleryImg val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} />
             </div>
           </div>
 
@@ -1001,7 +1010,7 @@ export default function ProductDetailClient({
                     className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border-[1.5px] transition-brand duration-brand ${i === curImgIdx ? 'border-brand-light shadow-[0_0_0_3px_rgba(68,167,252,.12)]' : 'border-border-base hover:border-brand-light/40'}`}
                     onClick={() => goImg(i)}
                   >
-                    <GalleryImg val={im} name={prod.name} isThumb />
+                    <GalleryImg val={im} alt={altFor(i)} isThumb />
                   </button>
                 ))}
               </div>
@@ -1048,7 +1057,7 @@ export default function ProductDetailClient({
                       {label}
                     </span>
                   ) : (
-                    <Link prefetch={false}
+                    <Link
                       key={v.id}
                       href={productHref(v)}
                       className="flex items-center gap-1.5 rounded-full border border-brand-light/25 bg-white/60 px-3 py-1.5 text-[12.5px] font-semibold text-ink shadow-2xs backdrop-blur-[6px] transition-brand duration-brand hover:border-brand-light/60 hover:bg-brand-bg/40 hover:shadow-xs"

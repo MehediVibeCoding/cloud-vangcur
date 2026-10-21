@@ -15,6 +15,7 @@ export interface Product {
   cats: string[];
   name: string;
   imgs: string[];
+  imgAlts?: string[]; // 🆕 প্রতিটা imgs[i]-এর নিজস্ব alt text (index মিলিয়ে); খালি থাকলে name-এ ফলব্যাক
   price: number;
   old: number;
   specs: ProductSpecs;

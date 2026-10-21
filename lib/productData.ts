@@ -59,6 +59,7 @@ interface RawCustomProduct {
   warranty?: string;
   rating?: number | string;
   imgs?: unknown;
+  img_alts?: unknown;
   specs?: unknown;
   desc_text?: string;
   desc?: string;
@@ -97,6 +98,11 @@ export function mapCustomProduct(p: RawCustomProduct): Product {
   let imgs = p.imgs as unknown;
   if (typeof imgs === 'string') imgs = parseJsonish<string[]>(imgs, imgs ? [imgs] : ['📦']);
   if (!Array.isArray(imgs) || !imgs.length) imgs = ['📦'];
+
+  let imgAlts = p.img_alts as unknown;
+  if (typeof imgAlts === 'string') imgAlts = parseJsonish<string[]>(imgAlts, []);
+  if (!Array.isArray(imgAlts)) imgAlts = [];
+
   return {
     id: p.id,
     cat: p.cat || 'rgb',
@@ -111,6 +117,7 @@ export function mapCustomProduct(p: RawCustomProduct): Product {
     warranty: (p.warranty || '').trim(), // খালি = ওয়ারেন্টি নেই → সাইটে ওয়ারেন্টি অংশ দেখাবে না
     rating: Number(p.rating) || 4.5,
     imgs: imgs as string[],
+    imgAlts: imgAlts as string[],
     specs,
     desc: p.desc_text || p.desc || '',
     longDesc: p.long_desc || p.desc_text || p.desc || '',
@@ -133,7 +140,7 @@ export function mapCustomProduct(p: RawCustomProduct): Product {
 }
 
 const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch';
-const DETAIL_COLS = `${GRID_COLS},desc_text,long_desc,features,faqs,closing,power_info,info_boxes,seo_h1,meta_title,meta_description,og_description,quick_specs_text,packaging_content`;
+const DETAIL_COLS = `${GRID_COLS},img_alts,desc_text,long_desc,features,faqs,closing,power_info,info_boxes,seo_h1,meta_title,meta_description,og_description,quick_specs_text,packaging_content`;
 
 const QUERY_TIMEOUT_MS = 4000;
 const RETRY_DELAY_MS = 400;
