@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* বাংলা সংখ্যা (০-৯) এর আলাদা ফন্ট — আগে Google Fonts থেকে `text=` দিয়ে আনা হতো (২টা বাইরের সার্ভার, ২টা
+   রিকোয়েস্ট-চেইন)। এখন একই ফন্ট (Noto Sans Bengali, ভ্যারিয়েবল) থেকে শুধু ১০টা ডিজিট কেটে নিজের সার্ভারে
+   রাখা (৩.৮ KB)। ⚠️ ফন্ট-নাম 'Noto Sans Bengali' হুবহু একই রাখা হয়েছে — tailwind.config.ts এর `font-body`
+   স্ট্যাক ও InvoiceClient এর ফন্ট-স্ট্যাক এই নামেই খোঁজে; নাম বদলালে ডিজিট আবার Hind Siliguri-তে ফিরে যাবে।
+   unicode-range শুধু বাংলা ডিজিটে সীমাবদ্ধ, তাই অন্য কোনো অক্ষরে প্রভাব নেই। ওজন 400–700 (আগের ৪টা ওজনের
+   সমান; 800/900 চাইলে আগের মতোই 700 ব্যবহার হবে)। */
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-bengali-digits-v1.woff2') format('woff2');
+  unicode-range: U+09E6-09EF;
+}
+
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;

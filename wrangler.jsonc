@@ -3,6 +3,9 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-10-12",
   "compatibility_flags": ["nodejs_compat"],
+  // 📊 Worker এর CPU সময়, এরর ও রিকোয়েস্ট লগ Cloudflare ড্যাশবোর্ডে (Workers → Logs/Metrics) দেখার জন্য।
+  // ফ্রি প্ল্যানে ১০ms CPU সীমা আছে, তাই কোনো পেজ সীমা ছুঁচ্ছে কিনা এখান থেকেই ধরা পড়বে।
+  "observability": { "enabled": true },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

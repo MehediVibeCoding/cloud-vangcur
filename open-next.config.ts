@@ -24,7 +24,18 @@ import d1NextTagCache from '@opennextjs/cloudflare/overrides/tag-cache/d1-next-t
 // পেজ-ভিউতে ৫–৬ বার দেখা হয়; KV-র ফ্রি সীমা মাত্র ১ লাখ রিড/দিন, D1-এ ৫০ লাখ রো/দিন।
 // (এটা শুধু ক্যাশ-মেটাডেটা; আপনার আসল ডেটা সব Supabase-এই থাকে।)
 export default defineCloudflareConfig({
-  incrementalCache: withRegionalCache(kvIncrementalCache, { mode: 'long-lived' }),
+  // ⚡ KV-রিড কমানো: `shouldLazilyUpdateOnCacheHit: false` — আগে (ডিফল্টে true) এজ-ক্যাশের প্রতিটা হিটে
+  // ব্যাকগ্রাউন্ডে KV থেকে আবার পড়া হতো, ফলে `withRegionalCache` KV-রিড আসলে কমাতো না।
+  //
+  // 🛡️ `bypassTagCacheOnCacheHit` ইচ্ছাকৃতভাবে `false`: `true` দিলে ক্যাশ-হিটে D1 ট্যাগ-চেক একদম বাদ যায় —
+  // তখন অ্যাডমিনের তাৎক্ষণিক পার্জ (revalidate-catalog এ `revalidateTag('catalog', { expire: 0 })`) ওই এলাকার
+  // ক্যাশ-মেয়াদ (পেজের revalidate, ১–২ ঘণ্টা) শেষ হওয়া পর্যন্ত কাজ করে না। `true` নিরাপদ হতো শুধু Cloudflare
+  // ক্যাশ-পার্জ (cdnInvalidation) চালু থাকলে — এই প্রজেক্টে সেটা কনফিগার করা নেই।
+  incrementalCache: withRegionalCache(kvIncrementalCache, {
+    mode: 'long-lived',
+    shouldLazilyUpdateOnCacheHit: false,
+    bypassTagCacheOnCacheHit: false,
+  }),
   tagCache: d1NextTagCache,
   queue: memoryQueue,
 });

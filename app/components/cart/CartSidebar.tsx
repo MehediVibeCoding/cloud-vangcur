@@ -459,9 +459,9 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
           <HeaderDecor />
           <div className="relative z-10 flex items-center justify-between">
             <div>
-              <h3 className="font-body text-[17px] font-extrabold text-ink">
+              <h2 className="font-body text-[17px] font-extrabold text-ink">
                 🛒 {lang === 'en' ? 'Your Cart' : 'আপনার কার্ট'}
-              </h3>
+              </h2>
               <p className="mt-0.5 font-body text-[13px] font-semibold text-muted">
                 {lang === 'en'
                   ? `${totalCount} ${totalCount === 1 ? 'item' : 'items'} selected`

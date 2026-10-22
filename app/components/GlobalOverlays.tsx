@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import FloatCartBadge from './cart/FloatCartBadge';
 import ConfirmDialog from './ui/ConfirmDialog';
-import ProductNavShell from './product/ProductNavShell';
 import { OPEN_CART_EVENT, OPEN_WISHLIST_EVENT, OPEN_TRACK_ORDER_EVENT } from '@/lib/uiEvents';
 import { useLanguageStore } from '@/lib/store/languageStore';
 import { useThemeStore } from '@/lib/store/themeStore';
@@ -224,7 +223,6 @@ export default function GlobalOverlays() {
       <TrackOrderModal isOpen={trackOpen} onClose={() => setTrackOpen(false)} />
       <PendingLockModal />
       <ConfirmDialog />
-      <ProductNavShell />
       
       {!hideFloatingBadges && !isGuidePage && <FloatCartBadge />}
 

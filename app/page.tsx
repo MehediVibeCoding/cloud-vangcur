@@ -5,13 +5,14 @@ import { fetchHeroCards, DEFAULT_HERO_CARDS } from '@/lib/heroSliderData';
 import { fetchShowcase, DEFAULT_SHOWCASE } from '@/lib/showcaseData';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
 import { logError } from '@/lib/logger';
+import { fetchSettingsBatch, HOME_SETTING_KEYS } from '@/lib/storeSettingsBatch';
 import ClientHome from './ClientHome';
 // ➕ নতুন ইম্পোর্ট — শুধু এই একটা লাইন যোগ হয়েছে (Google/crawler-এর জন্য
 // sr-only purpose-description, দেখুন app/components/home/SeoIntro.tsx)
 import SeoIntro from './components/home/SeoIntro';
 import HomeJsonLd from './components/home/HomeJsonLd';
 
-export const revalidate = 120;
+export const revalidate = 3600;
 
 // 🆕 কাস্টমার-গ্যালারির ছবি — হোম ISR-এর সাথে সার্ভারে একবার আনা হয় (আগে প্রতিটি নতুন ভিজিটরের
 // ব্রাউজার থেকে আলাদা কোয়েরি যেত)। কোয়েরি হুবহু CustomerGallery-র আগের কোয়েরি; ব্যর্থ বা খালি হলে
@@ -65,15 +66,22 @@ export default async function HomePage() {
   // করলে ProductGrid.tsx ক্লায়েন্ট থেকে চেয়ে নেয়। প্রোডাক্ট সংখ্যা কম থাকা
   // অবস্থায় (যেমন এখন) আচরণ প্রায় একই থাকবে, কিন্তু ক্যাটালগ বড় হলে হোমপেজ
   // হালকা থেকে যাবে।
-  const [productsPage, initialCategories, initialHeroCards, initialShowcase, initialGallery] = supabase
+  // ⚡ store_settings এর তিনটা কী এক কলে (আগে ৩টা আলাদা কল)। ব্যাচ ব্যর্থ হলে settings = null,
+  // তখন প্রতিটা ফেচার আগের মতো নিজে কোয়েরি করে — ফলব্যাক আচরণ অপরিবর্তিত।
+  const [productsPage, settings, initialGallery] = supabase
     ? await Promise.all([
       fetchProductsPage(supabase, 'all', 0, PRODUCTS_PAGE_SIZE),
-      fetchCategories(supabase),
-      fetchHeroCards(supabase),
-      fetchShowcase(supabase),
+      fetchSettingsBatch(supabase, HOME_SETTING_KEYS),
       fetchGalleryReviewsSafe(supabase),
     ])
-    : [{ products: [], hasMore: false }, DEFAULT_CATEGORIES, DEFAULT_HERO_CARDS, DEFAULT_SHOWCASE, null];
+    : [{ products: [], hasMore: false }, null, null];
+  const [initialCategories, initialHeroCards, initialShowcase] = supabase
+    ? await Promise.all([
+      fetchCategories(supabase, settings),
+      fetchHeroCards(supabase, settings),
+      fetchShowcase(supabase, settings),
+    ])
+    : [DEFAULT_CATEGORIES, DEFAULT_HERO_CARDS, DEFAULT_SHOWCASE];
   const initialProducts = productsPage.products;
   const initialHasMore = productsPage.hasMore;
 

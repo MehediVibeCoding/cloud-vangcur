@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
+import { preload } from 'react-dom';
 import './globals.css';
 import { dmSans, hindSiliguri } from './fonts';
 import GlobalOverlays from './components/GlobalOverlays';
@@ -60,6 +61,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const lang = await getServerLang();
+  // বাংলা সংখ্যার (০-৯) ফন্ট নিজের সার্ভারে (৩.৮ KB) — আগে Google Fonts থেকে দুই ধাপে আসত
+  // (preconnect → css → woff2) এবং JS দিয়ে দেরিতে সক্রিয় হতো। এখন @font-face (globals.css) আর এই
+  // preload একসাথে: ডিজিট প্রথম পেইন্টেই সঠিক ফন্টে আসে। `preload()` (react-dom) <head> এর শুরুতে
+  // একটাই লিংক বসায়; JSX এ <link rel="preload"> লিখলে React সেটা দুবার (hoist + জায়গামতো) দেয়।
+  preload('/fonts/noto-sans-bengali-digits-v1.woff2', {
+    as: 'font',
+    type: 'font/woff2',
+    crossOrigin: 'anonymous',
+  });
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
   let supabaseOrigin: string | null = null;
   try {
@@ -96,31 +106,6 @@ export default async function RootLayout({
             <link rel="dns-prefetch" href={supabaseOrigin} />
           </>
         )}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-        {/* বাংলা সংখ্যা ও ডিজিটের জন্য নির্ভরযোগ্য গুগল ফন্ট স্টাইলশীট (জিরো 404 এরর)।
-            এটা রেন্ডার-ব্লকিং না হওয়ার জন্য প্রথমে preload করে, তারপর JS দিয়ে স্টাইলশীট
-            হিসেবে সক্রিয় করা হয় (ক্লাসিক async-CSS প্যাটার্ন) — এতে প্রাথমিক পেইন্ট/LCP
-            আটকায় না, শুধু সংখ্যাগুলো ফন্ট লোড হওয়ার সাথে সাথে সামান্য পরে রিফ্লো হয়। */}
-        <link
-          rel="preload"
-          as="style"
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&text=%E0%A7%A6%E0%A7%A7%E0%A7%A8%E0%A7%A9%E0%A7%AA%E0%A7%AB%E0%A7%AC%E0%A7%AD%E0%A7%AE%E0%A7%AF&display=swap"
-        />
-        <noscript>
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&text=%E0%A7%A6%E0%A7%A7%E0%A7%A8%E0%A7%A9%E0%A7%AA%E0%A7%AB%E0%A7%AC%E0%A7%AD%E0%A7%AE%E0%A7%AF&display=swap"
-          />
-        </noscript>
-        <Script
-          id="digit-font-loader"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&text=%E0%A7%A6%E0%A7%A7%E0%A7%A8%E0%A7%A9%E0%A7%AA%E0%A7%AB%E0%A7%AC%E0%A7%AD%E0%A7%AE%E0%A7%AF&display=swap';document.head.appendChild(l);})();`,
-          }}
-        />
         {/* 🐢 পারফরম্যান্স ফিক্স (PageSpeed অডিট): GTM (gtm.js, 176.8 KiB — সবচেয়ে বড়
             একক স্ক্রিপ্ট) আগে এখানে afterInteractive দিয়ে সরাসরি লোড হতো, কোনো
             deferral ছাড়াই। এখন এটা GA4/Clarity/Meta Pixel-এর মতোই Analytics.tsx-এ

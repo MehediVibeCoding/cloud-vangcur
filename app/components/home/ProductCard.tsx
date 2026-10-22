@@ -13,7 +13,6 @@ import { useWishlistStore } from '@/lib/store/wishlistStore';
 import { useCartStore } from '@/lib/store/cartStore';
 import { showToast } from '@/lib/toast';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
-import { useProductSeedStore, OPTIMISTIC_PRODUCT_SHELL_ENABLED } from '@/lib/store/productSeedStore';
 import { useT } from '@/lib/i18n/useT';
 import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } from '@/lib/wishHeartBurst';
 import type { Product } from '@/types';
@@ -141,21 +140,6 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
   const showDiscBadge = discPct >= 5 && !sold;
   const href = productHref(p);
 
-  // ⚡ ক্লিকের সাথে সাথে তাৎক্ষণিক শেল (নাম/দাম/ছবি কার্ড থেকে) — আসল পেজ আসার আগেই ইউজার সাড়া পায়।
-  // শুধু সাধারণ বাঁ-ক্লিক/ট্যাপে; Ctrl/Cmd/Shift/মিডল-ক্লিক (নতুন ট্যাব) এ নয়। দেখুন ProductNavShell।
-  const beginOpenShell = (e: React.MouseEvent) => {
-    if (!OPTIMISTIC_PRODUCT_SHELL_ENABLED) return;
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    const first = (p.imgs || [])[0];
-    useProductSeedStore.getState().begin({
-      href,
-      name: p.name,
-      price: p.price,
-      old: p.old,
-      img: typeof first === 'string' && first.startsWith('http') ? optimizeCloudinaryUrl(first, 380) : undefined,
-    });
-  };
-
   const handleWish = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -229,7 +213,6 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
       <div className="relative aspect-[0.57] overflow-hidden rounded-[14px] bg-surface-muted [contain:paint_layout]">
         <Link prefetch={false}
           href={href}
-          onClick={beginOpenShell}
           className="absolute inset-0 block cursor-pointer transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:scale-[1.06]"
         >
           <ProdImg imgVal={(p.imgs || ['📦'])[0]} name={p.name} lazy={!isFirst && index >= 2} />
@@ -287,7 +270,6 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
         <div className="absolute inset-x-0 bottom-0 z-[2] p-2 sm:p-3">
           <Link prefetch={false}
             href={href}
-            onClick={beginOpenShell}
             title={p.name}
             className="block w-full cursor-pointer truncate overflow-hidden text-ellipsis whitespace-nowrap font-body text-[11px] font-extrabold leading-tight text-white no-underline hover:underline sm:text-sm xl:text-xs"
           >

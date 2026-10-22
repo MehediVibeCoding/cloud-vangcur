@@ -16,6 +16,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { parseSupabaseVal } from './categoryData';
 import { logWarn } from './logger';
+import type { SettingsMap } from './storeSettingsBatch';
 
 export const SHOWCASE_SETTING_KEY = 'vc_home_showcase';
 export const SHOWCASE_CARD_COUNT = 4;
@@ -294,19 +295,31 @@ export function collectionHref(collectionId: string): string {
 
 const QUERY_TIMEOUT_MS = 3500;
 
-export async function fetchShowcase(supabase: SupabaseClient): Promise<ShowcaseConfig> {
+export async function fetchShowcase(
+  supabase: SupabaseClient,
+  preloaded?: SettingsMap | null,
+): Promise<ShowcaseConfig> {
   try {
-    let abortSignal: AbortSignal | undefined;
-    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
-      abortSignal = AbortSignal.timeout(QUERY_TIMEOUT_MS);
-    }
+    // preloaded (lib/storeSettingsBatch.ts) থাকলে আলাদা কোয়েরি যায় না; না থাকলে আগের মতোই
+    let data: { setting_value: unknown } | null;
+    let error: unknown = null;
+    if (preloaded) {
+      data = SHOWCASE_SETTING_KEY in preloaded ? { setting_value: preloaded[SHOWCASE_SETTING_KEY] } : null;
+    } else {
+      let abortSignal: AbortSignal | undefined;
+      if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+        abortSignal = AbortSignal.timeout(QUERY_TIMEOUT_MS);
+      }
 
-    const { data, error } = await supabase
-      .from('store_settings')
-      .select('setting_value')
-      .eq('setting_key', SHOWCASE_SETTING_KEY)
-      .abortSignal(abortSignal as AbortSignal)
-      .maybeSingle();
+      const res = await supabase
+        .from('store_settings')
+        .select('setting_value')
+        .eq('setting_key', SHOWCASE_SETTING_KEY)
+        .abortSignal(abortSignal as AbortSignal)
+        .maybeSingle();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error || !data) return DEFAULT_SHOWCASE;
     return normalizeShowcase(parseSupabaseVal<unknown>(data.setting_value));
