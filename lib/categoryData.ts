@@ -11,6 +11,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Category } from '@/types';
 import { logWarn } from './logger';
+import type { SettingsMap } from './storeSettingsBatch';
 
 export const DEFAULT_CATEGORIES: Category[] = [
   // ১. অল প্রোডাক্টস (All Products — প্রিমিয়াম ৪-গ্রিড উইজেট ও গোল্ড স্পার্ক)
@@ -511,14 +512,26 @@ export function parseSupabaseVal<T = unknown>(val: unknown): T {
 
 const QUERY_TIMEOUT_MS = 3500;
 
-export async function fetchCategories(supabase: SupabaseClient): Promise<Category[]> {
+export async function fetchCategories(
+  supabase: SupabaseClient,
+  preloaded?: SettingsMap | null,
+): Promise<Category[]> {
   try {
-    const { data, error } = await supabase
-      .from('store_settings')
-      .select('setting_value')
-      .eq('setting_key', 'vc_categories')
-      .abortSignal(AbortSignal.timeout(QUERY_TIMEOUT_MS))
-      .maybeSingle();
+    // preloaded (lib/storeSettingsBatch.ts) থাকলে আলাদা কোয়েরি যায় না; না থাকলে আগের মতোই
+    let data: { setting_value: unknown } | null;
+    let error: unknown = null;
+    if (preloaded) {
+      data = 'vc_categories' in preloaded ? { setting_value: preloaded['vc_categories'] } : null;
+    } else {
+      const res = await supabase
+        .from('store_settings')
+        .select('setting_value')
+        .eq('setting_key', 'vc_categories')
+        .abortSignal(AbortSignal.timeout(QUERY_TIMEOUT_MS))
+        .maybeSingle();
+      data = res.data;
+      error = res.error;
+    }
     if (error || !data) return DEFAULT_CATEGORIES;
     const parsed = parseSupabaseVal<Category[]>(data.setting_value);
     if (Array.isArray(parsed) && parsed.length) return parsed;

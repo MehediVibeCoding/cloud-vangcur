@@ -313,9 +313,10 @@ function GalleryImg({ val, alt, isThumb }: { val?: string; alt: string; isThumb:
   if (isUrl && !broken) {
     return (
       <img
-        src={optimizeCloudinaryUrl(val, isThumb ? 200 : 900)}
+        src={optimizeCloudinaryUrl(val, isThumb ? 120 : 800)}
         alt={alt || ''}
-        loading="lazy"
+        loading={isThumb ? 'lazy' : 'eager'}
+        fetchPriority={isThumb ? undefined : 'high'}
         className={isThumb ? 'h-full w-full rounded-[8px] object-cover object-top' : 'block h-full w-full object-cover object-top select-none'}
         onError={() => setBroken(true)}
       />

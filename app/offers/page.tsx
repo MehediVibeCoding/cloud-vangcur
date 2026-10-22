@@ -5,7 +5,7 @@ import OffersClient from './OffersClient';
 
 const SITE_URL = 'https://vangcur.com';
 
-export const revalidate = 120;
+export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getServerLang();

@@ -6,12 +6,13 @@ import { fetchProductsPage, PRODUCTS_PAGE_SIZE } from '@/lib/productData';
 import { fetchCategories, makeCatSlug, DEFAULT_CATEGORIES } from '@/lib/categoryData';
 import { fetchHeroCards, DEFAULT_HERO_CARDS } from '@/lib/heroSliderData';
 import { fetchShowcase, DEFAULT_SHOWCASE } from '@/lib/showcaseData';
+import { fetchSettingsBatch, HOME_SETTING_KEYS } from '@/lib/storeSettingsBatch';
 import { getServerLang } from '@/lib/i18n/getServerLang';
 import ClientHome from '@/app/ClientHome';
 
 const SITE_URL = 'https://vangcur.com';
 
-export const revalidate = 300;
+export const revalidate = 7200;
 
 // ⚡ খালি generateStaticParams: বিল্ডের সময় কিছু প্রি-রেন্ডার হয় না, কিন্তু প্রথম ভিজিটে পেজ
 // বানিয়ে CDN-এ ক্যাশ হয় এবং `revalidate` অনুযায়ী ব্যাকগ্রাউন্ডে নবায়ন হয় (on-demand ISR)।
@@ -86,14 +87,20 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   // 🔧 ফিক্স: হোম পেজের মতোই এখানেও শোকেস (কালেকশন কার্ড + স্পটলাইট) আনা হচ্ছে —
   // আগে এটা এই পেজে না থাকায়, ক্যাটাগরিতে ঢুকে আবার "অল প্রোডাক্টস"-এ ফিরলে
   // (এই পেজেই থেকে, ফিল্টার রিসেট করে) নিচের দুটো সেকশন উধাও হয়ে যেত।
-  const [productsPage, initialCategories, initialHeroCards, initialShowcase] = supabase
+  // ⚡ হোমের মতোই store_settings এর তিনটা কী এক কলে; ব্যর্থ হলে settings = null → আগের মতো আলাদা কোয়েরি
+  const [productsPage, settings] = supabase
     ? await Promise.all([
       fetchProductsPage(supabase, cat.id, 0, PRODUCTS_PAGE_SIZE),
-      fetchCategories(supabase),
-      fetchHeroCards(supabase),
-      fetchShowcase(supabase),
+      fetchSettingsBatch(supabase, HOME_SETTING_KEYS),
     ])
-    : [{ products: [], hasMore: false }, DEFAULT_CATEGORIES, DEFAULT_HERO_CARDS, DEFAULT_SHOWCASE];
+    : [{ products: [], hasMore: false }, null];
+  const [initialCategories, initialHeroCards, initialShowcase] = supabase
+    ? await Promise.all([
+      fetchCategories(supabase, settings),
+      fetchHeroCards(supabase, settings),
+      fetchShowcase(supabase, settings),
+    ])
+    : [DEFAULT_CATEGORIES, DEFAULT_HERO_CARDS, DEFAULT_SHOWCASE];
   const initialProducts = productsPage.products;
   const initialHasMore = productsPage.hasMore;
 

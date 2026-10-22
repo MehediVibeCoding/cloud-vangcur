@@ -1,0 +1,5 @@
+# https://developers.cloudflare.com/workers/static-assets/headers
+# বাংলা ডিজিট ফন্ট: ফাইলের নামে ভার্সন আছে (-v1), তাই এক বছরের immutable ক্যাশ নিরাপদ।
+# ফন্ট বদলাতে হলে নতুন নামে (-v2) ফাইল বানিয়ে globals.css ও layout.tsx এ নাম বদলাবে।
+/fonts/noto-sans-bengali-digits-v1.woff2
+  Cache-Control: public, max-age=31536000, immutable

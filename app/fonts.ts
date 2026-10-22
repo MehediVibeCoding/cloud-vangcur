@@ -14,9 +14,10 @@ export const dmSans = DM_Sans({
 
 // Main Bengali font for all site text (headings, body copy, buttons, etc).
 // NOTE: Bengali digits (০-৯) are intentionally NOT rendered with this font.
-// A separate, narrowly-scoped "digit font" is loaded in app/layout.tsx via a
-// unicode-range-restricted Google Fonts link, and layered in front of this
-// font in the font-family stack (see tailwind.config.ts `body` and the
+// A separate, narrowly-scoped "digit font" (self-hosted: public/fonts/
+// noto-sans-bengali-digits-v1.woff2, declared via @font-face in app/globals.css
+// with unicode-range U+09E6-09EF and preloaded in app/layout.tsx) is layered in
+// front of this font in the font-family stack (see tailwind.config.ts `body` and the
 // inline fontFamily values in InvoiceClient.tsx). That is what keeps digits
 // legible without affecting any other character - do not merge them back
 // into a single font-family assignment, or the digit-only override will
