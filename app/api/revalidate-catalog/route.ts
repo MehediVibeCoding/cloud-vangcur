@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
   revalidatePath('/product/[slug]', 'page');
   revalidatePath('/sitemap.xml');
   revalidatePath('/api/search-index');
-  revalidateTag('catalog');
+  // Next 16: দ্বিতীয় আর্গুমেন্ট বাধ্যতামূলক। { expire: 0 } = আগের মতোই সঙ্গে সঙ্গে ক্যাশ মোছা
+  // (stale-while-revalidate নয়), যাতে অ্যাডমিনের বদল তখনই লাইভে দেখা যায়।
+  revalidateTag('catalog', { expire: 0 });
 
   return NextResponse.json({ ok: true });
 }
