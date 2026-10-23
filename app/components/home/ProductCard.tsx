@@ -202,6 +202,7 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
   return (
     <div
       data-pid={p.id}
+      data-product-imgs={Array.isArray(p.imgs) ? p.imgs.length : 0}
       onMouseEnter={() => scheduleIntentPrefetch(120)}
       onMouseLeave={cancelIntentPrefetch}
       onTouchStart={() => scheduleIntentPrefetch(70)}

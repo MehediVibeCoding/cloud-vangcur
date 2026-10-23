@@ -6,6 +6,7 @@ import { dmSans, hindSiliguri } from './fonts';
 import GlobalOverlays from './components/GlobalOverlays';
 import StaleTabReload from './components/StaleTabReload';
 import StaleSessionReload from './components/StaleSessionReload';
+import ProductNavOverlay from './components/ProductNavOverlay';
 import Analytics from './components/Analytics';
 import { getServerLang } from '@/lib/i18n/getServerLang';
 
@@ -134,6 +135,7 @@ export default async function RootLayout({
         <Analytics />
         <StaleTabReload />
         <StaleSessionReload />
+        <ProductNavOverlay />
         <GlobalOverlays />
       </body>
     </html>
