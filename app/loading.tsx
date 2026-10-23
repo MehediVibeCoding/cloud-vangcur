@@ -1,7 +1,28 @@
-// GitHub পাথ: app/loading.tsx — পুরো ফাইলটা এটা দিয়ে replace করবে
-import { LogoSkeleton, WishlistIconSkeleton, CartIconSkeleton, TrackIconSkeleton, SearchIconSkeleton } from '@/app/components/ui/Skeletons';
+'use client';
 
-export default function HomeLoading() {
+// GitHub পাথ: app/loading.tsx
+//
+// রুট-লেভেল fallback। আগে এটা সবসময় হোমপেজের স্কেলেটন দেখাত — ফলে কার্ডে ট্যাপ করলে (প্রোডাক্ট পেজের নিজস্ব
+// loading.tsx প্রিফেচ না থাকলে) প্রোডাক্টের বদলে হোমের গ্রিড-স্কেলেটন ভেসে উঠত।
+// এখন গন্তব্য /product/... হলে (অথবা কার্ড-ক্লিকের হিন্ট থাকলে) প্রোডাক্ট-স্কেলেটন দেখানো হয়;
+// বাকি সব রুটে আগের মতোই হোম স্কেলেটন।
+import { usePathname } from 'next/navigation';
+import { LogoSkeleton, WishlistIconSkeleton, CartIconSkeleton, TrackIconSkeleton, SearchIconSkeleton } from '@/app/components/ui/Skeletons';
+import ProductSkeletonAuto from '@/app/components/product/ProductSkeletonAuto';
+import { useProductNavHint } from '@/lib/productNavHint';
+
+export default function RootLoading() {
+  const pathname = usePathname();
+  const hint = useProductNavHint();
+  const goingToProduct =
+    (pathname ? pathname.startsWith('/product/') : false) ||
+    // নিরাপত্তা-জাল: ফলব্যাকে pathname পুরনোটা এলেও (ক্লিকের আগের পাথ) হিন্ট থাকলে প্রোডাক্ট-স্কেলেটন
+    (hint !== null && pathname === hint.fromPath);
+  if (goingToProduct) return <ProductSkeletonAuto />;
+  return <HomeLoading />;
+}
+
+function HomeLoading() {
   return (
     <div className="min-h-screen bg-transparent">
       {/* ================= Navbar Skeleton ================= */}

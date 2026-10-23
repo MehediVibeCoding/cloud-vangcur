@@ -1,12 +1,13 @@
 'use client';
 
 import { MAX_QTY_PER_PRODUCT } from '@/lib/cartLimits';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import { clearProductNavHint } from '@/lib/productNavHint';
 import {
   fetchCustomProducts, mergeCustomProducts, fetchProductsByIds, fetchColorSiblings,
   findProdBySlug, productHref,
@@ -307,19 +308,68 @@ function FeatureItem({ text }: { text: string }) {
   );
 }
 
+// প্রধান ছবি লোড না হওয়া পর্যন্ত স্কেলেটনের একই রঙের (bg-brand-bg/30) প্লেসহোল্ডার থাকে — সাদা বাক্স নয়।
+// ছবি ৩৫০ms এর বেশি দেরি করলে তবেই ছোট স্পিনার আসে (দ্রুত/ক্যাশড ছবিতে স্পিনার ঝলকায় না)।
+// লোড হলে শুধু opacity দিয়ে ফেড-ইন; বাক্সের মাপ (aspect-square) আগে থেকেই ঠিক, তাই লেআউট নড়ে না।
+// SSR HTML-এ ছবি সবসময় দৃশ্যমান (opacity-100) — হাইড্রেশনের আগে ছবি লুকানো থাকে না (LCP নিরাপদ)।
+const GALLERY_SPINNER_DELAY_MS = 350;
+
 function GalleryImg({ val, alt, isThumb }: { val?: string; alt: string; isThumb: boolean }) {
   const [broken, setBroken] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [showSpinner, setShowSpinner] = useState(false);
   const isUrl = typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'));
+
+  // ছবি ইতিমধ্যে ক্যাশ/লোড থাকলে (complete) কোনো ফেড/স্পিনার নয়; না থাকলে pending=true (পেইন্টের আগেই)
+  const setImgRef = useCallback((el: HTMLImageElement | null) => {
+    if (el && !(el.complete && el.naturalWidth > 0)) setPending(true);
+  }, []);
+
+  useEffect(() => {
+    if (!pending) {
+      setShowSpinner(false);
+      return;
+    }
+    const t = window.setTimeout(() => setShowSpinner(true), GALLERY_SPINNER_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, [pending]);
+
   if (isUrl && !broken) {
+    if (isThumb) {
+      return (
+        <img
+          src={optimizeCloudinaryUrl(val, 120)}
+          alt={alt || ''}
+          loading="lazy"
+          className="h-full w-full rounded-[8px] object-cover object-top"
+          onError={() => setBroken(true)}
+        />
+      );
+    }
     return (
-      <img
-        src={optimizeCloudinaryUrl(val, isThumb ? 120 : 800)}
-        alt={alt || ''}
-        loading={isThumb ? 'lazy' : 'eager'}
-        fetchPriority={isThumb ? undefined : 'high'}
-        className={isThumb ? 'h-full w-full rounded-[8px] object-cover object-top' : 'block h-full w-full object-cover object-top select-none'}
-        onError={() => setBroken(true)}
-      />
+      <div className="relative h-full w-full bg-brand-bg/30">
+        <img
+          ref={setImgRef}
+          src={optimizeCloudinaryUrl(val, 800)}
+          alt={alt || ''}
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+          className={`block h-full w-full select-none object-cover object-top ${
+            pending ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'
+          }`}
+          onLoad={() => setPending(false)}
+          onError={() => {
+            setPending(false);
+            setBroken(true);
+          }}
+        />
+        {pending && showSpinner && (
+          <span aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-brand-light/25 border-t-brand-light" />
+          </span>
+        )}
+      </div>
     );
   }
   return <span className={isThumb ? 'text-2xl' : 'text-[90px]'}>{val || '📦'}</span>;
@@ -400,6 +450,11 @@ export default function ProductDetailClient({
   const { t, lang } = useT();
   const router = useRouter();
   const supabase = useRef(createClient()).current;
+
+  // প্রোডাক্ট পেজ মাউন্ট হয়েছে — ক্লিকের সময় রাখা স্কেলেটন-হিন্ট আর দরকার নেই
+  useEffect(() => {
+    clearProductNavHint();
+  }, []);
 
   const [prods, setProds] = useState<Product[]>(
     initialProducts && initialProducts.length
@@ -986,7 +1041,7 @@ export default function ProductDetailClient({
               className="flex h-full w-full items-center justify-center transition-transform duration-300"
               style={{ transformOrigin, transform: zoomed ? 'scale(2)' : 'scale(1)' }}
             >
-              <GalleryImg val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} />
+              <GalleryImg key={imgs[curImgIdx] || curImgIdx} val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} />
             </div>
           </div>
 
