@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
-import { clearProductNavHint } from '@/lib/productNavHint';
+import { clearProductNavHint, peekProductNavHint } from '@/lib/productNavHint';
+import { useImageRetry } from '@/lib/useImageRetry';
 import {
   fetchCustomProducts, mergeCustomProducts, fetchProductsByIds, fetchColorSiblings,
   findProdBySlug, productHref,
@@ -28,7 +29,8 @@ import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } 
 import Navbar from '@/app/components/layout/Navbar';
 import ProductCard from '@/app/components/home/ProductCard';
 import WarrantyModal from '@/app/components/modals/WarrantyModal';
-import { hasWarranty, formatWarrantyLabel } from '@/lib/warrantyData';
+import { hasWarranty } from '@/lib/warrantyData';
+import { GalleryBadge, PriceRow, StockLine, WarrantyBanner } from '@/app/components/product/ProductInfoBlocks';
 import useCloseWhenOffscreen from '@/lib/useCloseWhenOffscreen';
 import LoginModal from '@/app/components/auth/LoginModal';
 import ProductQnA from '@/app/components/product/ProductQnA';
@@ -93,15 +95,6 @@ function SolidQuestionBookIcon({ className = '' }: { className?: string }) {
   return (
     <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
       <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 8h6v2H9V8zm0 3h6v2H9v-2zm0 3h4v2H9v-2z" />
-    </svg>
-  );
-}
-
-function ShieldIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" />
-      <path d="M9 12l2 2 4-4" />
     </svg>
   );
 }
@@ -308,61 +301,81 @@ function FeatureItem({ text }: { text: string }) {
   );
 }
 
-// প্রধান ছবি লোড না হওয়া পর্যন্ত স্কেলেটনের একই রঙের (bg-brand-bg/30) প্লেসহোল্ডার থাকে — সাদা বাক্স নয়।
-// ছবি ৩৫০ms এর বেশি দেরি করলে তবেই ছোট স্পিনার আসে (দ্রুত/ক্যাশড ছবিতে স্পিনার ঝলকায় না)।
-// লোড হলে শুধু opacity দিয়ে ফেড-ইন; বাক্সের মাপ (aspect-square) আগে থেকেই ঠিক, তাই লেআউট নড়ে না।
-// SSR HTML-এ ছবি সবসময় দৃশ্যমান (opacity-100) — হাইড্রেশনের আগে ছবি লুকানো থাকে না (LCP নিরাপদ)।
+// প্রধান ছবির লোডিং-অভিজ্ঞতা:
+//  ১) লোড না হওয়া পর্যন্ত স্কেলেটনের একই রঙের (bg-brand-bg/30) বাক্স — সাদা নয়।
+//  ২) কার্ড থেকে এলে (baseSrc) কার্ডের ছোট ছবি — যেটা ব্রাউজারে আগে থেকেই ক্যাশে — সঙ্গে সঙ্গে নিচের স্তরে দেখায়;
+//     বড় ছবি এসে তার উপরে ফেড-ইন করে। দুটোই একই ফটো/অনুপাত/CSS (object-cover object-top), তাই পজিশন বা সাইজ
+//     বদলায় না — শুধু ধারালোতা বাড়ে।
+//  ৩) কোনো স্তরেই ছবি না থাকলে ৩৫০ms পরে তবেই ছোট স্পিনার (দ্রুত/ক্যাশড ছবিতে স্পিনার ঝলকায় না)।
+//  ৪) ব্যর্থ হলে একবার আবার চেষ্টা; তারপরও ব্যর্থ হলে 📦।
+// SSR HTML-এ বড় ছবি সবসময় দৃশ্যমান (opacity-100) — হাইড্রেশনের আগে ছবি লুকানো থাকে না (LCP নিরাপদ)।
 const GALLERY_SPINNER_DELAY_MS = 350;
 
-function GalleryImg({ val, alt, isThumb }: { val?: string; alt: string; isThumb: boolean }) {
-  const [broken, setBroken] = useState(false);
+function GalleryImg({ val, alt, isThumb, baseSrc }: { val?: string; alt: string; isThumb: boolean; baseSrc?: string | null }) {
+  const { attempt, waiting, failed, onError } = useImageRetry(1);
   const [pending, setPending] = useState(false);
+  const [baseReady, setBaseReady] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
   const isUrl = typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'));
+  // কার্ডের ছবি শুধু তখনই ভিত্তি-স্তর, যখন সেটা এই একই ছবি (পুরনো/ভিন্ন প্রোডাক্টের হিন্ট হলে নয়)
+  const hasBase = !isThumb && !!baseSrc && baseSrc === val;
 
   // ছবি ইতিমধ্যে ক্যাশ/লোড থাকলে (complete) কোনো ফেড/স্পিনার নয়; না থাকলে pending=true (পেইন্টের আগেই)
   const setImgRef = useCallback((el: HTMLImageElement | null) => {
     if (el && !(el.complete && el.naturalWidth > 0)) setPending(true);
   }, []);
+  const setBaseRef = useCallback((el: HTMLImageElement | null) => {
+    if (el && el.complete && el.naturalWidth > 0) setBaseReady(true);
+  }, []);
 
   useEffect(() => {
-    if (!pending) {
+    if (!pending || baseReady) {
       setShowSpinner(false);
       return;
     }
     const t = window.setTimeout(() => setShowSpinner(true), GALLERY_SPINNER_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [pending]);
+  }, [pending, baseReady]);
 
-  if (isUrl && !broken) {
+  if (isUrl && !failed) {
     if (isThumb) {
       return (
         <img
+          key={attempt}
           src={optimizeCloudinaryUrl(val, 120)}
           alt={alt || ''}
           loading="lazy"
-          className="h-full w-full rounded-[8px] object-cover object-top"
-          onError={() => setBroken(true)}
+          className={`h-full w-full rounded-[8px] object-cover object-top${waiting ? ' invisible' : ''}`}
+          onError={onError}
         />
       );
     }
     return (
       <div className="relative h-full w-full bg-brand-bg/30">
+        {hasBase && (
+          <img
+            ref={setBaseRef}
+            src={optimizeCloudinaryUrl(baseSrc as string, 380)}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="absolute inset-0 block h-full w-full select-none object-cover object-top"
+            onLoad={() => setBaseReady(true)}
+          />
+        )}
         <img
+          key={attempt}
           ref={setImgRef}
           src={optimizeCloudinaryUrl(val, 800)}
           alt={alt || ''}
           loading="eager"
           fetchPriority="high"
           decoding="async"
-          className={`block h-full w-full select-none object-cover object-top ${
-            pending ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'
+          className={`absolute inset-0 block h-full w-full select-none object-cover object-top ${
+            pending || waiting ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'
           }`}
           onLoad={() => setPending(false)}
-          onError={() => {
-            setPending(false);
-            setBroken(true);
-          }}
+          onError={onError}
         />
         {pending && showSpinner && (
           <span aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -451,6 +464,8 @@ export default function ProductDetailClient({
   const router = useRouter();
   const supabase = useRef(createClient()).current;
 
+  // কার্ড থেকে এসে থাকলে কার্ডের ছবির URL (প্রথম রেন্ডারেই ধরে রাখি — নিচের effect হিন্ট মুছে দেয়)
+  const [cardImgRef] = useState<string | null>(() => peekProductNavHint()?.product?.img ?? null);
   // প্রোডাক্ট পেজ মাউন্ট হয়েছে — ক্লিকের সময় রাখা স্কেলেটন-হিন্ট আর দরকার নেই
   useEffect(() => {
     clearProductNavHint();
@@ -1028,20 +1043,12 @@ export default function ProductDetailClient({
             onTouchStart={handleGalleryTouchStart}
             onTouchEnd={handleGalleryTouchEnd}
           >
-            {sold ? (
-              <div className="absolute left-3.5 top-3.5 z-10 rounded-full bg-[#5A6578] px-3 py-1 font-body text-[11px] font-bold text-white shadow-xs">
-                {lang === 'en' ? 'Sold Out' : 'স্টক শেষ'}
-              </div>
-            ) : prod.badge && (
-              <div className="absolute left-3.5 top-3.5 z-10 animate-badge-hot-glow rounded-full bg-brand-light px-3 py-1 text-[11px] font-bold text-white shadow-sh1">
-                {prod.badge}
-              </div>
-            )}
+            <GalleryBadge sold={sold} badge={prod.badge} />
             <div
               className="flex h-full w-full items-center justify-center transition-transform duration-300"
               style={{ transformOrigin, transform: zoomed ? 'scale(2)' : 'scale(1)' }}
             >
-              <GalleryImg key={imgs[curImgIdx] || curImgIdx} val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} />
+              <GalleryImg key={imgs[curImgIdx] || curImgIdx} val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} baseSrc={curImgIdx === 0 ? cardImgRef : null} />
             </div>
           </div>
 
@@ -1077,17 +1084,7 @@ export default function ProductDetailClient({
         <div>
           <h1 className="mb-3 font-body text-[21px] font-bold leading-snug text-ink sm:text-2xl">{prod.seoH1 || prod.name}</h1>
 
-          <div className="mb-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <span className="font-body text-[28px] font-bold text-brand-light sm:text-[32px]">৳{prod.price.toLocaleString('en-US')}</span>
-            {prod.old > prod.price && (
-              <>
-                <span className="text-[15px] text-muted line-through">৳{prod.old.toLocaleString('en-US')}</span>
-                {discountPct > 0 && (
-                  <span className="text-[13px] font-bold text-success">{lang === 'en' ? `${discountPct}% Off` : `${discountPct}% ছাড়`}</span>
-                )}
-              </>
-            )}
-          </div>
+          <PriceRow price={prod.price} old={prod.old} />
 
           {colorVariants.length > 1 && (
             <div className="mb-4">
@@ -1127,33 +1124,9 @@ export default function ProductDetailClient({
             </div>
           )}
 
-          {!sold && (
-            <div className="mb-3 flex items-center gap-1.5 text-[12.5px] font-semibold">
-              {prod.stock <= 10 ? (
-                <span className="text-brand-light">⚡ {t('মাত্র')} {prod.stock}{t('টি বাকি — দ্রুত অর্ডার করুন')}</span>
-              ) : (
-                <span className="text-brand-light">{t('স্টকে আছে')} ({prod.stock}{t('টি')})</span>
-              )}
-            </div>
-          )}
+          {!sold && <StockLine stock={prod.stock} />}
 
-          {hasWarranty(prod.warranty) && (
-            <button
-              type="button"
-              onClick={() => setWarrantyOpen(true)}
-              className="mb-5 flex w-full items-center justify-between gap-2 rounded-[10px] border border-success/30 bg-success/10 px-3.5 py-2.5 text-left transition-brand duration-brand hover:border-success/50"
-            >
-              <span className="flex items-center gap-1.5 text-[12.5px] font-medium text-success">
-                <ShieldIcon className="text-success" /> {formatWarrantyLabel(prod.warranty, lang === 'en' ? 'en' : 'bn')}
-              </span>
-              <span
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-success/40 text-[10.5px] font-bold text-success"
-                title={t('ওয়ারেন্টি বিস্তারিত')}
-              >
-                ?
-              </span>
-            </button>
-          )}
+          {hasWarranty(prod.warranty) && <WarrantyBanner warranty={prod.warranty} onClick={() => setWarrantyOpen(true)} />}
 
           {quickSpecPills.length > 0 && (
             <div className="mb-5">

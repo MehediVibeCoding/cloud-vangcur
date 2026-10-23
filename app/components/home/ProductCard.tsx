@@ -13,6 +13,8 @@ import { useWishlistStore } from '@/lib/store/wishlistStore';
 import { useCartStore } from '@/lib/store/cartStore';
 import { showToast } from '@/lib/toast';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import { attachProductToNavHint } from '@/lib/productNavHint';
+import { useImageRetry } from '@/lib/useImageRetry';
 import { useT } from '@/lib/i18n/useT';
 import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } from '@/lib/wishHeartBurst';
 import type { Product } from '@/types';
@@ -69,12 +71,14 @@ function CartCheckIcon() {
 }
 
 function ProdImg({ imgVal, name, lazy }: { imgVal?: string; name: string; lazy?: boolean }) {
-  const [broken, setBroken] = useState(false);
+  // একবার ব্যর্থ হলে ১.৫s পর আবার চেষ্টা; দ্বিতীয়বারও ব্যর্থ হলে তবেই 📦
+  const { attempt, waiting, failed, onError } = useImageRetry(1);
   const isUrl = typeof imgVal === 'string' && (imgVal.startsWith('http://') || imgVal.startsWith('https://'));
   if (!imgVal) return <span className="text-[52px]">📦</span>;
-  if (isUrl && !broken) {
+  if (isUrl && !failed) {
     return (
       <img
+        key={attempt}
         src={optimizeCloudinaryUrl(imgVal, 380)}
         alt={name || ''}
         loading={lazy ? 'lazy' : 'eager'}
@@ -82,12 +86,12 @@ function ProdImg({ imgVal, name, lazy }: { imgVal?: string; name: string; lazy?:
         decoding="async"
         draggable={false}
         onContextMenu={(e) => e.preventDefault()}
-        className="block h-full w-full select-none object-cover object-top [-webkit-touch-callout:none]"
-        onError={() => setBroken(true)}
+        className={`block h-full w-full select-none object-cover object-top [-webkit-touch-callout:none]${waiting ? ' invisible' : ''}`}
+        onError={onError}
       />
     );
   }
-  if (isUrl && broken) return <span className="text-[52px]">📦</span>;
+  if (isUrl && failed) return <span className="text-[52px]">📦</span>;
   return <span className="text-[52px]">{imgVal}</span>;
 }
 
@@ -199,10 +203,29 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
   // বাকি সময় কার্ডটা হালকা থাকে।
   const isAnimatingTransform = !!burst || cartPop !== null;
 
+  // প্রোডাক্ট লিংকে ক্লিক হলে কার্ডের তথ্য (শুধু GRID_COLS-এর অংশ) নেভিগেশন-হিন্টে জুড়ে দেয়, যাতে প্রোডাক্ট পেজ
+  // খোলার ফাঁকে ছবি/দাম/স্টক/ওয়ারেন্টি সঙ্গে সঙ্গে দেখানো যায়। document-লেভেল capture লিসেনার (ProductNavOverlay)
+  // আগে চলে হিন্ট বানায়, এটা তার পর চলে তথ্য যোগ করে।
+  const handleProductNavCapture = (e: React.MouseEvent) => {
+    const target = e.target as Element | null;
+    if (!target || typeof target.closest !== 'function' || !target.closest('a[href^="/product/"]')) return;
+    const imgs = Array.isArray(p.imgs) ? p.imgs : [];
+    attachProductToNavHint({
+      img: imgs[0] || null,
+      imgCount: imgs.length,
+      price: p.price,
+      old: p.old,
+      stock: p.stock,
+      badge: p.badge,
+      warranty: p.warranty,
+      hasColorGroup: !!p.colorGroupId,
+    });
+  };
+
   return (
     <div
       data-pid={p.id}
-      data-product-imgs={Array.isArray(p.imgs) ? p.imgs.length : 0}
+      onClickCapture={handleProductNavCapture}
       onMouseEnter={() => scheduleIntentPrefetch(120)}
       onMouseLeave={cancelIntentPrefetch}
       onTouchStart={() => scheduleIntentPrefetch(70)}
@@ -229,7 +252,7 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
             {lang === 'en' ? 'Sold Out' : 'স্টক শেষ'}
           </div>
         ) : p.badge && (
-          <div className="absolute left-[4.5%] top-[4.5%] z-[2] animate-badge-hot-glow rounded-full bg-brand-light px-2.5 py-1 text-[10px] font-bold text-white shadow-sh1">
+          <div className="absolute left-[4.5%] top-[4.5%] z-[2] rounded-full bg-brand-light px-2.5 py-1 text-[10px] font-bold text-white shadow-sh1">
             {p.badge}
           </div>
         )}

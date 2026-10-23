@@ -14,6 +14,10 @@ import {
   TrackIconSkeleton,
   SearchIconSkeleton,
 } from '@/app/components/ui/Skeletons';
+import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import { hasWarranty } from '@/lib/warrantyData';
+import type { NavPreviewProduct } from '@/lib/productNavHint';
+import { GalleryBadge, PriceRow, StockLine, WarrantyBanner } from './ProductInfoBlocks';
 
 /** কার্ড থেকে ছবির সংখ্যা জানা না থাকলে (সরাসরি লিংক/ব্যাক-নেভিগেশন) যা ধরা হবে। */
 export const DEFAULT_PRODUCT_SKELETON_IMG_COUNT = 1;
@@ -22,14 +26,23 @@ const MAX_STRIP_ITEMS = 8;
 interface ProductDetailSkeletonProps {
   /** প্রোডাক্টে কয়টা ছবি — ১ হলে ডট/থাম্বনেইল স্ট্রিপ দেখানো হয় না (আসল পেজের মতো) */
   imgCount?: number | null;
+  /**
+   * কার্ড থেকে এলে কার্ডের তথ্য। থাকলে যা কার্ডেই আছে (ছবি, ব্যাজ, দাম, স্টক, ওয়ারেন্টি) তা আসল পেজের একই
+   * কম্পোনেন্টে সঙ্গে সঙ্গে দেখানো হয়; বাকিটা (টাইটেল, স্পেক পিল, পরিমাণ, বাটন) স্কেলেটন থাকে।
+   * টাইটেল ইচ্ছাকৃতভাবে স্কেলেটন: আসল পেজ `seoH1 || name` দেখায়, আর seoH1 শুধু ডিটেইল-ডাটায় থাকে —
+   * কার্ডের নাম দেখালে আসল পেজ এলে লেখা/লাইন-সংখ্যা বদলে যেতে পারত।
+   */
+  product?: NavPreviewProduct | null;
 }
 
-export default function ProductDetailSkeleton({ imgCount }: ProductDetailSkeletonProps) {
+export default function ProductDetailSkeleton({ imgCount, product }: ProductDetailSkeletonProps) {
   const count = Math.min(
-    Math.max(Math.round(imgCount ?? DEFAULT_PRODUCT_SKELETON_IMG_COUNT), 1),
+    Math.max(Math.round(product?.imgCount ?? imgCount ?? DEFAULT_PRODUCT_SKELETON_IMG_COUNT), 1),
     MAX_STRIP_ITEMS,
   );
   const showStrip = count > 1;
+  const sold = product ? product.stock <= 0 : false;
+  const cardImgIsUrl = !!product?.img && (product.img.startsWith('http://') || product.img.startsWith('https://'));
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-brand-bg/25 via-white to-white" aria-busy="true">
@@ -64,7 +77,19 @@ export default function ProductDetailSkeleton({ imgCount }: ProductDetailSkeleto
         <div>
           {/* বাইরের বাক্স আসল পেজের সাথে এক (bg-white + border + shadow + radius); ভেতরের রঙ স্থির */}
           <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[14px] border border-border-base bg-white shadow-sh1">
-            <div className="h-full w-full bg-brand-bg/30" />
+            {product && <GalleryBadge sold={sold} badge={product.badge} />}
+            <div className="relative h-full w-full bg-brand-bg/30">
+              {cardImgIsUrl && (
+                // কার্ড যে URL-এ ছবি এনেছে হুবহু সেটাই (width=380) — ব্রাউজার ক্যাশ থেকে সঙ্গে সঙ্গে আসে
+                <img
+                  src={optimizeCloudinaryUrl(product!.img as string, 380)}
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="absolute inset-0 block h-full w-full select-none object-cover object-top"
+                />
+              )}
+            </div>
           </div>
 
           {showStrip && (
@@ -102,19 +127,44 @@ export default function ProductDetailSkeleton({ imgCount }: ProductDetailSkeleto
             ))}
           </div>
 
-          {/* দাম-সারি: ২৮px (sm: ৩২px) × line-height ১.৫ = ৪২px (sm: ৪৮px), mb-3 */}
-          <div className="mb-3 flex h-[42px] items-center gap-x-2.5 sm:h-12">
-            <div className="h-8 w-28 animate-pulse rounded-lg bg-brand-light/30 sm:h-9" />
-            <div className="h-4 w-16 animate-pulse rounded bg-surface-muted" />
-          </div>
+          {/* দাম-সারি: কার্ডের তথ্য থাকলে আসল PriceRow; নইলে স্কেলেটন (২৮px (sm: ৩২px) × line-height ১.৫ = ৪২px (sm: ৪৮px), mb-3) */}
+          {product ? (
+            <PriceRow price={product.price} old={product.old} />
+          ) : (
+            <div className="mb-3 flex h-[42px] items-center gap-x-2.5 sm:h-12">
+              <div className="h-8 w-28 animate-pulse rounded-lg bg-brand-light/30 sm:h-9" />
+              <div className="h-4 w-16 animate-pulse rounded bg-surface-muted" />
+            </div>
+          )}
 
-          {/* স্টক-লাইন: ১২.৫px × ১.৫ = ১৮.৭৫px, mb-3 */}
-          <div className="mb-3 flex h-[18.75px] items-center">
-            <div className="h-3.5 w-44 animate-pulse rounded bg-surface-muted" />
-          </div>
+          {/* কালার-ভ্যারিয়েন্ট সারি (কার্ডে colorGroupId থাকলে): লেবেল ১১px×১.৫=১৬.৫px + mb-2; পিল py-1.5 + ১২.৫px×১.৫ + বর্ডার ৪px = ৩৪.৭৫px; mb-4 */}
+          {product?.hasColorGroup && (
+            <div className="mb-4">
+              <div className="mb-2 flex h-[16.5px] items-center">
+                <div className="h-2.5 w-24 animate-pulse rounded bg-surface-muted" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <div className="h-[34.75px] w-28 animate-pulse rounded-full bg-brand-bg/35" />
+                <div className="h-[34.75px] w-24 animate-pulse rounded-full bg-brand-bg/35" />
+              </div>
+            </div>
+          )}
 
-          {/* ওয়ারেন্টি ব্যানার: py-2.5 + ২০px (আইকন-বৃত্ত) + বর্ডার ২px = ৪২px, mb-5 */}
-          <div className="mb-5 h-[42px] w-full animate-pulse rounded-[10px] border border-success/30 bg-success/10" />
+          {/* স্টক-লাইন: কার্ডের তথ্য থাকলে আসল StockLine (স্টক শেষ হলে আসল পেজেও নেই); নইলে স্কেলেটন ১২.৫px × ১.৫ = ১৮.৭৫px, mb-3 */}
+          {product ? (
+            !sold && <StockLine stock={product.stock} />
+          ) : (
+            <div className="mb-3 flex h-[18.75px] items-center">
+              <div className="h-3.5 w-44 animate-pulse rounded bg-surface-muted" />
+            </div>
+          )}
+
+          {/* ওয়ারেন্টি ব্যানার: কার্ডের তথ্য থাকলে আসল ব্যানার (ওয়ারেন্টি না থাকলে আসল পেজেও নেই); নইলে স্কেলেটন: py-2.5 + ২০px (আইকন-বৃত্ত) + বর্ডার ২px = ৪২px, mb-5 */}
+          {product ? (
+            hasWarranty(product.warranty) && <WarrantyBanner warranty={product.warranty} />
+          ) : (
+            <div className="mb-5 h-[42px] w-full animate-pulse rounded-[10px] border border-success/30 bg-success/10" />
+          )}
 
           {/* কুইক স্পেক: লেবেল ১১px×১.৫=১৬.৫px + mb-2.5; পিল py-1.5 + ১৩px×১.৫ = ৩১.৫px; সারির গ্যাপ ৮px; mb-5 */}
           <div className="mb-5">
