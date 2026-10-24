@@ -7,7 +7,7 @@
 // এখন গন্তব্য /product/... হলে (অথবা কার্ড-ক্লিকের হিন্ট থাকলে) প্রোডাক্ট-স্কেলেটন দেখানো হয়;
 // বাকি সব রুটে আগের মতোই হোম স্কেলেটন।
 import { usePathname } from 'next/navigation';
-import { LogoSkeleton, WishlistIconSkeleton, CartIconSkeleton, TrackIconSkeleton, SearchIconSkeleton } from '@/app/components/ui/Skeletons';
+import SkeletonNavbar from '@/app/components/ui/SkeletonNavbar';
 import ProductSkeletonAuto from '@/app/components/product/ProductSkeletonAuto';
 import { useProductNavHint } from '@/lib/productNavHint';
 
@@ -25,33 +25,8 @@ export default function RootLoading() {
 function HomeLoading() {
   return (
     <div className="min-h-screen bg-transparent">
-      {/* ================= Navbar Skeleton ================= */}
-      <div className="sticky top-[14px] z-[900] mx-2 mb-1.5 mt-[14px] max-[400px]:mx-1.5 sm:mx-3">
-        <div className="navbar-glass relative rounded-[35px] border border-white/70 bg-white/80 shadow-sh1 backdrop-blur-[10px]">
-          <div className="mx-auto flex h-[62px] max-w-[1300px] items-center gap-[14px] px-3 max-[400px]:gap-2 sm:px-5 2xl:max-w-[1560px]">
-            <div className="flex w-full items-center justify-between gap-2 max-[400px]:gap-1.5 sm:gap-3">
-              {/* লোগো — Image (140x49) এর h-7/md:h-8 রেশিও অনুযায়ী, আসল PNG-র হুবহু শেপ (mask-image) */}
-              <LogoSkeleton className="h-7 w-20 max-[400px]:h-6 max-[400px]:w-[68px] md:h-8 md:w-[92px]" />
-
-              <div className="flex items-center gap-2 md:gap-3">
-                {/* ডেস্কটপ সার্চ বার — md:w-[240px] lg:w-[300px] */}
-                <div className="hidden h-10 animate-pulse rounded-full bg-brand-bg/30 md:block md:w-[240px] lg:w-[300px]" />
-
-                {/* wishlist, cart, login pill, track-order — একই অর্ডারে। wishlist/cart/
-                    track/mobile-search আসলে ট্রান্সপারেন্ট আইকন-বাটন (কোনো ব্যাকগ্রাউন্ড
-                    বক্স/বৃত্ত নেই), তাই স্কেলেটনেও হুবহু সেই আইকন-শেপ, ব্যাকগ্রাউন্ড ছাড়া। */}
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-9 w-9 items-center justify-center"><WishlistIconSkeleton /></div>
-                  <div className="flex h-9 w-9 items-center justify-center"><CartIconSkeleton /></div>
-                  <div className="h-9 w-[74px] animate-pulse rounded-full bg-brand-light/30 sm:w-20" />
-                  <div className="hidden h-9 w-9 items-center justify-center min-[401px]:flex"><TrackIconSkeleton /></div>
-                  <div className="flex h-9 w-9 items-center justify-center md:hidden"><SearchIconSkeleton /></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* ================= Navbar: আসল নেভবার (ব্যাচ ২) ================= */}
+      <SkeletonNavbar />
 
       {/* ================= Hero Slider Skeleton ================= */}
       <div className="relative mx-auto max-w-[1300px] bg-transparent px-3.5 pt-3.5 sm:px-5 2xl:max-w-[1560px]">

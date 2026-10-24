@@ -21,6 +21,8 @@ export interface NavPreviewProduct {
   warranty: string;
   /** কালার-ভ্যারিয়েন্ট থাকলে (স্কেলেটনে এক সারি জায়গা রাখতে) */
   hasColorGroup: boolean;
+  /** আসল পেজের h1 যা দেখাবে: `seoH1 || name` — কার্ডের নাম থেকে আলাদা (কার্ডে " Vangcur" যোগ থাকে) */
+  title: string;
 }
 
 export interface ProductNavHint {

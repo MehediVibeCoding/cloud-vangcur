@@ -308,6 +308,8 @@ function FeatureItem({ text }: { text: string }) {
 //     বদলায় না — শুধু ধারালোতা বাড়ে।
 //  ৩) কোনো স্তরেই ছবি না থাকলে ৩৫০ms পরে তবেই ছোট স্পিনার (দ্রুত/ক্যাশড ছবিতে স্পিনার ঝলকায় না)।
 //  ৪) ব্যর্থ হলে একবার আবার চেষ্টা; তারপরও ব্যর্থ হলে 📦।
+//  ৫) ব্যাচ ২: ভিত্তি-স্তরের <img> decoding="sync" — স্কেলেটনের ডিকোড-করা ছবি সরে নতুন <img> বসার সময় এক-দুই ফ্রেম
+//     ফাঁকা বাক্স দেখাত (async ডিকোডের কারণে); sync-এ ছবি প্রথম পেইন্টেই থাকে। (কোনো নতুন রিকোয়েস্ট নেই — একই URL, ক্যাশ থেকে।)
 // SSR HTML-এ বড় ছবি সবসময় দৃশ্যমান (opacity-100) — হাইড্রেশনের আগে ছবি লুকানো থাকে না (LCP নিরাপদ)।
 const GALLERY_SPINNER_DELAY_MS = 350;
 
@@ -368,6 +370,7 @@ function GalleryImg({ val, alt, isThumb, baseSrc, zoomed = false }: { val?: stri
             alt=""
             aria-hidden
             draggable={false}
+            decoding="sync"
             className="absolute inset-0 block h-full w-full select-none object-cover object-top"
             onLoad={() => setBaseReady(true)}
           />

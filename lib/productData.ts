@@ -139,7 +139,7 @@ export function mapCustomProduct(p: RawCustomProduct): Product {
   };
 }
 
-const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch';
+const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch,seo_h1';
 const DETAIL_COLS = `${GRID_COLS},img_alts,desc_text,long_desc,features,faqs,closing,power_info,info_boxes,seo_h1,meta_title,meta_description,og_description,quick_specs_text,packaging_content`;
 
 const QUERY_TIMEOUT_MS = 4000;

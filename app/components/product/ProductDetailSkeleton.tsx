@@ -8,12 +8,7 @@
 //   • ডান কলামের প্রতিটা সারির উচ্চতা আসল সারির line-height/padding থেকে হিসাব করা (টাইটেল ২১px×leading-snug,
 //     দাম ২৮px×১.৫, পরিমাণ-সারি ৪০px, বাটন py-3.5+২০px লাইন ইত্যাদি) — হেডলেস Chromium-এ মেপে দেখা: ০px ফারাক।
 // ফাইলের মাপ বদলালে scripts-এর মতো করে আসল পেজের সাথে আবার মিলিয়ে নিতে হবে।
-import {
-  WishlistIconSkeleton,
-  CartIconSkeleton,
-  TrackIconSkeleton,
-  SearchIconSkeleton,
-} from '@/app/components/ui/Skeletons';
+import SkeletonNavbar from '@/app/components/ui/SkeletonNavbar';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
 import { hasWarranty } from '@/lib/warrantyData';
 import type { NavPreviewProduct } from '@/lib/productNavHint';
@@ -27,10 +22,10 @@ interface ProductDetailSkeletonProps {
   /** প্রোডাক্টে কয়টা ছবি — ১ হলে ডট/থাম্বনেইল স্ট্রিপ দেখানো হয় না (আসল পেজের মতো) */
   imgCount?: number | null;
   /**
-   * কার্ড থেকে এলে কার্ডের তথ্য। থাকলে যা কার্ডেই আছে (ছবি, ব্যাজ, দাম, স্টক, ওয়ারেন্টি) তা আসল পেজের একই
-   * কম্পোনেন্টে সঙ্গে সঙ্গে দেখানো হয়; বাকিটা (টাইটেল, স্পেক পিল, পরিমাণ, বাটন) স্কেলেটন থাকে।
-   * টাইটেল ইচ্ছাকৃতভাবে স্কেলেটন: আসল পেজ `seoH1 || name` দেখায়, আর seoH1 শুধু ডিটেইল-ডাটায় থাকে —
-   * কার্ডের নাম দেখালে আসল পেজ এলে লেখা/লাইন-সংখ্যা বদলে যেতে পারত।
+   * কার্ড থেকে এলে কার্ডের তথ্য। থাকলে যা কার্ডেই আছে (ছবি, ব্যাজ, দাম, স্টক, ওয়ারেন্টি, টাইটেল) তা আসল পেজের একই
+   * কম্পোনেন্টে সঙ্গে সঙ্গে দেখানো হয়; বাকিটা (স্পেক পিল, পরিমাণ, বাটন) স্কেলেটন থাকে।
+   * টাইটেল: ব্যাচ ২ থেকে লিস্টিং কুয়েরিতে seo_h1 আসে, তাই হিন্টের `title` (= আসল পেজের `seoH1 || name`) হুবহু
+   * সেটাই দেখানো হয়। title খালি (পুরনো ক্যাশ/অন্য উৎস) হলে আগের মতোই স্কেলেটন-বার।
    */
   product?: NavPreviewProduct | null;
 }
@@ -46,30 +41,8 @@ export default function ProductDetailSkeleton({ imgCount, product }: ProductDeta
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-brand-bg/25 via-white to-white" aria-busy="true">
-      {/* ================= Navbar Skeleton (showHomeButton ভ্যারিয়েন্ট) ================= */}
-      <div className="mx-2 mb-1.5 mt-[14px] max-[400px]:mx-1.5 sm:mx-3">
-        <div className="navbar-glass relative rounded-[35px] border border-white/70 bg-white/80 shadow-sh1 backdrop-blur-[10px]">
-          <div className="mx-auto flex h-[62px] max-w-[1300px] items-center gap-[14px] px-3 max-[400px]:gap-2 sm:px-5 2xl:max-w-[1560px]">
-            <div className="flex w-full items-center justify-between gap-2 max-[400px]:gap-1.5 sm:gap-3">
-              <div className="flex shrink-0 items-center gap-1.5 min-[420px]:gap-2 rounded-full border border-border-base/70 bg-white/80 py-1.5 pl-2 pr-3 shadow-xs max-[400px]:pr-2 max-[400px]:pl-1.5 min-[420px]:pr-3.5">
-                <div className="h-7 w-7 shrink-0 animate-pulse rounded-full bg-brand-light/40" />
-                <div className="hidden h-3.5 w-16 animate-pulse rounded bg-brand-bg/50 min-[420px]:block" />
-                <div className="h-3.5 w-9 animate-pulse rounded bg-brand-bg/50 min-[420px]:hidden" />
-              </div>
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="hidden h-10 animate-pulse rounded-full bg-brand-bg/30 md:block md:w-[240px] lg:w-[300px]" />
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-9 w-9 items-center justify-center"><WishlistIconSkeleton /></div>
-                  <div className="flex h-9 w-9 items-center justify-center"><CartIconSkeleton /></div>
-                  <div className="h-9 w-[74px] animate-pulse rounded-full bg-brand-light/30 sm:w-20" />
-                  <div className="hidden h-9 w-9 items-center justify-center min-[401px]:flex"><TrackIconSkeleton /></div>
-                  <div className="flex h-9 w-9 items-center justify-center md:hidden"><SearchIconSkeleton /></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* ================= Navbar: আসল নেভবার (স্কেলেটন নয়) — ব্যাচ ২ ================= */}
+      <SkeletonNavbar showHomeButton sticky={false} />
 
       {/* ================= মূল গ্রিড: গ্যালারি + ইনফো কলাম (আসল পেজের grid-এর হুবহু ক্লাস) ================= */}
       <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-8 px-4 pb-6 pt-3.5 md:grid-cols-2 md:px-8 md:pb-10">
@@ -86,6 +59,7 @@ export default function ProductDetailSkeleton({ imgCount, product }: ProductDeta
                   alt=""
                   aria-hidden
                   draggable={false}
+                  decoding="sync"
                   className="absolute inset-0 block h-full w-full select-none object-cover object-top"
                 />
               )}
@@ -118,14 +92,18 @@ export default function ProductDetailSkeleton({ imgCount, product }: ProductDeta
 
         {/* ---------- ডান কলাম ---------- */}
         <div>
-          {/* টাইটেল: ২১px (sm: ২৪px) × leading-snug(১.৩৭৫) = ২৮.৮৭৫px (sm: ৩৩px) প্রতি লাইন, ২ লাইন ধরা, mb-3 */}
-          <div className="mb-3">
-            {[100, 66].map((w) => (
-              <div key={w} className="flex h-[28.875px] items-center sm:h-[33px]">
-                <div className="h-[18px] animate-pulse rounded-lg bg-surface-muted sm:h-5" style={{ width: `${w}%` }} />
-              </div>
-            ))}
-          </div>
+          {/* টাইটেল: কার্ডের হিন্টে আসল শিরোনাম থাকলে সেটাই (আসল পেজের h1-এর হুবহু ক্লাস); নইলে ২১px (sm: ২৪px) × leading-snug = ২৮.৮৭৫px (sm: ৩৩px) প্রতি লাইন, ২ লাইন ধরা, mb-3 */}
+          {product?.title ? (
+            <h1 className="mb-3 font-body text-[21px] font-bold leading-snug text-ink sm:text-2xl">{product.title}</h1>
+          ) : (
+            <div className="mb-3">
+              {[100, 66].map((w) => (
+                <div key={w} className="flex h-[28.875px] items-center sm:h-[33px]">
+                  <div className="h-[18px] animate-pulse rounded-lg bg-surface-muted sm:h-5" style={{ width: `${w}%` }} />
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* দাম-সারি: কার্ডের তথ্য থাকলে আসল PriceRow; নইলে স্কেলেটন (২৮px (sm: ৩২px) × line-height ১.৫ = ৪২px (sm: ৪৮px), mb-3) */}
           {product ? (
