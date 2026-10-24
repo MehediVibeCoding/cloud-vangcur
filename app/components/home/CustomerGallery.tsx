@@ -13,10 +13,14 @@ import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } 
 interface Review {
   id: number | string;
   image_url?: string | null;
+  alt_text?: string | null;
   like_count?: number | string | null;
   created_at?: string;
   liked?: boolean;
 }
+
+// alt_text না থাকলে (পুরনো রো) এই সাধারণ বর্ণনা — আগের "Customer Review"-এর চেয়ে অর্থবহ
+const FALLBACK_REVIEW_ALT = 'Vangcur customer review photo';
 
 const AUTOPLAY_MS = 5200;
 const RESUME_DELAY_MS = 3200;
@@ -143,6 +147,7 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
 
   // 🔍 Interactive Lightbox Zoom & Pan State
   const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
+  const [zoomImageAlt, setZoomImageAlt] = useState<string>('');
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomTranslate, setZoomTranslate] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -221,7 +226,7 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
       try {
         const { data, error } = await supabase
           .from('customer_reviews')
-          .select('id,image_url,like_count,created_at')
+          .select('id,image_url,alt_text,like_count,created_at')
           .order('created_at', { ascending: false })
           .limit(30);
 
@@ -348,6 +353,7 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
     }
     if (!review.image_url) return;
     setZoomImageUrl(review.image_url);
+    setZoomImageAlt(review.alt_text?.trim() || FALLBACK_REVIEW_ALT);
     resetZoom();
     pausedRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
@@ -631,7 +637,7 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
                         <img
                           className="block h-full w-full object-cover select-none"
                           src={optimizeCloudinaryUrl(imgUrl, 720)}
-                          alt="Customer Review"
+                          alt={r.alt_text?.trim() || FALLBACK_REVIEW_ALT}
                           loading="lazy"
                           draggable={false}
                           onError={(e) => { e.currentTarget.style.opacity = '.3'; }}
@@ -766,7 +772,7 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={optimizeCloudinaryUrl(zoomImageUrl, 1600)}
-              alt="Full Resolution Review"
+              alt={zoomImageAlt || FALLBACK_REVIEW_ALT}
               style={{
                 transform: `translate3d(${zoomTranslate.x}px, ${zoomTranslate.y}px, 0) scale(${zoomScale})`,
                 transition: isPanning ? 'none' : 'transform 0.2s cubic-bezier(0.25, 1, 0.5, 1)',

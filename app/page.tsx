@@ -56,11 +56,11 @@ async function fetchGalleryReviewsSafe(supabase: ReturnType<typeof createClient>
   try {
     const { data, error } = await supabase
       .from('customer_reviews')
-      .select('id,image_url,like_count,created_at')
+      .select('id,image_url,alt_text,like_count,created_at')
       .order('created_at', { ascending: false })
       .limit(30);
     if (error || !data || data.length === 0) return null;
-    return data as { id: number | string; image_url?: string | null; like_count?: number | string | null; created_at?: string }[];
+    return data as { id: number | string; image_url?: string | null; alt_text?: string | null; like_count?: number | string | null; created_at?: string }[];
   } catch {
     return null;
   }

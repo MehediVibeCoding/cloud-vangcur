@@ -493,7 +493,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
                   {card.img ? (
                     <HeroCardImage
                       src={optimizeCloudinaryUrl(card.img, 360)}
-                      alt={label}
+                      alt={card.alt?.trim() || label}
                       isPriority={isPriority}
                     />
                   ) : isSvgEmoji ? (
