@@ -99,9 +99,12 @@ interface ProductCardProps {
   prod: Product;
   isFirst?: boolean;
   index?: number;
+  /** true হলে ছবি সবসময় lazy (ডিফল্ট: প্রথম ২টা কার্ড eager+high)। যে সেকশন ভাঁজের অনেক নিচে (যেমন প্রোডাক্ট পেজের
+   *  "রিলেটেড") সেখানে true দাও — নাহলে ভাঁজের নিচের ২টা ছবি মূল (LCP) ছবির সাথে ব্যান্ডউইথ ভাগ করে নামে। */
+  lazyImage?: boolean;
 }
 
-export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCardProps) {
+export default function ProductCard({ prod: p, isFirst, index = 0, lazyImage = false }: ProductCardProps) {
   const { t, lang } = useT();
   const router = useRouter();
   const rawWished = useWishlistStore((s) => s.wishlist.some((x) => String(x.id) === String(p.id)));
@@ -239,7 +242,7 @@ export default function ProductCard({ prod: p, isFirst, index = 0 }: ProductCard
           href={href}
           className="absolute inset-0 block cursor-pointer transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:scale-[1.06]"
         >
-          <ProdImg imgVal={(p.imgs || ['📦'])[0]} name={p.name} lazy={!isFirst && index >= 2} />
+          <ProdImg imgVal={(p.imgs || ['📦'])[0]} name={p.name} lazy={lazyImage || (!isFirst && index >= 2)} />
         </Link>
 
         <div
