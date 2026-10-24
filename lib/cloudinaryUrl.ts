@@ -57,3 +57,20 @@ export function optimizeCloudinaryUrl(url?: string, width = 450): string {
   // --- অন্য যেকোনো সোর্স (যেমন এখনো-মাইগ্রেট-না-হওয়া Supabase Storage URL) ---
   return url;
 }
+
+// 📐 রেসপন্সিভ srcset (শুধু R2-হোস্টেড ছবি): প্রতিটা `pixelWidths` এ একটা URL, `w` ডেসক্রিপ্টরে আসল পিক্সেল চওড়া।
+// ⚠️ এখানে `dpr=1` ইচ্ছাকৃত — ডিভাইসের DPR কভার করে ব্রাউজার নিজে `sizes` × DPR দিয়ে সঠিক প্রার্থী বাছে
+// (উপরের optimizeR2Url এর স্থির `dpr=2` এর বদলে), ফলে ২x-৩x ফোনে শার্পনেস একই থাকে, কম-DPR/ছোট বাক্সে ছোট ফাইল যায়।
+// Cloudflare ডিফল্টে `fit=scale-down` — সোর্সের চেয়ে বড় করে না, তাই বড় প্রার্থী সোর্স-সীমিত।
+// R2 ছাড়া (Cloudinary/অন্য সোর্স/env নেই) `undefined` ফেরে — তখন কলার শুধু `src` ব্যবহার করে (আগের আচরণ)।
+// ⚠️ প্রতিটা আলাদা width Cloudflare এর আলাদা "unique transformation" (ফ্রি প্ল্যানে মাসে ৫,০০০) — তাই প্রার্থী কম রাখা।
+export function buildImageSrcSet(url: string | undefined, pixelWidths: readonly number[]): string | undefined {
+  if (!url || !url.startsWith('http')) return undefined;
+  const siteBase = process.env.NEXT_PUBLIC_SITE_URL;
+  const r2Base = process.env.NEXT_PUBLIC_R2_IMAGE_BASE;
+  if (!siteBase || !r2Base || !url.startsWith(r2Base)) return undefined;
+  const site = siteBase.endsWith('/') ? siteBase.slice(0, -1) : siteBase;
+  return pixelWidths
+    .map((w) => `${site}/cdn-cgi/image/width=${w},quality=82,format=auto,dpr=1/${url} ${w}w`)
+    .join(', ');
+}

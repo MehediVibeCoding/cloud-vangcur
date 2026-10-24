@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
-import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import { optimizeCloudinaryUrl, buildImageSrcSet } from '@/lib/cloudinaryUrl';
 import { clearProductNavHint, peekProductNavHint } from '@/lib/productNavHint';
 import { useImageRetry } from '@/lib/useImageRetry';
 import {
@@ -311,7 +311,15 @@ function FeatureItem({ text }: { text: string }) {
 // SSR HTML-এ বড় ছবি সবসময় দৃশ্যমান (opacity-100) — হাইড্রেশনের আগে ছবি লুকানো থাকে না (LCP নিরাপদ)।
 const GALLERY_SPINNER_DELAY_MS = 350;
 
-function GalleryImg({ val, alt, isThumb, baseSrc }: { val?: string; alt: string; isThumb: boolean; baseSrc?: string | null }) {
+// 📐 মূল ছবির রেসপন্সিভ srcset: ২টা মাপ (৭২০px ও ১৬০০px) — বেশি মাপ মানে বেশি Cloudflare unique-transformation।
+// `sizes` = ছবির বাক্সের আসল CSS চওড়া (গ্রিড: max-w-[1100px], px-4 / md:px-8, md:grid-cols-2, gap-8, বাক্সে ১px করে বর্ডার):
+//   ফোন: ১০০vw − ৩২ (প্যাডিং) − ২ (বর্ডার) | md+: (min(১০০vw, ১১০০px) − ৬৪ − ৩২ গ্যাপ − ২ বর্ডার) / ২।
+// জুমে (scale(2)) বাক্স দ্বিগুণ দেখায়, তাই sizes দ্বিগুণ → ব্রাউজার বড় (১৬০০) প্রার্থী বাছে। গ্রিড/প্যাডিং বদলালে এটাও বদলাবে!
+const GALLERY_SRCSET_WIDTHS = [720, 1600] as const;
+const GALLERY_SIZES = '(min-width: 768px) calc((min(100vw, 1100px) - 98px) / 2), calc(100vw - 34px)';
+const GALLERY_SIZES_ZOOMED = '(min-width: 768px) calc(min(100vw, 1100px) - 98px), calc((100vw - 34px) * 2)';
+
+function GalleryImg({ val, alt, isThumb, baseSrc, zoomed = false }: { val?: string; alt: string; isThumb: boolean; baseSrc?: string | null; zoomed?: boolean }) {
   const { attempt, waiting, failed, onError } = useImageRetry(1);
   const [pending, setPending] = useState(false);
   const [baseReady, setBaseReady] = useState(false);
@@ -319,6 +327,7 @@ function GalleryImg({ val, alt, isThumb, baseSrc }: { val?: string; alt: string;
   const isUrl = typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'));
   // কার্ডের ছবি শুধু তখনই ভিত্তি-স্তর, যখন সেটা এই একই ছবি (পুরনো/ভিন্ন প্রোডাক্টের হিন্ট হলে নয়)
   const hasBase = !isThumb && !!baseSrc && baseSrc === val;
+  const mainSrcSet = isThumb ? undefined : buildImageSrcSet(val, GALLERY_SRCSET_WIDTHS);
 
   // ছবি ইতিমধ্যে ক্যাশ/লোড থাকলে (complete) কোনো ফেড/স্পিনার নয়; না থাকলে pending=true (পেইন্টের আগেই)
   const setImgRef = useCallback((el: HTMLImageElement | null) => {
@@ -367,6 +376,8 @@ function GalleryImg({ val, alt, isThumb, baseSrc }: { val?: string; alt: string;
           key={attempt}
           ref={setImgRef}
           src={optimizeCloudinaryUrl(val, 800)}
+          srcSet={mainSrcSet}
+          sizes={mainSrcSet ? (zoomed ? GALLERY_SIZES_ZOOMED : GALLERY_SIZES) : undefined}
           alt={alt || ''}
           loading="eager"
           fetchPriority="high"
@@ -1048,7 +1059,7 @@ export default function ProductDetailClient({
               className="flex h-full w-full items-center justify-center transition-transform duration-300"
               style={{ transformOrigin, transform: zoomed ? 'scale(2)' : 'scale(1)' }}
             >
-              <GalleryImg key={imgs[curImgIdx] || curImgIdx} val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} baseSrc={curImgIdx === 0 ? cardImgRef : null} />
+              <GalleryImg key={imgs[curImgIdx] || curImgIdx} val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} baseSrc={curImgIdx === 0 ? cardImgRef : null} zoomed={zoomed} />
             </div>
           </div>
 
@@ -1563,7 +1574,7 @@ export default function ProductDetailClient({
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {related.map((p, i) => (
               <div key={p.id}>
-                <ProductCard prod={p} isFirst={false} index={i} />
+                <ProductCard prod={p} isFirst={false} index={i} lazyImage />
               </div>
             ))}
           </div>
