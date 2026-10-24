@@ -10,6 +10,8 @@ export interface HeroCard {
   catId: string;
   emoji: string;
   img: string;
+  // 🆕 SEO/অ্যাক্সেসিবিলিটি alt — ছবির সাথেই কার্ডে সেভ থাকে (ইংরেজি, ছবির বর্ণনা)। খালি/না থাকলে label ফলব্যাক।
+  alt?: string;
   bg: string;
   // ক্লিকে কোথায় যাবে: category (ডিফল্ট, পুরনো কার্ডও এটাই) | grid (হোমের প্রোডাক্ট গ্রিডে ওই প্রোডাক্টে) | product (সরাসরি ডিটেলস পেজ)
   linkType?: HeroLinkType;
