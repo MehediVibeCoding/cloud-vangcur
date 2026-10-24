@@ -5,6 +5,8 @@ import { fetchHeroCards, DEFAULT_HERO_CARDS } from '@/lib/heroSliderData';
 import { fetchShowcase, DEFAULT_SHOWCASE } from '@/lib/showcaseData';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
 import { logError } from '@/lib/logger';
+import type { Metadata } from 'next';
+import { getServerLang } from '@/lib/i18n/getServerLang';
 import { fetchSettingsBatch, HOME_SETTING_KEYS } from '@/lib/storeSettingsBatch';
 import ClientHome from './ClientHome';
 // ➕ নতুন ইম্পোর্ট — শুধু এই একটা লাইন যোগ হয়েছে (Google/crawler-এর জন্য
@@ -13,6 +15,39 @@ import SeoIntro from './components/home/SeoIntro';
 import HomeJsonLd from './components/home/HomeJsonLd';
 
 export const revalidate = 3600;
+
+// ⚡ ব্যাচ ১: হোমের নিজস্ব title/description (আগে layout-এর ডিফল্ট — শুধু "Vangcur" — আসত)।
+// getServerLang() layout-এও ব্যবহৃত, তাই এটা নতুন কোনো ডাটাবেজ/নেটওয়ার্ক কল যোগ করে না।
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await getServerLang();
+  const title = lang === 'en'
+    ? 'Vangcur — RGB Neon Lights, Crystal Ball Lamps & Gadgets in Bangladesh'
+    : 'ভাঙচুর (Vangcur) — RGB নিওন লাইট, ক্রিস্টাল বল ল্যাম্প ও গ্যাজেট';
+  const description = lang === 'en'
+    ? 'Shop RGB neon lights, 3D crystal ball lamps, mini UPS and trendy gadgets at Vangcur — best prices with fast home delivery across Bangladesh.'
+    : 'ভাঙচুর-এ পাবেন RGB নিওন লাইট, ৩ডি ক্রিস্টাল বল ল্যাম্প, মিনি UPS ও ট্রেন্ডি গ্যাজেট — সেরা দামে, সারা বাংলাদেশে দ্রুত হোম ডেলিভারি।';
+
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical: '/' },
+    openGraph: {
+      type: 'website',
+      url: 'https://vangcur.com',
+      title,
+      description,
+      siteName: 'Vangcur',
+      images: [{ url: '/vangcur-logo.png', width: 991, height: 365, alt: 'Vangcur' }],
+      locale: lang === 'en' ? 'en_US' : 'bn_BD',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/vangcur-logo.png'],
+    },
+  };
+}
 
 // 🆕 কাস্টমার-গ্যালারির ছবি — হোম ISR-এর সাথে সার্ভারে একবার আনা হয় (আগে প্রতিটি নতুন ভিজিটরের
 // ব্রাউজার থেকে আলাদা কোয়েরি যেত)। কোয়েরি হুবহু CustomerGallery-র আগের কোয়েরি; ব্যর্থ বা খালি হলে
