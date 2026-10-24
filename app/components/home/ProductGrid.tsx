@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { scrollToProductsSection } from '@/lib/scrollToProducts';
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import {
   CATEGORY_FILTER_EVENT, FOCUS_PRODUCT_EVENT, makeCatSlug, DEFAULT_CATEGORIES,
 } from '@/lib/categoryData';
@@ -12,6 +11,7 @@ import { fetchProductsPageAction } from '@/app/actions/products';
 import { useT } from '@/lib/i18n/useT';
 import type { Category, Product } from '@/types';
 import ProductCard from './ProductCard';
+import CatFromUrlSync from './CatFromUrlSync';
 
 function EmptyBoxIcon() {
   return (
@@ -62,7 +62,6 @@ interface ProductGridProps {
 // (fetchProductsPageAction)। প্রোডাক্ট কয়েকশো হয়ে গেলেও হোমপেজ হালকা থাকবে।
 export default function ProductGrid({ initialProducts, initialCategory, initialHasMore, categoryName }: ProductGridProps) {
   const { t, lang } = useT();
-  const searchParams = useSearchParams();
   const startCat = initialCategory || 'all';
 
   const [items, setItems] = useState<Product[]>(initialProducts);
@@ -204,9 +203,10 @@ export default function ProductGrid({ initialProducts, initialCategory, initialH
     }
   }, [items, switching, hasMore, focusTick, appendNextBatch]);
 
-  useEffect(() => {
-    const catFromUrl = searchParams.get('cat');
-    if (!catFromUrl) return;
+  // ⚡ ব্যাচ ১: আগে এখানেই useSearchParams() ছিল — রুটের loading.tsx (Suspense)-এর ভেতরে থাকায় পুরো হোম সার্ভারে
+  // না এঁকে ক্লায়েন্টে আঁকা হতো (CSR bailout)। এখন ?cat= পড়ার কাজ আলাদা ছোট কম্পোনেন্টে (CatFromUrlSync),
+  // নিজের <Suspense fallback={null}>-এ — তাই বাকি হোম আবার সার্ভারেই আঁকা হয়। আচরণ হুবহু আগের মতো।
+  const handleCatFromUrl = useCallback((catFromUrl: string) => {
     setActiveCat(catFromUrl);
     try {
       const cosmeticUrl = catFromUrl === 'all' ? '/' : `/category/${makeCatSlug(catFromUrl)}`;
@@ -215,7 +215,7 @@ export default function ProductGrid({ initialProducts, initialCategory, initialH
       // ignore
     }
     scrollToProductsSection();
-  }, [searchParams]);
+  }, []);
 
   const handleShowAll = () => {
     setActiveCat('all');
@@ -238,6 +238,9 @@ export default function ProductGrid({ initialProducts, initialCategory, initialH
 
   return (
     <div className="mx-auto mb-11 min-h-[400px] max-w-[1300px] px-5 scroll-mt-20 sm:scroll-mt-24" id="prodSec">
+      <Suspense fallback={null}>
+        <CatFromUrlSync onCat={handleCatFromUrl} />
+      </Suspense>
       <div className="mb-5 flex items-center justify-between">
         <h2 className="border-l-[3px] border-brand-light pl-3 text-xl font-bold">
           {activeCategoryName && activeCat !== 'all' ? (
