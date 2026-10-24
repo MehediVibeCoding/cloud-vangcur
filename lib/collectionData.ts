@@ -16,7 +16,7 @@ import { COLLECTION_IDS, type CollectionId } from './showcaseData';
 import { logWarn } from './logger';
 
 // productData.ts-এর GRID_COLS-এর সাথে একই কলাম (প্রোডাক্ট কার্ডের জন্য যা লাগে)
-const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch';
+const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch,seo_h1';
 
 // এক কালেকশন পেজে সর্বোচ্চ কয়টা প্রোডাক্ট দেখাবে
 export const COLLECTION_PAGE_LIMIT = 120;
