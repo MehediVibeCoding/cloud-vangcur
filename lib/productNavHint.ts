@@ -23,6 +23,8 @@ export interface NavPreviewProduct {
   hasColorGroup: boolean;
   /** আসল পেজের h1 যা দেখাবে: `seoH1 || name` — কার্ডের নাম থেকে আলাদা (কার্ডে " Vangcur" যোগ থাকে) */
   title: string;
+  /** প্রোডাক্ট id — স্কেলেটনে wishlist-হার্ট লাল/সাদা দেখাতে (wishlist store ব্রাউজারেই আছে, নেটওয়ার্ক লাগে না) */
+  id: string;
 }
 
 export interface ProductNavHint {
