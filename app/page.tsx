@@ -3,7 +3,7 @@ import { fetchProductsPage, PRODUCTS_PAGE_SIZE } from '@/lib/productData';
 import { fetchCategories, DEFAULT_CATEGORIES } from '@/lib/categoryData';
 import { fetchHeroCards, DEFAULT_HERO_CARDS } from '@/lib/heroSliderData';
 import { fetchShowcase, DEFAULT_SHOWCASE } from '@/lib/showcaseData';
-import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import { optimizeCloudinaryUrl, HERO_CARD_IMG_WIDTH } from '@/lib/cloudinaryUrl';
 import { logError } from '@/lib/logger';
 import type { Metadata } from 'next';
 import { getServerLang } from '@/lib/i18n/getServerLang';
@@ -126,8 +126,16 @@ export default async function HomePage() {
   // Only rendered on the homepage (where the hero slider actually lives),
   // not site-wide, so other routes stop wastefully preloading it too.
   const lcpHeroImg = initialHeroCards[0]?.img
-    ? optimizeCloudinaryUrl(initialHeroCards[0].img, 360)
+    ? optimizeCloudinaryUrl(initialHeroCards[0].img, HERO_CARD_IMG_WIDTH)
     : null;
+  // ব্যাচ ২.১: ডেস্কটপে ৬টা হিরো-কার্ড একসাথে দেখা যায় (md:w-1/6), কিন্তু ৩–৬ নম্বর কার্ডের ছবি loading="lazy" —
+  // PageSpeed ডেস্কটপে LCP এলিমেন্ট ছিল এমন একটা lazy ছবি, "resource load delay" ২.৩ সেকেন্ড। মোবাইলে মাত্র ২টা কার্ড
+  // দেখা যায় (এগুলো আগে থেকেই eager), তাই বাকি ৪টা শুধু ≥768px-এ প্রিলোড হয় — মোবাইলে একটা বাড়তি বাইটও নামে না।
+  // (নতুন কোনো ছবি/ট্রান্সফর্ম নয়: হুবহু একই URL যা HeroSlider পরে lazy করে চাইত।)
+  const desktopHeroPreloads = initialHeroCards
+    .slice(1, 6)
+    .map((c) => (c?.img ? optimizeCloudinaryUrl(c.img, HERO_CARD_IMG_WIDTH) : null))
+    .filter((h): h is string => !!h);
 
   return (
     <>
@@ -144,6 +152,9 @@ export default async function HomePage() {
           fetchpriority="high"
         />
       )}
+      {desktopHeroPreloads.map((href) => (
+        <link key={href} rel="preload" as="image" href={href} media="(min-width: 768px)" />
+      ))}
       <ClientHome
         initialProducts={initialProducts}
         initialCategories={initialCategories}

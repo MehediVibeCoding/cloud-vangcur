@@ -60,6 +60,11 @@ const config: Config = {
         brand: '250ms',
       },
       keyframes: {
+        // ব্যাচ ২.১: স্কেলেটনের খুব হালকা pulse (বিল্ট-ইন animate-pulse স্বচ্ছতা ১→০.৫ করে, এটা ১→০.৮৫ — রং প্রায় আসলের মতোই থাকে)
+        softPulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.85' },
+        },
         cartJiggle: {
           '0%, 100%': { transform: 'rotate(0deg) scale(1)' },
           '10%': { transform: 'rotate(-12deg) scale(1.15)' },
@@ -100,6 +105,7 @@ const config: Config = {
         },
       },
       animation: {
+        'soft-pulse': 'softPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'cart-jiggle': 'cartJiggle .7s cubic-bezier(.36,.07,.19,.97) both',
         'section-reveal': 'sectionReveal .5s cubic-bezier(.4,0,.2,1) both',
         'badge-hot-glow': 'badgeHotGlow 2.2s ease-in-out infinite',

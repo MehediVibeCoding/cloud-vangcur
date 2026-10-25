@@ -224,6 +224,7 @@ export default function ProductCard({ prod: p, isFirst, index = 0, lazyImage = f
       hasColorGroup: !!p.colorGroupId,
       // seoH1 ফিল্ডটাই নেই (পুরনো ক্যাশ/অন্য কুয়েরি) হলে খালি — স্কেলেটন তখন টাইটেল-বার দেখায়, ভুল নাম নয়
       title: p.seoH1 === undefined ? '' : p.seoH1 || p.name,
+      id: String(p.id),
     });
   };
 

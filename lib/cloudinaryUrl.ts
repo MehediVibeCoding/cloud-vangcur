@@ -35,6 +35,11 @@ function optimizeR2Url(url: string, width: number): string | null {
   return `${site}/cdn-cgi/image/${params}/${url}`;
 }
 
+// 🎠 হিরো স্লাইডারের কার্ড-ছবির প্রস্থ (HeroSlider + page.tsx-এর LCP প্রিলোড একই মান ব্যবহার করে, যাতে URL কখনো আলাদা না হয়)।
+// ব্যাচ ২.১: আগে ৩৬০ (×dpr=2 = ৭২০px) ছিল, অথচ কার্ড দেখায় মাত্র ~১৭৫–২০০ CSS px — PageSpeed: "৭২০×১২৮০ ফাইল, দেখানো ২০০×৩৫৬"।
+// ২৪০ (×dpr=2 = ৪৮০px) = ২.৪× — সব ২x স্ক্রিনে শার্প, ৩x ফোনেও (১৭৫×৩=৫২৫px) প্রায় একই; ফাইল ~৫৫% ছোট।
+export const HERO_CARD_IMG_WIDTH = 240;
+
 export function optimizeCloudinaryUrl(url?: string, width = 450): string {
   if (!url || !url.startsWith('http')) return url || '';
 

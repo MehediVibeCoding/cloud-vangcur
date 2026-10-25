@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { logWarn } from '@/lib/logger';
 import { sanitizeSvgHtml } from '@/lib/sanitize';
-import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import { optimizeCloudinaryUrl, HERO_CARD_IMG_WIDTH } from '@/lib/cloudinaryUrl';
 import { isModalOpen } from '@/lib/bodyScrollLock';
 import { productHref } from '@/lib/productData';
 import { scrollToProductsSection } from '@/lib/scrollToProducts';
@@ -82,7 +82,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
     for (let idx = 0; idx < perPage; idx++) {
       const src = cards[idx]?.img;
       if (!src) continue;
-      const href = optimizeCloudinaryUrl(src, 360);
+      const href = optimizeCloudinaryUrl(src, HERO_CARD_IMG_WIDTH);
       const preloadImg = new window.Image();
       preloadImg.src = href;
     }
@@ -102,7 +102,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
       for (let idx = perPage; idx < cards.length; idx++) {
         const src = cards[idx]?.img;
         if (!src) continue;
-        const href = optimizeCloudinaryUrl(src, 360);
+        const href = optimizeCloudinaryUrl(src, HERO_CARD_IMG_WIDTH);
         const preloadImg = new window.Image();
         preloadImg.src = href;
       }
@@ -492,7 +492,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
                 >
                   {card.img ? (
                     <HeroCardImage
-                      src={optimizeCloudinaryUrl(card.img, 360)}
+                      src={optimizeCloudinaryUrl(card.img, HERO_CARD_IMG_WIDTH)}
                       alt={card.alt?.trim() || label}
                       isPriority={isPriority}
                     />

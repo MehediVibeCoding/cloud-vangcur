@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { optimizeCloudinaryUrl, buildImageSrcSet } from '@/lib/cloudinaryUrl';
 import { clearProductNavHint, peekProductNavHint } from '@/lib/productNavHint';
+import { PRODUCT_PAGE_BG } from '@/lib/productPageBg';
 import { useImageRetry } from '@/lib/useImageRetry';
 import {
   fetchCustomProducts, mergeCustomProducts, fetchProductsByIds, fetchColorSiblings,
@@ -966,7 +967,7 @@ export default function ProductDetailClient({
   if (!prod) {
     if (!prodsLoaded) {
       return (
-        <div className="min-h-screen bg-gradient-to-b from-brand-bg/25 via-white to-white">
+        <div className={`min-h-screen ${PRODUCT_PAGE_BG}`}>
           <Navbar {...navbarProps} />
           <div className="flex min-h-[50vh] items-center justify-center gap-2.5 text-sm text-muted">
             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-light/25 border-t-brand-light" />
