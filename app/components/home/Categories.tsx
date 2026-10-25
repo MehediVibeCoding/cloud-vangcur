@@ -14,6 +14,9 @@ const CIRCLE_STYLE = {
     'border border-[#D6EAFC] bg-[#ECF6FE] shadow-[0_1px_4px_rgba(68,167,252,.12)] group-hover:border-brand-light/50 group-hover:bg-[#E0F0FE] dark:border-[#2B4A75] dark:bg-[#1B2F4E] dark:shadow-[0_2px_10px_rgba(0,0,0,.35)] dark:group-hover:border-[#3F6BA3] dark:group-hover:bg-[#223B60]',
   slate:
     'border border-[#D3E7FB] bg-[#EEF6FF] shadow-[0_1px_4px_rgba(68,167,252,.12)] group-hover:border-brand-light/50 group-hover:bg-[#E2F0FF] dark:border-[#3E5F8E] dark:bg-[#2A4468] dark:shadow-[0_2px_10px_rgba(0,0,0,.35)] dark:group-hover:border-[#5679A8] dark:group-hover:bg-[#31507A]',
+  // লাইট: ব্র্যান্ড-টিন্ট সার্কেল (trust-এর মতো); ডার্ক: আগের slate সার্কেলই (অপরিবর্তিত)
+  branddeep:
+    'border border-[#D6EAFC] bg-[#ECF6FE] shadow-[0_1px_4px_rgba(68,167,252,.12)] group-hover:border-brand-light/50 group-hover:bg-[#E0F0FE] dark:border-[#3E5F8E] dark:bg-[#2A4468] dark:shadow-[0_2px_10px_rgba(0,0,0,.35)] dark:group-hover:border-[#5679A8] dark:group-hover:bg-[#31507A]',
 } as const;
 
 function CatIcon({ icon }: { icon?: string }) {
