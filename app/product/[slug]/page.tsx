@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { idFromSlug, makeSlug, fetchProductById, fetchRelatedProducts } from '@/lib/productData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { brandedTitle } from '@/lib/seoTitle';
 import { fetchProductReviews } from '@/lib/productReviewData';
 import { fetchProductQuestions } from '@/lib/productQnaData';
 import type { Product, ProductReview, ProductQuestion } from '@/types';
@@ -136,7 +137,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const canonicalSlug = `${makeSlug(p.name)}-${p.id}`;
 
   return {
-    title,
+    // F3: meta_title/autoTitle-এ ব্র্যান্ড আগে থেকেই আছে — layout-এর টেমপ্লেট যেন আবার না জোড়ে
+    title: brandedTitle(title),
     description,
     alternates: { canonical: `/product/${canonicalSlug}` },
     openGraph: {
@@ -178,9 +180,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     (img) => typeof img === 'string' && img.startsWith('http')
   );
 
-  const ratingValue = liveReviewsSummary?.ratingValue || initialProduct.rating || 4.8;
-  const reviewCount = liveReviewsSummary?.reviewCount || Math.floor((Number(initialProduct.id) || 1) * 37 + initialProduct.stock * 13) % 80 + 20;
-
+  // F1: aggregateRating শুধু আসল অনুমোদিত রিভিউ (≥১) থাকলেই — আগে রিভিউ না থাকলে ডিফল্ট রেটিং
+  // ও বানানো রিভিউ-সংখ্যা Google-কে পাঠানো হতো, যা structured-data নীতির পরিপন্থী।
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -199,11 +200,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         name: 'Vangcur',
       },
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue,
-      reviewCount,
-    },
+    ...(liveReviewsSummary && liveReviewsSummary.reviewCount > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: liveReviewsSummary.ratingValue,
+            reviewCount: liveReviewsSummary.reviewCount,
+          },
+        }
+      : {}),
   };
 
   return (

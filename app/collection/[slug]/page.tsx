@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { fetchShowcase, DEFAULT_SHOWCASE } from '@/lib/showcaseData';
 import { fetchCollectionProducts, isCollectionId } from '@/lib/collectionData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { brandedTitle } from '@/lib/seoTitle';
 import CollectionPageClient from './CollectionPageClient';
 
 const SITE_URL = 'https://vangcur.com';
@@ -49,7 +50,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     ? `Explore the ${name} collection on Vangcur — hand-picked gadgets, best prices, fast home delivery.`
     : `Vangcur-এর ${name} কালেকশন দেখুন — বাছাই করা গ্যাজেট, সেরা দামে, দ্রুত হোম ডেলিভারিতে।`;
   return {
-    title,
+    // F3: টাইটেলে ব্র্যান্ড আগে থেকেই আছে — টেমপ্লেট যেন আবার না জোড়ে
+    title: brandedTitle(title),
     description,
     alternates: { canonical: `/collection/${slug}` },
     openGraph: {

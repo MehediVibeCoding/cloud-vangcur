@@ -23,6 +23,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { brandedTitle } from '@/lib/seoTitle';
 import {
   fetchGuidePageBySlug,
   resolveProductSnapshots,
@@ -78,7 +79,8 @@ export async function generateMetadata({
   const url = `${SITE_URL}${guidePageUrlPath(page.slug, template.url_prefix)}`;
 
   return {
-    title,
+    // F3: meta_title_bn/en (ডাটাবেজ)-এ ব্র্যান্ড আগে থেকেই আছে — টেমপ্লেট যেন আবার না জোড়ে
+    title: brandedTitle(title),
     description,
     alternates: { canonical: url },
     openGraph: {

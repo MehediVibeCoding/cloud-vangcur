@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { brandedTitle } from '@/lib/seoTitle';
 import OffersClient from './OffersClient';
 
 const SITE_URL = 'https://vangcur.com';
@@ -15,7 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
     : 'Vangcur (ভাঙচুর)-এর চলমান বিশেষ অফার, ডিসকাউন্ট ক্যাম্পেইন ও এক্সক্লুসিভ ডিলসমূহ দেখুন।';
 
   return {
-    title,
+    // F3: টাইটেলে ব্র্যান্ড আগে থেকেই আছে — টেমপ্লেট যেন আবার না জোড়ে
+    title: brandedTitle(title),
     description,
     alternates: { canonical: `${SITE_URL}/offers` },
     openGraph: {

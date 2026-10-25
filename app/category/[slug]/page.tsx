@@ -8,6 +8,8 @@ import { fetchHeroCards, DEFAULT_HERO_CARDS } from '@/lib/heroSliderData';
 import { fetchShowcase, DEFAULT_SHOWCASE } from '@/lib/showcaseData';
 import { fetchSettingsBatch, HOME_SETTING_KEYS } from '@/lib/storeSettingsBatch';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { brandedTitle } from '@/lib/seoTitle';
+import { categoryHasProductsCached } from '@/lib/productListingCache';
 import ClientHome from '@/app/ClientHome';
 
 const SITE_URL = 'https://vangcur.com';
@@ -43,9 +45,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const description = lang === 'en'
     ? `Browse the best products in the ${cat.name} category on Vangcur — best prices, fast home delivery.`
     : `Vangcur-এ ${cat.name} ক্যাটাগরির সেরা প্রোডাক্টগুলো দেখুন — সেরা দামে, দ্রুত হোম ডেলিভারিতে।`;
+  // F4: প্রোডাক্টহীন (খালি) ক্যাটাগরি পেজ ইনডেক্স হবে না; লিংক-সংকেত (follow) বহাল। ক্যাশ-করা
+  // সারি থেকে চেক, ব্যর্থ হলে (null) আগের মতোই ইনডেক্সযোগ্য। অ্যাডমিন প্রোডাক্ট সেভ করলে
+  // /api/revalidate-catalog এই পেজও পার্জ করে, তাই প্রোডাক্ট যোগ হলে noindex নিজে সরে যায়।
+  const hasProducts = await categoryHasProductsCached(cat.id);
   return {
-    title,
+    // F3: টাইটেলে ব্র্যান্ড আগে থেকেই আছে — টেমপ্লেট যেন আবার না জোড়ে
+    title: brandedTitle(title),
     description,
+    ...(hasProducts === false ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: `/category/${makeCatSlug(cat.id)}` },
     openGraph: {
       type: 'website',
@@ -105,13 +113,18 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   const initialHasMore = productsPage.hasMore;
 
   return (
-    <ClientHome
-      initialProducts={initialProducts}
-      initialCategories={initialCategories}
-      initialHeroCards={initialHeroCards}
-      initialCategory={cat.id}
-      initialHasMore={initialHasMore}
-      initialShowcase={initialShowcase}
-    />
+    <>
+      {/* F5: ক্যাটাগরি পেজে আগে কোনো <h1> ছিল না। sr-only — দৃশ্যমান ডিজাইনে কোনো পরিবর্তন নেই
+          (হোমের SeoIntro-র মতোই); সার্চ ইঞ্জিন ও স্ক্রিন-রিডার পেজের বিষয় বুঝতে পারে। */}
+      <h1 className="sr-only">{cat.name}</h1>
+      <ClientHome
+        initialProducts={initialProducts}
+        initialCategories={initialCategories}
+        initialHeroCards={initialHeroCards}
+        initialCategory={cat.id}
+        initialHasMore={initialHasMore}
+        initialShowcase={initialShowcase}
+      />
+    </>
   );
 }
