@@ -552,13 +552,16 @@ export const FOCUS_PRODUCT_EVENT = 'vc:focusProduct';
 // ক্যাটাগরি আইকনের কালার থিম — শুধু নিচের এই এক লাইন বদলালেই পুরো সাইটের আইকন বদলে যায়:
 //   'trust' = ট্রাস্ট স্ট্রিপের রঙ (ব্র্যান্ড স্কাই-ব্লু #44A7FC আউটলাইন, হালকা/সাদা বডি)
 //   'slate' = নরম স্লেট-ব্লু আউটলাইন (#3B6FA8), বেশি কনট্রাস্ট
+//   'branddeep' = ব্র্যান্ডের নিজস্ব গাঢ় স্কাই-ব্লু শেড (#3C93DE, brand-light-এর hover রঙ) আউটলাইন ও ডিটেইলে,
+//                 বডি ও অ্যাকসেন্টের আসল গ্রেডিয়েন্ট অক্ষত। শুধু লাইট মোডে আলাদা দেখায়; ডার্ক মোড আগের মতোই।
 // ডার্ক মোডের নিয়ম globals.css-এর `.dark .vc-cat-icon`-এ, সার্কেলের স্টাইল Categories.tsx-এ।
 // ─────────────────────────────────────────────────────────────────────────────
-export const VC_ICON_THEME = 'slate' as 'trust' | 'slate';
+export const VC_ICON_THEME = 'branddeep' as 'trust' | 'slate' | 'branddeep';
 
 const VC_ICON_PALETTES = {
   trust: { line: '#44A7FC', screen: '#44A7FC', top: '#FFFFFF', bodyBottom: '#CFE6FD', accentTop: '#A9D5FD' },
   slate: { line: '#3B6FA8', screen: '#335F99', top: '#FFFFFF', bodyBottom: null, accentTop: null },
+  branddeep: { line: '#3C93DE', screen: '#3C93DE', top: '#FFFFFF', bodyBottom: null, accentTop: null },
 } as const;
 
 /**
