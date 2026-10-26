@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { logWarn } from '@/lib/logger';
@@ -47,6 +48,8 @@ function HeroCardImage({
       className="absolute inset-0 z-0 h-full w-full rounded-[inherit] object-cover object-top opacity-100 transition-transform duration-300 ease-brand group-hover:scale-[1.05]"
       src={src}
       alt={alt}
+      width={180}
+      height={320}
       loading={isPriority ? 'eager' : 'lazy'}
       fetchPriority={isPriority ? 'high' : undefined}
       decoding="async"
@@ -63,6 +66,17 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
     padCards(initialCards && initialCards.length ? initialCards : DEFAULT_HERO_CARDS)
   );
 
+  // ⚡ ব্যাচ ৫খ: স্লাইডারের ৩টা কপির মধ্যে প্রথম কপিই (১২টা কার্ড) শুরুতে পুরো আঁকা হয়; ২য়–৩য় কপি
+  // (অসীম-লুপের জন্য) খালি ফ্রেম হিসেবে থাকে — মাপ একই, তাই লেআউট/অবস্থান অপরিবর্তিত। `warm` হলে
+  // (পেজ লোড + idle, বা প্রথম ইন্টারঅ্যাকশন/অটো-স্লাইডের ঠিক আগে) পুরোটা আঁকা হয়।
+  const [warm, setWarm] = useState(false);
+  const warmRef = useRef(false);
+  const warmNow = useCallback(() => {
+    if (warmRef.current) return;
+    warmRef.current = true;
+    setWarm(true);
+  }, []);
+
   const wrapRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -74,18 +88,30 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
   const touchRef = useRef({ startX: 0, startY: 0 });
   const isVisibleRef = useRef(true);
 
+  const preloadedRef = useRef<Set<string>>(new Set());
+  const preloadAhead = useCallback((upTo: number) => {
+    if (typeof window === 'undefined') return;
+    const total = cards.length;
+    if (!total) return;
+    for (let idx = 0; idx < upTo; idx++) {
+      const src = cards[idx % total]?.img;
+      if (!src) continue;
+      const href = optimizeCloudinaryUrl(src, HERO_CARD_IMG_WIDTH);
+      if (preloadedRef.current.has(href)) continue;
+      preloadedRef.current.add(href);
+      const preloadImg = new window.Image();
+      preloadImg.src = href;
+    }
+  }, [cards]);
+  const preloadAheadRef = useRef(preloadAhead);
+  preloadAheadRef.current = preloadAhead;
+
   // প্রথম স্ক্রিনের দৃশ্যমান কার্ডগুলোর তাৎক্ষণিক প্রিলোড + পেজ স্থির হওয়ার পর বাকি কার্ডগুলোর ব্যাকগ্রাউন্ড প্রিলোড
   useEffect(() => {
     if (typeof window === 'undefined' || !cards.length) return;
     const perPage = getDuoPerPage();
     
-    for (let idx = 0; idx < perPage; idx++) {
-      const src = cards[idx]?.img;
-      if (!src) continue;
-      const href = optimizeCloudinaryUrl(src, HERO_CARD_IMG_WIDTH);
-      const preloadImg = new window.Image();
-      preloadImg.src = href;
-    }
+    preloadAheadRef.current(perPage);
 
     // 🐢 স্লো কানেকশন / ডেটা সেভার মোডে বাকি কার্ডগুলো আগে থেকে না টেনে, স্ক্রল করে
     // কাছে এলে native lazy loading-এর উপর ছেড়ে দেওয়া হয় — যাতে প্রথম LCP ছবির
@@ -98,14 +124,11 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
       !!conn && (conn.saveData === true || /^(slow-2g|2g|3g)$/.test(conn.effectiveType || ''));
     if (isSlowConnection) return;
 
+    // ⚡ ব্যাচ ৫খ: আগে পেজ লোডের পর বাকি সব (১০টা) কার্ডের ছবি একসাথে নামত (~৫০০ KB)। এখন শুধু পরের
+    // ২ পেজ (মোবাইলে ৪টা); বাকিগুলো অটো-স্লাইড এগোলে `preloadAhead` দিয়ে ধাপে ধাপে।
     const idlePreload = () => {
-      for (let idx = perPage; idx < cards.length; idx++) {
-        const src = cards[idx]?.img;
-        if (!src) continue;
-        const href = optimizeCloudinaryUrl(src, HERO_CARD_IMG_WIDTH);
-        const preloadImg = new window.Image();
-        preloadImg.src = href;
-      }
+      preloadAheadRef.current(perPage * 3);
+      warmNow();
     };
 
     let idleId: number | null = null;
@@ -137,7 +160,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
       }
       if (timerId) clearTimeout(timerId);
     };
-  }, [cards]);
+  }, [cards, warmNow]);
 
   // 🚀 জিরো রিফ্লো পজিশনিং — কোনো DOM নোড মিউটেশন ছাড়া সরাসরি GPU কম্পোজিটর ট্রান্সফর্ম
   const setPosition = useCallback((animate: boolean) => {
@@ -167,6 +190,12 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
     const perPage = getDuoPerPage();
     const totalCards = cards.length;
 
+    // ⚡ ব্যাচ ৫খ: লুপের ২য়–৩য় কপি তখনো খালি থাকলে, কোনো জাম্প/অ্যানিমেশনের আগেই সিঙ্ক্রোনাসলি আঁকি।
+    if (!warmRef.current) {
+      warmRef.current = true;
+      flushSync(() => setWarm(true));
+    }
+
     if (dir < 0 && duoIdxRef.current <= 0) {
       infiniteJumpRef.current = true;
       duoIdxRef.current = totalCards;
@@ -176,6 +205,10 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
 
     duoIdxRef.current += dir * perPage;
     setPosition(true);
+    // পরের ২ পেজের ছবি আগে থেকে (একবারই, ডুপ্লিকেট সেট দিয়ে) — মাথার ওপর বাড়তি রিকোয়েস্ট নয়।
+    preloadAheadRef.current(
+      Math.max(0, duoIdxRef.current % Math.max(totalCards, 1)) + perPage * 3
+    );
   }, [cards.length, setPosition]);
 
   const startAuto = useCallback((intervalMs = AUTOPLAY_MS) => {
@@ -222,6 +255,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
     observer.observe(wrap);
 
     const onTouchStart = (e: TouchEvent) => {
+      warmNow();
       touchRef.current.startX = e.touches[0].clientX;
       touchRef.current.startY = e.touches[0].clientY;
       isInteractingRef.current = true;
@@ -249,6 +283,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
     };
 
     const onMouseEnter = () => {
+      warmNow();
       if (window.innerWidth >= 768) {
         startAuto(HOVER_AUTOPLAY_MS);
       }
@@ -355,7 +390,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onDocVisibility);
     };
-  }, [cards.length, duoStep, setPosition, startAuto]);
+  }, [cards.length, duoStep, setPosition, startAuto, warmNow]);
 
   useEffect(() => {
     if (initialCards && initialCards.length) return;
@@ -470,6 +505,8 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
             const isFirstDuo = i < 2;
             const isDesktopExtra = i >= 2 && i < 6;
             const isInitialCard = isFirstDuo || isDesktopExtra;
+            // ⚡ ব্যাচ ৫খ: লুপের ২য়–৩য় কপি (i ≥ cards.length) warm হওয়ার আগে খালি ফ্রেম — একই মাপ, কোনো ছবি/blur নেই।
+            const deferredCopy = !warm && i >= cards.length;
             const staggerDelay = i * 0.03;
             const isPriority = i < 2;
 
@@ -479,7 +516,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
                 key={`${catId}-${i}`}
                 className="aspect-[9/16] w-[calc((100%-12px)/2)] min-h-[220px] shrink-0 sm:min-h-[280px] md:w-[calc((100%-60px)/6)]"
               >
-                <div
+                {deferredCopy ? null : <div
                   className={`group relative flex h-full w-full cursor-pointer flex-col justify-end overflow-hidden rounded-[14px] bg-[#111] shadow-[0_4px_16px_rgba(0,0,0,.08)] transition-transform duration-300 ease-brand [-webkit-tap-highlight-color:transparent] hover:-translate-y-0.5 hover:scale-[1.006] active:scale-[.98] ${
                     isInitialCard ? 'hero-card-anim-in' : ''
                   }`}
@@ -520,7 +557,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
                       {label}
                     </span>
                   </div>
-                </div>
+                </div>}
               </div>
             );
           })}

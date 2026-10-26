@@ -81,6 +81,8 @@ function ProdImg({ imgVal, name, lazy }: { imgVal?: string; name: string; lazy?:
         key={attempt}
         src={optimizeCloudinaryUrl(imgVal, 380)}
         alt={name || ''}
+        width={380}
+        height={667}
         loading={lazy ? 'lazy' : 'eager'}
         fetchPriority={lazy ? undefined : 'high'}
         decoding="async"
