@@ -6,7 +6,13 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { logWarn } from '@/lib/logger';
 import { sanitizeSvgHtml } from '@/lib/sanitize';
-import { optimizeCloudinaryUrl, HERO_CARD_IMG_WIDTH } from '@/lib/cloudinaryUrl';
+import {
+  optimizeCloudinaryUrl,
+  buildImageSrcSet,
+  HERO_CARD_IMG_WIDTH,
+  HERO_SRCSET_WIDTHS,
+  HERO_IMG_SIZES,
+} from '@/lib/cloudinaryUrl';
 import { isModalOpen } from '@/lib/bodyScrollLock';
 import { productHref } from '@/lib/productData';
 import { scrollToProductsSection } from '@/lib/scrollToProducts';
@@ -35,10 +41,12 @@ interface HeroSliderProps {
 
 function HeroCardImage({
   src,
+  srcSet,
   alt,
   isPriority,
 }: {
   src: string;
+  srcSet?: string;
   alt: string;
   isPriority: boolean;
 }) {
@@ -47,6 +55,8 @@ function HeroCardImage({
     <img
       className="absolute inset-0 z-0 h-full w-full rounded-[inherit] object-cover object-top opacity-100 transition-transform duration-300 ease-brand group-hover:scale-[1.05]"
       src={src}
+      srcSet={srcSet}
+      sizes={srcSet ? HERO_IMG_SIZES : undefined}
       alt={alt}
       width={180}
       height={320}
@@ -530,6 +540,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
                   {card.img ? (
                     <HeroCardImage
                       src={optimizeCloudinaryUrl(card.img, HERO_CARD_IMG_WIDTH)}
+                      srcSet={buildImageSrcSet(card.img, HERO_SRCSET_WIDTHS)}
                       alt={card.alt?.trim() || label}
                       isPriority={isPriority}
                     />

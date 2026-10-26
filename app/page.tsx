@@ -3,7 +3,13 @@ import { fetchProductsPage, PRODUCTS_PAGE_SIZE } from '@/lib/productData';
 import { fetchCategories, DEFAULT_CATEGORIES } from '@/lib/categoryData';
 import { fetchHeroCards, DEFAULT_HERO_CARDS } from '@/lib/heroSliderData';
 import { fetchShowcase, DEFAULT_SHOWCASE } from '@/lib/showcaseData';
-import { optimizeCloudinaryUrl, HERO_CARD_IMG_WIDTH } from '@/lib/cloudinaryUrl';
+import {
+  optimizeCloudinaryUrl,
+  buildImageSrcSet,
+  HERO_CARD_IMG_WIDTH,
+  HERO_SRCSET_WIDTHS,
+  HERO_IMG_SIZES,
+} from '@/lib/cloudinaryUrl';
 import { logError } from '@/lib/logger';
 import type { Metadata } from 'next';
 import { getServerLang } from '@/lib/i18n/getServerLang';
@@ -132,10 +138,22 @@ export default async function HomePage() {
   // PageSpeed ডেস্কটপে LCP এলিমেন্ট ছিল এমন একটা lazy ছবি, "resource load delay" ২.৩ সেকেন্ড। মোবাইলে মাত্র ২টা কার্ড
   // দেখা যায় (এগুলো আগে থেকেই eager), তাই বাকি ৪টা শুধু ≥768px-এ প্রিলোড হয় — মোবাইলে একটা বাড়তি বাইটও নামে না।
   // (নতুন কোনো ছবি/ট্রান্সফর্ম নয়: হুবহু একই URL যা HeroSlider পরে lazy করে চাইত।)
+  // ব্যাচ ৫গ: <img> এখন srcset+sizes দিয়ে ছবি বাছে, তাই প্রিলোডেও হুবহু একই srcset/sizes দিতে হয় — নইলে প্রিলোড
+  // আর <img> আলাদা ফাইল টানবে (ডাবল ডাউনলোড)। srcset না থাকলে (R2 ছাড়া সোর্স) আগের মতো শুধু href।
+  const lcpHeroSrcSet = initialHeroCards[0]?.img
+    ? buildImageSrcSet(initialHeroCards[0].img, HERO_SRCSET_WIDTHS)
+    : undefined;
   const desktopHeroPreloads = initialHeroCards
     .slice(1, 6)
-    .map((c) => (c?.img ? optimizeCloudinaryUrl(c.img, HERO_CARD_IMG_WIDTH) : null))
-    .filter((h): h is string => !!h);
+    .map((c) =>
+      c?.img
+        ? {
+            href: optimizeCloudinaryUrl(c.img, HERO_CARD_IMG_WIDTH),
+            srcSet: buildImageSrcSet(c.img, HERO_SRCSET_WIDTHS),
+          }
+        : null
+    )
+    .filter((h): h is { href: string; srcSet: string | undefined } => !!h);
 
   return (
     <>
@@ -148,12 +166,21 @@ export default async function HomePage() {
           rel="preload"
           as="image"
           href={lcpHeroImg}
-          // @ts-expect-error - fetchpriority is standard in modern browsers
-          fetchpriority="high"
+          imageSrcSet={lcpHeroSrcSet}
+          imageSizes={lcpHeroSrcSet ? HERO_IMG_SIZES : undefined}
+          fetchPriority="high"
         />
       )}
-      {desktopHeroPreloads.map((href) => (
-        <link key={href} rel="preload" as="image" href={href} media="(min-width: 768px)" />
+      {desktopHeroPreloads.map(({ href, srcSet }) => (
+        <link
+          key={href}
+          rel="preload"
+          as="image"
+          href={href}
+          imageSrcSet={srcSet}
+          imageSizes={srcSet ? HERO_IMG_SIZES : undefined}
+          media="(min-width: 768px)"
+        />
       ))}
       <ClientHome
         initialProducts={initialProducts}

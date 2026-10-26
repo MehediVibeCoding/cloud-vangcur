@@ -12,7 +12,12 @@ import {
 import { useWishlistStore } from '@/lib/store/wishlistStore';
 import { useCartStore } from '@/lib/store/cartStore';
 import { showToast } from '@/lib/toast';
-import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import {
+  optimizeCloudinaryUrl,
+  buildImageSrcSet,
+  PRODUCT_SRCSET_WIDTHS,
+  PRODUCT_IMG_SIZES,
+} from '@/lib/cloudinaryUrl';
 import { attachProductToNavHint } from '@/lib/productNavHint';
 import { useImageRetry } from '@/lib/useImageRetry';
 import { useT } from '@/lib/i18n/useT';
@@ -76,10 +81,13 @@ function ProdImg({ imgVal, name, lazy }: { imgVal?: string; name: string; lazy?:
   const isUrl = typeof imgVal === 'string' && (imgVal.startsWith('http://') || imgVal.startsWith('https://'));
   if (!imgVal) return <span className="text-[52px]">📦</span>;
   if (isUrl && !failed) {
+    const productSrcSet = buildImageSrcSet(imgVal, PRODUCT_SRCSET_WIDTHS);
     return (
       <img
         key={attempt}
         src={optimizeCloudinaryUrl(imgVal, 380)}
+        srcSet={productSrcSet}
+        sizes={productSrcSet ? PRODUCT_IMG_SIZES : undefined}
         alt={name || ''}
         width={380}
         height={667}
@@ -230,6 +238,11 @@ export default function ProductCard({ prod: p, isFirst, index = 0, lazyImage = f
     });
   };
 
+  // ⚡ ব্যাচ ৫ক: ভাঁজের নিচের কার্ডগুলো (প্রথম ৪টা বাদে) অফস্ক্রিনে থাকলে ব্রাউজার তাদের লেআউট/পেইন্ট/ছবি-লোড
+  // বাদ দেয় (content-visibility:auto) এবং ভিউপোর্টের কাছে এলে আঁকে। `auto` কিওয়ার্ড একবার আঁকার পর আসল মাপ মনে রাখে;
+  // তার আগে ~৩০০px ধরা হয়। কার্ডে আগে থেকেই [contain:content] আছে, তাই হোভার-গ্লো/শ্যাডোর ক্লিপিং বদলায় না।
+  const cvAuto = lazyImage || (!isFirst && index >= 4);
+
   return (
     <div
       data-pid={p.id}
@@ -240,7 +253,7 @@ export default function ProductCard({ prod: p, isFirst, index = 0, lazyImage = f
       onTouchMove={cancelIntentPrefetch}
       onTouchEnd={cancelIntentPrefetch}
       onTouchCancel={cancelIntentPrefetch}
-      className={`card-hover-glow group rounded-[18px] bg-white p-1 shadow-[0_4px_14px_rgba(0,88,199,.12)] [contain:content] ${isAnimatingTransform ? 'transform-gpu' : ''}`}
+      className={`card-hover-glow group rounded-[18px] bg-white p-1 shadow-[0_4px_14px_rgba(0,88,199,.12)] [contain:content] ${cvAuto ? '[content-visibility:auto] [contain-intrinsic-size:auto_300px]' : ''} ${isAnimatingTransform ? 'transform-gpu' : ''}`}
     >
       <div className="relative aspect-[0.57] overflow-hidden rounded-[14px] bg-surface-muted [contain:paint_layout]">
         <Link prefetch={false}
