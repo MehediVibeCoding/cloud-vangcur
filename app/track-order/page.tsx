@@ -10,10 +10,12 @@ export async function generateMetadata(): Promise<Metadata> {
     ? {
       title: brandedTitle('Track Your Order - Vangcur'),
       description: 'Check the latest status of your Vangcur order using your order number and mobile number.',
+      alternates: { canonical: '/track-order' },
     }
     : {
       title: brandedTitle('অর্ডার ট্র্যাক করুন - Vangcur'),
       description: 'অর্ডার নম্বর ও মোবাইল নম্বর দিয়ে আপনার Vangcur অর্ডারের সর্বশেষ অবস্থা দেখুন।',
+      alternates: { canonical: '/track-order' },
     };
 }
 

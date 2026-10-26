@@ -5,7 +5,7 @@
 // '/install', খালি হলে সরাসরি রুটে), তাই fetchAllPublishedGuideUrls()
 // ইতিমধ্যে পূর্ণ, সঠিক পাথ রিটার্ন করে।
 import type { MetadataRoute } from 'next';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { fetchCustomProducts, productHref, prodInCat } from '@/lib/productData';
 import { fetchCategories, makeCatSlug } from '@/lib/categoryData';
 import type { Product } from '@/types';
@@ -16,6 +16,34 @@ const SITE_URL = 'https://vangcur.com';
 
 export const revalidate = 3600;
 
+/**
+ * F7: প্রোডাক্টের আসল শেষ-কনটেন্ট-বদলের তারিখ (custom_products.updated_at — ডাটাবেজ ট্রিগার শুধু
+ * আসল কনটেন্ট বদলালে সেট করে, স্টক/ক্রম/রেটিং বদলালে নয়)। কলাম না থাকলে বা কোয়েরি ব্যর্থ হলে
+ * খালি ম্যাপ — তখন সাইটম্যাপে lastModified বাদ যায় (বানানো "এখন" দেওয়ার চেয়ে ভালো)।
+ */
+async function fetchProductUpdatedAt(supabase: SupabaseClient): Promise<Map<string, Date>> {
+  const out = new Map<string, Date>();
+  try {
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('custom_products')
+        .select('id, updated_at')
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error || !data) return new Map();
+      for (const row of data as { id: number | string; updated_at: string | null }[]) {
+        const d = row.updated_at ? new Date(row.updated_at) : null;
+        if (d && !Number.isNaN(d.getTime())) out.set(String(row.id), d);
+      }
+      if (data.length < PAGE) break;
+    }
+  } catch {
+    return new Map();
+  }
+  return out;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -23,6 +51,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let products: Product[] = [];
   let categories: { id: string; name: string }[] = [];
   let guidePages: { url: string; updated_at: string }[] = [];
+  let updatedAtById = new Map<string, Date>();
 
   // F8: আগে ডাটাবেজ ব্যর্থ হলে ক্যাচ ব্লক চুপচাপ গিলে ফেলত, ফলে শুধু স্ট্যাটিক URL-এর ছোট
   // সাইটম্যাপ বানিয়ে সেটাই ১ ঘণ্টা ক্যাশ হতো। এখন (রানটাইমে) ব্যর্থতা বা "০টা প্রোডাক্ট" এলে
@@ -33,12 +62,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (supabaseUrl && supabaseKey) {
     try {
       const supabase = createClient(supabaseUrl, supabaseKey);
-      const [prods, cats, guides] = await Promise.all([
+      const [prods, cats, guides, stamps] = await Promise.all([
         fetchCustomProducts(supabase),
         fetchCategories(supabase),
         fetchAllPublishedGuideUrls(supabase),
+        fetchProductUpdatedAt(supabase),
       ]);
       products = prods;
+      updatedAtById = stamps;
       // F4: শুধু অন্তত ১টা প্রোডাক্টওয়ালা ক্যাটাগরি সাইটম্যাপে (খালি পেজ ক্রল-বাজেট নষ্ট করে ও
       // "থিন পেজ" সংকেত দেয়)। নতুন প্রোডাক্ট যোগ হলে ক্যাটাগরি নিজে থেকেই ফিরে আসবে।
       categories = cats.filter((c) => c.id !== 'all' && prods.some((p) => prodInCat(p, c.id)));
@@ -103,12 +134,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // F12: /track-order ইউটিলিটি পেজ — সার্চে আনার মতো কনটেন্ট নয়, তাই সাইটম্যাপ থেকে বাদ
   ];
 
-  const categoryRoutes: MetadataRoute.Sitemap = categories.map((cat) => ({
-    url: `${SITE_URL}/category/${makeCatSlug(cat.id)}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }));
+  // F7: ক্যাটাগরির তারিখ = তার প্রোডাক্টগুলোর সবচেয়ে নতুন আসল আপডেট; জানা না থাকলে বাদ
+  const categoryRoutes: MetadataRoute.Sitemap = categories.map((cat) => {
+    let latest: Date | undefined;
+    for (const p of products) {
+      if (!prodInCat(p, cat.id)) continue;
+      const d = updatedAtById.get(String(p.id));
+      if (d && (!latest || d > latest)) latest = d;
+    }
+    return {
+      url: `${SITE_URL}/category/${makeCatSlug(cat.id)}`,
+      ...(latest ? { lastModified: latest } : {}),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    };
+  });
 
   const collectionRoutes: MetadataRoute.Sitemap = COLLECTION_IDS.map((id) => ({
     url: `${SITE_URL}/collection/${id}`,
@@ -117,12 +157,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  const productRoutes: MetadataRoute.Sitemap = products.map((prod) => ({
-    url: `${SITE_URL}${productHref(prod)}`,
-    lastModified: new Date(),
-    changeFrequency: 'daily',
-    priority: 0.9,
-  }));
+  const productRoutes: MetadataRoute.Sitemap = products.map((prod) => {
+    const lastModified = updatedAtById.get(String(prod.id));
+    return {
+      url: `${SITE_URL}${productHref(prod)}`,
+      ...(lastModified ? { lastModified } : {}),
+      changeFrequency: 'daily' as const,
+      priority: 0.9,
+    };
+  });
 
   const guideRoutes: MetadataRoute.Sitemap = guidePages.map((g) => ({
     url: `${SITE_URL}${g.url}`,

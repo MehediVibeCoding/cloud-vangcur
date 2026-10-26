@@ -9,10 +9,12 @@ export async function generateMetadata(): Promise<Metadata> {
     ? {
       title: brandedTitle('Return & Refund Policy - Vangcur'),
       description: "Vangcur's full policy on product returns, exchanges, replacements, and refunds.",
+      alternates: { canonical: '/refund-policy' },
     }
     : {
       title: brandedTitle('রিটার্ন ও রিফান্ড পলিসি - Vangcur'),
       description: 'Vangcur (ভাঙচুর)-এর প্রোডাক্ট রিটার্ন, এক্সচেঞ্জ, রিপ্লেসমেন্ট ও রিফান্ড সংক্রান্ত পূর্ণাঙ্গ নীতিমালা।',
+      alternates: { canonical: '/refund-policy' },
     };
 }
 

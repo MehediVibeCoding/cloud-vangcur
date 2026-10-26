@@ -14,6 +14,8 @@ export default function robots(): MetadataRoute.Robots {
           '/account',
           '/account/*',
           '/reset-password',
+          // F16: সার্চ-ফলাফল পেজ ইনডেক্স হয় না (noindex) — ক্রলও বন্ধ, ক্রল-বাজেট বাঁচে
+          '/search',
           '/api/*',
         ],
       },

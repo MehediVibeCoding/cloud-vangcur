@@ -9,10 +9,12 @@ export async function generateMetadata(): Promise<Metadata> {
     ? {
         title: brandedTitle('Order & Shipping Policy - Vangcur'),
         description: "Learn about Vangcur's order verification process, home delivery timelines, closed-box shipping, and courier rates across Bangladesh.",
+        alternates: { canonical: '/shipping' },
       }
     : {
         title: brandedTitle('অর্ডার ও শিপিং তথ্য - Vangcur'),
         description: 'Vangcur (ভাঙচুর)-এর অর্ডার ভেরিফিকেশন, হোম ডেলিভারি সময়সীমা, ক্লোজড-বক্স ডেলিভারি ও কুরিয়ার ট্র্যাকিং সংক্রান্ত পূর্ণাঙ্গ নীতিমালা।',
+        alternates: { canonical: '/shipping' },
       };
 }
 
