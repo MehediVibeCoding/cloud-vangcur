@@ -138,7 +138,7 @@ export default function BrandMarquee() {
   };
 
   return (
-    <section ref={secRef} className="vc-brand-sec mx-auto mb-14 max-w-[1300px] px-4 sm:px-5" id="brandsSec" aria-label={en ? 'Brands we carry' : 'আমাদের ব্র্যান্ডসমূহ'}>
+    <section ref={secRef} className="vc-brand-sec mx-auto mb-14 max-w-[1300px] px-4 sm:px-5 [content-visibility:auto] [contain-intrinsic-size:auto_220px]" id="brandsSec" aria-label={en ? 'Brands we carry' : 'আমাদের ব্র্যান্ডসমূহ'}>
       <style>{CSS}</style>
 
       <div className="mb-8 text-center">
