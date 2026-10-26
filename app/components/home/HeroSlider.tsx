@@ -110,6 +110,14 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
       if (preloadedRef.current.has(href)) continue;
       preloadedRef.current.add(href);
       const preloadImg = new window.Image();
+      // ⚠️ ব্যাচ ৫ঘ: <img> এখন srcset+sizes দিয়ে ছবি বাছে (ব্যাচ ৫গ)। প্রিলোডও হুবহু একই srcset/sizes দিয়ে না করলে
+      // ব্রাউজার আলাদা URL (পুরনো width=240,dpr=2) টেনে একই ছবি দুবার নামাত — HAR/PSI-তে ডুপ্লিকেট (৭০ KiB + ৪১ KiB) দেখা গেছে।
+      // `sizes` → `srcset` → `src` ক্রমে সেট করলে ব্রাউজার <img>-এর সমান প্রার্থীই বাছে।
+      const srcSet = buildImageSrcSet(src, HERO_SRCSET_WIDTHS);
+      if (srcSet) {
+        preloadImg.sizes = HERO_IMG_SIZES;
+        preloadImg.srcset = srcSet;
+      }
       preloadImg.src = href;
     }
   }, [cards]);

@@ -179,6 +179,7 @@ export default async function HomePage() {
           href={href}
           imageSrcSet={srcSet}
           imageSizes={srcSet ? HERO_IMG_SIZES : undefined}
+          fetchPriority="high"
           media="(min-width: 768px)"
         />
       ))}
