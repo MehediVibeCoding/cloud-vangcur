@@ -12,7 +12,12 @@ import {
 import { useWishlistStore } from '@/lib/store/wishlistStore';
 import { useCartStore } from '@/lib/store/cartStore';
 import { showToast } from '@/lib/toast';
-import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import {
+  optimizeCloudinaryUrl,
+  buildImageSrcSet,
+  PRODUCT_SRCSET_WIDTHS,
+  PRODUCT_IMG_SIZES,
+} from '@/lib/cloudinaryUrl';
 import { attachProductToNavHint } from '@/lib/productNavHint';
 import { useImageRetry } from '@/lib/useImageRetry';
 import { useT } from '@/lib/i18n/useT';
@@ -76,10 +81,13 @@ function ProdImg({ imgVal, name, lazy }: { imgVal?: string; name: string; lazy?:
   const isUrl = typeof imgVal === 'string' && (imgVal.startsWith('http://') || imgVal.startsWith('https://'));
   if (!imgVal) return <span className="text-[52px]">📦</span>;
   if (isUrl && !failed) {
+    const productSrcSet = buildImageSrcSet(imgVal, PRODUCT_SRCSET_WIDTHS);
     return (
       <img
         key={attempt}
         src={optimizeCloudinaryUrl(imgVal, 380)}
+        srcSet={productSrcSet}
+        sizes={productSrcSet ? PRODUCT_IMG_SIZES : undefined}
         alt={name || ''}
         width={380}
         height={667}

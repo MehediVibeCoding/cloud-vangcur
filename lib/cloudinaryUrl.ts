@@ -40,6 +40,19 @@ function optimizeR2Url(url: string, width: number): string | null {
 // ২৪০ (×dpr=2 = ৪৮০px) = ২.৪× — সব ২x স্ক্রিনে শার্প, ৩x ফোনেও (১৭৫×৩=৫২৫px) প্রায় একই; ফাইল ~৫৫% ছোট।
 export const HERO_CARD_IMG_WIDTH = 240;
 
+// 📐 ব্যাচ ৫গ: হিরো/প্রোডাক্ট কার্ডের রেসপন্সিভ srcset (শুধু R2 ছবি)। আগে সব ডিভাইসে স্থির `dpr=2` ছবি যেত
+// (হিরো ৪৮০px, প্রোডাক্ট ৭৬০px), অথচ PageSpeed-এর ১.৭৫ DPR ফোনে দরকার ~৩২৬px / ~২৯০px। এখন ব্রাউজার
+// `sizes` × DPR দিয়ে নিজে বাছে — উচ্চ-DPR ফোনে আগের মতোই (বা কাছাকাছি) শার্প, ছোট স্ক্রিনে অনেক ছোট ফাইল।
+// ⚠️ প্রতিটা width = Cloudflare-এর আলাদা unique transformation (ফ্রি: ৫,০০০/মাস)। মোট নতুন ≈ ১২×২ + ৩৫×৩ ≈ ১৩০।
+export const HERO_SRCSET_WIDTHS = [340, 480] as const;
+// মোবাইলে ২ কার্ড (px-3.5 = ২৮ + gap ১২ = ৪০), ডেস্কটপে ৬ কার্ড (px-5 = ৪০ + ৫ gap × ১২ = ৬০ → ১০০; max ১৩০০)।
+export const HERO_IMG_SIZES =
+  '(min-width: 768px) calc((min(100vw, 1300px) - 100px) / 6), calc((100vw - 40px) / 2)';
+export const PRODUCT_SRCSET_WIDTHS = [320, 480, 720] as const;
+// ProductGrid: grid-cols-2 / md:3 / lg:4 / xl:6, gap-3.5 (১৪px), কনটেইনার px-5 (৪০) ও max ১৩০০।
+export const PRODUCT_IMG_SIZES =
+  '(min-width: 1280px) calc((min(100vw, 1300px) - 110px) / 6), (min-width: 1024px) calc((100vw - 82px) / 4), (min-width: 768px) calc((100vw - 68px) / 3), calc((100vw - 54px) / 2)';
+
 export function optimizeCloudinaryUrl(url?: string, width = 450): string {
   if (!url || !url.startsWith('http')) return url || '';
 
