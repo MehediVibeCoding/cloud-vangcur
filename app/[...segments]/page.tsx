@@ -23,6 +23,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { brandedTitle } from '@/lib/seoTitle';
 import {
   fetchGuidePageBySlug,
   resolveProductSnapshots,
@@ -78,7 +79,8 @@ export async function generateMetadata({
   const url = `${SITE_URL}${guidePageUrlPath(page.slug, template.url_prefix)}`;
 
   return {
-    title,
+    // F3: meta_title_bn/en (ডাটাবেজ)-এ ব্র্যান্ড আগে থেকেই আছে — টেমপ্লেট যেন আবার না জোড়ে
+    title: brandedTitle(title),
     description,
     alternates: { canonical: url },
     openGraph: {
@@ -88,6 +90,14 @@ export async function generateMetadata({
       siteName: 'Vangcur',
       locale: lang === 'en' ? 'en_US' : 'bn_BD',
       type: 'article',
+      // F14: গাইড লিংক শেয়ারে প্রিভিউ-ছবি আসত না — অন্য পেজগুলোর মতোই লোগো
+      images: [{ url: '/vangcur-logo.png', width: 991, height: 365, alt: 'Vangcur' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/vangcur-logo.png'],
     },
   };
 }
@@ -132,6 +142,25 @@ export default async function GuidePage({ params }: { params: Promise<{ segments
       name: h1,
       url,
       inLanguage: lang === 'en' ? 'en' : 'bn',
+    },
+    // F14: Article — তারিখ ডাটাবেজের আসল published_at/updated_at (বানানো নয়); published_at না থাকলে
+    // datePublished বাদ। লেখক/প্রকাশক সাইটের নিজস্ব Organization।
+    {
+      '@type': 'Article',
+      headline: h1,
+      description: lang === 'en' ? page.meta_description_en : page.meta_description_bn,
+      inLanguage: lang === 'en' ? 'en' : 'bn',
+      mainEntityOfPage: url,
+      image: `${SITE_URL}/vangcur-logo.png`,
+      ...(page.published_at ? { datePublished: page.published_at } : {}),
+      dateModified: page.updated_at,
+      author: { '@type': 'Organization', name: 'Vangcur', url: SITE_URL },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Vangcur',
+        url: SITE_URL,
+        logo: { '@type': 'ImageObject', url: `${SITE_URL}/vangcur-logo.png` },
+      },
     },
   ];
 

@@ -56,6 +56,20 @@ const getCachedOrderedRows = unstable_cache(
   { revalidate: 300, tags: ['catalog'] },
 );
 
+/**
+ * F4: ক্যাটাগরিতে অন্তত একটা প্রোডাক্ট আছে কিনা — ক্যাশ-করা হালকা সারি (id, cat, cats, stock) থেকে,
+ * তাই নতুন ডাটাবেজ কোয়েরি লাগে না। ব্যর্থ হলে null ("জানি না") — কলার তখন পেজ noindex করবে না,
+ * যাতে সাময়িক ডাটাবেজ-ত্রুটিতে আসল ক্যাটাগরি ভুলে সার্চ থেকে বাদ না পড়ে।
+ */
+export async function categoryHasProductsCached(category: string): Promise<boolean | null> {
+  try {
+    const rows = await getCachedOrderedRows();
+    return orderedIdsForCategory(rows, normalizeCat(category)).length > 0;
+  } catch {
+    return null;
+  }
+}
+
 // একটা (ক্যাটাগরি, offset, limit)-এর পেজ — ভারী GRID_COLS সহ। শুধু আগে থেকে জানা, সীমিত কম্বিনেশনে ডাকা হয়।
 const getCachedProductsPage = unstable_cache(
   async (cat: string, offset: number, limit: number): Promise<ProductsPageResult> => {

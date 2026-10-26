@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { fetchProductsPage, computeProductsListPaging } from '@/lib/productData';
 import { fetchCategories, makeCatSlug, DEFAULT_CATEGORIES } from '@/lib/categoryData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { brandedTitle } from '@/lib/seoTitle';
 import { logError } from '@/lib/logger';
 import { loadProductsListingCached } from '@/lib/productListingCache';
 import { getCachedCategories } from '@/lib/catalogIndex';
@@ -35,7 +36,8 @@ export async function generateMetadata({ searchParams }: ProductsPageProps): Pro
   const canonical = `/products${qs.toString() ? `?${qs.toString()}` : ''}`;
 
   return {
-    title: `${title} - Vangcur`,
+    // F3: টাইটেলে ব্র্যান্ড আগে থেকেই আছে — টেমপ্লেট যেন আবার না জোড়ে
+    title: brandedTitle(`${title} - Vangcur`),
     description: lang === 'en'
       ? 'Browse the full Vangcur product catalog — best prices, fast home delivery.'
       : 'ভাঙচুর-এর সম্পূর্ণ প্রোডাক্ট ক্যাটালগ দেখুন — সেরা দামে, দ্রুত হোম ডেলিভারিতে।',
