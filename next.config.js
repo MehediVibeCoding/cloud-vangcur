@@ -37,6 +37,8 @@ const nextConfig = {
     ];
   },
   images: {
+    // ⚡ ব্যাচ ৩: `_next/image` (ফুটারের ২টা ছবি ও GuideBlocks-এর ছবি) — ডিফল্ট ৪ ঘণ্টা; মালিকের সিদ্ধান্তে ৭ দিন (৬০৪৮০০s)।
+    minimumCacheTTL: 604800,
     remotePatterns: [
       {
         protocol: 'https',

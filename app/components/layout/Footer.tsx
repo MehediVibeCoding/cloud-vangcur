@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import VangcurLogoMark from '@/app/components/ui/VangcurLogoMark';
 import Link from 'next/link';
@@ -156,7 +156,7 @@ function UsersGroupIcon() {
 const colLinkClass =
   'block bg-transparent border-0 p-0 text-left font-body text-[13.5px] font-medium text-slate-700 no-underline transition-colors hover:text-brand-light cursor-pointer leading-snug';
 
-export default function Footer() {
+function FooterContent() {
   const { t, lang } = useT();
   const currentUser = useAuthStore((s) => s.currentUser);
   const supabase = useMemo(() => createClient(), []);
@@ -534,4 +534,38 @@ export default function Footer() {
       </div>
     </footer>
   );
+}
+
+// ⚡ ব্যাচ ৩: ফুটারের ভেতরের সবকিছু (ছবি, Supabase কনটেন্ট-ফেচ ও Realtime সাবস্ক্রিপশন) এখন শুধু ব্যবহারকারী
+// ফুটারের কাছাকাছি (~৮০০px আগে) স্ক্রল করলে মাউন্ট হয় — আগে প্রতিটা পেজ খোলার সঙ্গে সঙ্গেই হতো।
+// • মোবাইল ও ডেস্কটপের ছবি আলাদাই আছে (FooterContent-এর ভেতরে অপরিবর্তিত)।
+// • ফুটার সবসময় পেজের শেষ উপাদান, তাই নিচে বড় হলে দেখা-যাওয়া অংশ সরে না (layout shift নেই)।
+// • IntersectionObserver না থাকলে (খুব পুরনো ব্রাউজার) সঙ্গে সঙ্গে মাউন্ট — আগের আচরণ।
+// • কোনো নতুন রিকোয়েস্ট নয়; উল্টো ফুটার না-দেখা ভিজিটরের জন্য ২টা ছবি + ১টা Supabase কল + ১টা WebSocket কমে।
+export default function Footer() {
+  const holderRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const el = holderRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setMounted(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setMounted(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '800px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  if (mounted) return <FooterContent />;
+  return <div ref={holderRef} aria-hidden="true" className="mt-12 h-10" />;
 }
