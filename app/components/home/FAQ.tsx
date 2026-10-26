@@ -40,7 +40,7 @@ export default function FAQ() {
   };
 
   return (
-    <div className="mx-auto mb-14 max-w-[1300px] px-4 sm:px-5 [contain:content] [transform:translateZ(0)]" id="faqSec">
+    <div className="mx-auto mb-14 max-w-[1300px] px-4 sm:px-5 [contain:content] [transform:translateZ(0)] [content-visibility:auto] [contain-intrinsic-size:auto_640px]" id="faqSec">
       <div className="mb-8 text-center">
         <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border border-brand-light/35 bg-white/90 px-3.5 py-1 font-body text-[11px] font-bold uppercase tracking-wider text-brand-light shadow-2xs">
           <SupportHelpIcon />

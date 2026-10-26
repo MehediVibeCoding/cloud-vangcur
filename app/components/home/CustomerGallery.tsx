@@ -551,7 +551,7 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-        className="mx-auto mb-16 max-w-[1300px] px-4 sm:px-5 overflow-hidden"
+        className="mx-auto mb-16 max-w-[1300px] px-4 sm:px-5 overflow-hidden [content-visibility:auto] [contain-intrinsic-size:auto_520px]"
       >
         {headerBlock}
 

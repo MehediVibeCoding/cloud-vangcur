@@ -34,7 +34,7 @@ export default function About() {
   const { lang } = useT();
 
   return (
-    <section className="mx-auto mb-14 max-w-[1300px] px-4 sm:px-5 [contain:content] [transform:translateZ(0)] overflow-hidden">
+    <section className="mx-auto mb-14 max-w-[1300px] px-4 sm:px-5 [contain:content] [transform:translateZ(0)] overflow-hidden [content-visibility:auto] [contain-intrinsic-size:auto_760px]">
       <div className="relative overflow-hidden rounded-[28px] border border-white/90 bg-gradient-to-b from-brand-bg/25 via-[#EFF6FE]/75 to-white/95 p-6 sm:p-10 shadow-[0_4px_24px_rgba(68,167,252,0.08)] ring-1 ring-white/80">
         
         <HeaderDecor />
