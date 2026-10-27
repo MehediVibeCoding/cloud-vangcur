@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -38,6 +38,8 @@ import AccountNavTabs, { type AccountNavTabItem } from '@/app/components/account
 import OrderCard from '@/app/components/orders/OrderCard';
 import SkeletonTransition from '@/app/components/ui/SkeletonTransition';
 import { CompactOrderListSkeleton } from '@/app/components/ui/Skeletons';
+import AccountMainSkeleton from './AccountMainSkeleton';
+import MembershipFromUrlSync from './MembershipFromUrlSync';
 import type { Order, DraftOrder, StockNotification } from '@/types';
 import { guardPendingLock } from '@/lib/pendingLock';
 
@@ -200,7 +202,6 @@ function IconLogoutWarning() {
 export default function AccountClient() {
   const { t, lang } = useT();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
@@ -209,9 +210,13 @@ export default function AccountClient() {
   const cartQty = useCartStore((s) => cartCount(s.cart));
   const wishQty = useWishlistStore((s) => s.wishlist.length);
   const currentUser = useAuthStore((s) => s.currentUser);
+  // লগইন-স্টেট localStorage থেকে হাইড্রেট হওয়ার আগে (সার্ভারের HTML + প্রথম ক্লায়েন্ট রেন্ডার) আসল ইউজার জানা যায় না;
+  // তখন "লগইন করুন" কার্ড না দেখিয়ে স্কেলেটন দেখানো হয়।
+  const authReady = useAuthStore((s) => s.hydrated);
 
   const [loginOpen, setLoginOpen] = useState(false);
   const [membershipOpen, setMembershipOpen] = useState(false);
+  const openMembership = useCallback(() => setMembershipOpen(true), []);
   const [completeProfileOpen, setCompleteProfileOpen] = useState(false);
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
 
@@ -233,13 +238,6 @@ export default function AccountClient() {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    if (searchParams.get('open') === 'membership') {
-      setMembershipOpen(true);
-      router.replace('/account', { scroll: false });
-    }
-  }, [searchParams, router]);
 
   useEffect(() => {
     if (!cardRef.current) return undefined;
@@ -537,7 +535,9 @@ export default function AccountClient() {
       {/* ২. প্রোফাইল ড্যাশবোর্ড কনটেন্ট                                   */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <main className="mx-auto max-w-[1100px] px-4 pb-16 pt-4 md:px-6">
-        {!currentUser ? (
+        {!authReady ? (
+          <AccountMainSkeleton />
+        ) : !currentUser ? (
           <div className="mx-auto my-12 max-w-[420px] rounded-[28px] border border-white/80 bg-white/85 p-8 text-center shadow-sh2 backdrop-blur-md animate-section-reveal">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-bg/50 text-brand-light shadow-xs">
               <IconLockAlt />
@@ -1085,7 +1085,7 @@ export default function AccountClient() {
         )}
       </main>
 
-      <Footer />
+      <Footer eager />
 
       {/* লগআউট কনফার্মেশন মোডাল */}
       {showLogoutConfirm && (
@@ -1128,6 +1128,11 @@ export default function AccountClient() {
         onClose={() => setCompleteProfileOpen(false)}
         onSaved={() => setProfileComplete(true)}
       />
+
+      {/* ?open=membership — useSearchParams আলাদা ছোট কম্পোনেন্টে, নিজের Suspense-এ (পুরো পেজ CSR-এ চলে যাওয়া ঠেকাতে) */}
+      <Suspense fallback={null}>
+        <MembershipFromUrlSync onOpen={openMembership} />
+      </Suspense>
 
       <MembershipModal
         isOpen={membershipOpen}
