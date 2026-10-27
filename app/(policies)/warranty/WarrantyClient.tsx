@@ -114,29 +114,29 @@ export default function WarrantyClient() {
       >
         <p className={policyPClass}>
           {en
-            ? 'The warranty of each product is shown in the warranty section of its product page, below the price and stock. The following warranty types are offered by Vangcur:'
-            : 'প্রতিটি পণ্যের ওয়ারেন্টি সেই পণ্যের পেজে মূল্য ও স্টকের নিচে ওয়ারেন্টি অংশে লেখা থাকে। Vangcur-এ নিচের ধরনের ওয়ারেন্টি দেওয়া হয়:'}
+            ? 'The warranty of each product is shown in the warranty section of its product page, below the price and stock. The duration differs from product to product: it can be a few days, a few months or a few years. Vangcur offers the following types of warranty:'
+            : 'প্রতিটি পণ্যের ওয়ারেন্টি সেই পণ্যের পেজে মূল্য ও স্টকের নিচে ওয়ারেন্টি অংশে লেখা থাকে। মেয়াদ পণ্যভেদে আলাদা — কয়েক দিন, কয়েক মাস বা কয়েক বছর পর্যন্ত হতে পারে। Vangcur-এ নিচের ধরনের ওয়ারেন্টি দেওয়া হয়:'}
         </p>
         <ul className={policyUlClass}>
           <PolicyBulletPoint>
             {en
-              ? '7-Day Replacement Warranty (standard products): within 7 days, manufacturing defects or technical issues are replaced free of charge.'
-              : '৭ দিনের রিপ্লেসমেন্ট ওয়ারেন্টি (সাধারণ পণ্য): ৭ দিনের মধ্যে প্রস্তুতকারক ত্রুটি বা টেকনিক্যাল সমস্যা দেখা দিলে ফ্রিতে রিপ্লেসমেন্ট।'}
+              ? 'Replacement Warranty: if a manufacturing defect or technical issue appears within the warranty period, the product is replaced free of charge.'
+              : 'রিপ্লেসমেন্ট ওয়ারেন্টি: ওয়ারেন্টির মেয়াদের মধ্যে প্রস্তুতকারক ত্রুটি বা টেকনিক্যাল সমস্যা দেখা দিলে ফ্রিতে রিপ্লেসমেন্ট।'}
           </PolicyBulletPoint>
           <PolicyBulletPoint>
             {en
-              ? '6-Month (180 days) Replacement Warranty (selected products): free replacement for internal technical issues or manufacturer defects.'
-              : '৬ মাস (১৮০ দিন) রিপ্লেসমেন্ট ওয়ারেন্টি (নির্বাচিত পণ্য): অভ্যন্তরীণ টেকনিক্যাল সমস্যা বা প্রস্তুতকারক ত্রুটিতে ফ্রিতে রিপ্লেসমেন্ট।'}
+              ? 'Service Warranty: if a defect appears within the warranty period, it is resolved through the brand’s free service.'
+              : 'সার্ভিস ওয়ারেন্টি: ওয়ারেন্টির মেয়াদের মধ্যে ত্রুটি দেখা দিলে ব্র্যান্ডের ফ্রি সার্ভিসের মাধ্যমে সমাধান।'}
           </PolicyBulletPoint>
           <PolicyBulletPoint>
             {en
-              ? '1-Year (365 days) Warranty (selected products): free replacement, or the brand’s free service warranty, for manufacturer defects or hardware issues.'
-              : '১ বছর (৩৬৫ দিন) ওয়ারেন্টি (নির্বাচিত পণ্য): প্রস্তুতকারক ত্রুটি বা হার্ডওয়্যারজনিত সমস্যায় ফ্রি রিপ্লেসমেন্ট অথবা ব্র্যান্ডের ফ্রি সার্ভিস ওয়ারেন্টি।'}
+              ? 'Official Warranty: the brand’s own official warranty, with a free replacement or the brand’s free service, whichever applies, for manufacturer defects or hardware issues.'
+              : 'অফিসিয়াল ওয়ারেন্টি: ব্র্যান্ডের নিজস্ব অফিসিয়াল ওয়ারেন্টি — প্রস্তুতকারক ত্রুটি বা হার্ডওয়্যারজনিত সমস্যায় যেটা প্রযোজ্য, ফ্রি রিপ্লেসমেন্ট অথবা ব্র্যান্ডের ফ্রি সার্ভিস।'}
           </PolicyBulletPoint>
           <PolicyBulletPoint>
             {en
-              ? '2-Year (24 months) Warranty (selected products): free replacement, or the brand’s official free service warranty, for any hardware defect.'
-              : '২ বছর (২৪ মাস) ওয়ারেন্টি (নির্বাচিত পণ্য): যেকোনো হার্ডওয়্যার ত্রুটিতে ফ্রি রিপ্লেসমেন্ট অথবা ব্র্যান্ডের অফিসিয়াল ফ্রি সার্ভিস ওয়ারেন্টি।'}
+              ? 'Duration: for example 7 days, 6 months, 1 year or 2 years. Whatever duration is written on the product page is the one that applies.'
+              : 'মেয়াদ: যেমন ৭ দিন, ৬ মাস, ১ বছর বা ২ বছর। পণ্যের পেজে যে মেয়াদ লেখা থাকে, সেটাই প্রযোজ্য।'}
           </PolicyBulletPoint>
         </ul>
         <PolicyNote type="info">
@@ -246,13 +246,13 @@ export default function WarrantyClient() {
         <ul className={policyUlClass}>
           <PolicyBulletPoint>
             {en
-              ? '1-Year warranty: the box with the serial number must be submitted.'
-              : '১ বছরের ওয়ারেন্টি: সিরিয়াল নম্বরসহ মূল বক্স জমা দিতে হবে।'}
+              ? 'Longer warranties (for example 1 year): the box with the serial number must be submitted.'
+              : 'দীর্ঘ মেয়াদের ওয়ারেন্টি (যেমন ১ বছর): সিরিয়াল নম্বরসহ মূল বক্স জমা দিতে হবে।'}
           </PolicyBulletPoint>
           <PolicyBulletPoint>
             {en
-              ? '2-Year warranty: the warranty card must be submitted along with the box and invoice.'
-              : '২ বছরের ওয়ারেন্টি: বক্স ও ইনভয়েসের সাথে ওয়ারেন্টি কার্ড জমা দিতে হবে।'}
+              ? 'Products that come with a warranty card (for example a 2-year warranty): the warranty card must be submitted along with the box and invoice.'
+              : 'ওয়ারেন্টি কার্ডসহ আসা পণ্য (যেমন ২ বছরের ওয়ারেন্টি): বক্স ও ইনভয়েসের সাথে ওয়ারেন্টি কার্ড জমা দিতে হবে।'}
           </PolicyBulletPoint>
         </ul>
 

@@ -8,12 +8,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return lang === 'en'
     ? {
       title: brandedTitle('Warranty Policy - Vangcur'),
-      description: 'Vangcur warranty policy: 7-day replacement warranty, 6-month, 1-year and 2-year warranty on selected products, what is covered, claim requirements and how to claim.',
+      description: 'Vangcur warranty policy: replacement, service and official warranty with a duration that depends on the product, what is covered, claim requirements and how to claim.',
       alternates: { canonical: '/warranty' },
     }
     : {
       title: brandedTitle('ওয়ারেন্টি নীতিমালা (Warranty Policy) - Vangcur'),
-      description: 'Vangcur (ভাঙচুর)-এর ওয়ারেন্টি নীতিমালা: ৭ দিনের রিপ্লেসমেন্ট ওয়ারেন্টি, নির্বাচিত পণ্যে ৬ মাস / ১ বছর / ২ বছরের ওয়ারেন্টি, কী কভার হয়, ক্লেইমের শর্ত ও ক্লেইম করার নিয়ম।',
+      description: 'Vangcur (ভাঙচুর)-এর ওয়ারেন্টি নীতিমালা: রিপ্লেসমেন্ট, সার্ভিস ও অফিসিয়াল ওয়ারেন্টি (মেয়াদ পণ্যভেদে আলাদা), কী কভার হয়, ক্লেইমের শর্ত ও ক্লেইম করার নিয়ম।',
       alternates: { canonical: '/warranty' },
     };
 }

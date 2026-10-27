@@ -28,6 +28,12 @@ function toEnDigits(s: string): string {
   return s.replace(/[০-৯]/g, (d) => String(BN_DIGITS.indexOf(d)));
 }
 
+// বাংলা অঙ্ক → ইংরেজি অঙ্ক। ওয়ারেন্টি মডালের বাংলা টেক্সটে (যেকোনো সংখ্যা/মেয়াদের জন্য) ইংরেজি
+// অঙ্ক দেখানোর একটাই জায়গা — আগে মডালে শুধু ৪টা নির্দিষ্ট মেয়াদের জন্য আলাদা আলাদা regex ছিল।
+export function toEnglishDigits(s: string): string {
+  return toEnDigits(s);
+}
+
 function toBnDigits(s: string): string {
   return s.replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]);
 }
@@ -140,7 +146,13 @@ function tierOf(p: ParsedWarranty | null): '7d' | '6m' | '1y' | '2y' | null {
 
 export function getWarrantyModalContent(warrantyText?: string, lang: WarrantyLang = 'bn'): WarrantyModalContent {
   const parsed = parseWarranty(warrantyText);
-  const tier = tierOf(parsed);
+  let tier = tierOf(parsed);
+  // ৭ দিন / ৬ মাসের তৈরি টেক্সটে শুধু "ফ্রি রিপ্লেসমেন্ট" বলা আছে — সার্ভিস বা অফিসিয়াল
+  // ওয়ারেন্টির বেলায় সেটা ভুল তথ্য দেবে, তাই এই দুই ক্ষেত্রে জেনেরিক (ধরন-অনুযায়ী) টেক্সটে যাওয়া হবে।
+  if ((tier === '7d' || tier === '6m') && parsed && (parsed.kind === 'service' || parsed.kind === 'official')) {
+    tier = null;
+  }
+  const kind: WarrantyKind = parsed ? parsed.kind : 'plain';
 
   if (lang === 'en') {
     const rules = [
@@ -177,9 +189,15 @@ export function getWarrantyModalContent(warrantyText?: string, lang: WarrantyLan
       };
     }
     if (parsed) {
+      const bodyEn =
+        kind === 'service'
+          ? 'From the order date, manufacturer defects or technical issues are resolved through the brand\'s free service for the stated warranty period.'
+          : kind === 'official'
+            ? 'From the order date, you are covered by the brand\'s official warranty (free replacement or free service, as applicable) for manufacturer defects or technical issues during the stated warranty period.'
+            : 'From the order date, you are covered for manufacturer defects or technical issues for the stated warranty period.';
       return {
         title: `${formatWarrantyLabel(warrantyText, 'en')} Policy`,
-        body: 'From the order date, you are covered for manufacturer defects or technical issues for the stated warranty period.',
+        body: bodyEn,
         rules,
       };
     }
@@ -196,7 +214,7 @@ export function getWarrantyModalContent(warrantyText?: string, lang: WarrantyLan
 
   if (tier === '7d') {
     return {
-      title: '১ সপ্তাহ (৭ দিন) রিপ্লেসমেন্ট ওয়ারেন্টি পলিসি',
+      title: '৭ দিন (১ সপ্তাহ) রিপ্লেসমেন্ট ওয়ারেন্টি পলিসি',
       body: 'প্রোডাক্টটি অর্ডার করার দিন থেকে পরবর্তী ৭ দিনের মধ্যে প্রস্তুতকারক ত্রুটি বা টেকনিক্যাল সমস্যার জন্য ফ্রিতে রিপ্লেসমেন্ট পাবেন।',
       rules: [
         'আন-কাট আনবক্সিং ভিডিও প্রমাণ হিসেবে প্রদর্শন করতে হবে।',
@@ -239,9 +257,15 @@ export function getWarrantyModalContent(warrantyText?: string, lang: WarrantyLan
     };
   }
   if (parsed) {
+    const bodyBn =
+      kind === 'service'
+        ? 'প্রোডাক্টটি অর্ডার করার দিন থেকে নির্ধারিত মেয়াদের মধ্যে প্রস্তুতকারক ত্রুটি বা টেকনিক্যাল সমস্যা দেখা দিলে ব্র্যান্ডের ফ্রি সার্ভিসের মাধ্যমে সমাধান পাবেন।'
+        : kind === 'official'
+          ? 'প্রোডাক্টটি অর্ডার করার দিন থেকে নির্ধারিত মেয়াদের মধ্যে প্রস্তুতকারক ত্রুটি বা টেকনিক্যাল সমস্যার জন্য ব্র্যান্ডের অফিসিয়াল ওয়ারেন্টি (প্রযোজ্য হিসেবে ফ্রি রিপ্লেসমেন্ট বা ফ্রি সার্ভিস) সুবিধা পাবেন।'
+          : 'প্রোডাক্টটি অর্ডার করার দিন থেকে নির্ধারিত মেয়াদের মধ্যে প্রস্তুতকারক ত্রুটি বা টেকনিক্যাল সমস্যার জন্য ওয়ারেন্টি সুবিধা পাবেন।';
     return {
       title: `${formatWarrantyLabel(warrantyText, 'bn')} পলিসি`,
-      body: 'প্রোডাক্টটি অর্ডার করার দিন থেকে নির্ধারিত মেয়াদের মধ্যে প্রস্তুতকারক ত্রুটি বা টেকনিক্যাল সমস্যার জন্য ওয়ারেন্টি সুবিধা পাবেন।',
+      body: bodyBn,
       rules: [
         'আনবক্সিং ভিডিও প্রমাণ হিসেবে দেখাতে হবে।',
         'মূল বক্স ও ইনভয়েস পেপার অক্ষত ফেরত দিতে হবে।',
