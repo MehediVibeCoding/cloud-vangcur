@@ -516,7 +516,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                     <CartItemThumb emoji={item.emoji} />
 
                   <div className="min-w-0 flex-1">
-                    <div className="line-clamp-1 font-body text-[13.5px] font-bold text-ink">
+                    <div className="line-clamp-2 font-body text-[13.5px] font-bold text-ink">
                       {item.name}
                     </div>
                     <div className="mt-0.5 font-body text-[13px] text-muted">

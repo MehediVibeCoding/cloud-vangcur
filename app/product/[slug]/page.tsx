@@ -3,6 +3,8 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { idFromSlug, makeSlug, fetchProductById, fetchRelatedProducts } from '@/lib/productData';
+import { DEFAULT_CATEGORIES, makeCatSlug } from '@/lib/categoryData';
+import { DEFAULT_SHIP_CFG } from '@/lib/checkoutData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
 import { brandedTitle } from '@/lib/seoTitle';
 import { fetchProductReviews } from '@/lib/productReviewData';
@@ -182,12 +184,17 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   // F1: aggregateRating শুধু আসল অনুমোদিত রিভিউ (≥১) থাকলেই — আগে রিভিউ না থাকলে ডিফল্ট রেটিং
   // ও বানানো রিভিউ-সংখ্যা Google-কে পাঠানো হতো, যা structured-data নীতির পরিপন্থী।
+  // 🆕 ব্যাচ ৮: শুধু যে ফিল্ডগুলোর আসল ডেটা আছে সেগুলোই যোগ করা হয়েছে (sku/mpn বাদ, ডেটা নেই)।
+  const category = DEFAULT_CATEGORIES.find((c) => c.id === initialProduct.cat);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: initialProduct.name,
     image: validImgs.length ? validImgs : undefined,
     description: initialProduct.desc || initialProduct.metaDescription || initialProduct.name,
+    ...(initialProduct.brand
+      ? { brand: { '@type': 'Brand', name: initialProduct.brand } }
+      : {}),
     offers: {
       '@type': 'Offer',
       priceCurrency: 'BDT',
@@ -198,6 +205,26 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       seller: {
         '@type': 'Organization',
         name: 'Vangcur',
+      },
+      // 🆕 সাইটের বর্তমান ডেলিভারি চার্জ (checkoutData.ts-এর DEFAULT_SHIP_CFG) থেকে — ঢাকা/বাইরে দুই রেট
+      shippingDetails: [
+        {
+          '@type': 'OfferShippingDetails',
+          shippingRate: { '@type': 'MonetaryAmount', value: DEFAULT_SHIP_CFG.dhaka, currency: 'BDT' },
+          shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'BD', addressRegion: 'Dhaka' },
+        },
+        {
+          '@type': 'OfferShippingDetails',
+          shippingRate: { '@type': 'MonetaryAmount', value: DEFAULT_SHIP_CFG.out, currency: 'BDT' },
+          shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'BD' },
+        },
+      ],
+      // 🆕 /refund-policy পেজ অনুযায়ী
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'BD',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnLink: `${SITE_URL}/refund-policy`,
       },
     },
     ...(liveReviewsSummary && liveReviewsSummary.reviewCount > 0
@@ -211,12 +238,49 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       : {}),
   };
 
+  // 🆕 ব্যাচ ৮: BreadcrumbList — হোম → ক্যাটাগরি (থাকলে) → প্রোডাক্ট
+  const breadcrumbItems = [
+    { '@type': 'ListItem', position: 1, name: 'Vangcur', item: SITE_URL },
+    ...(category
+      ? [{ '@type': 'ListItem', position: 2, name: category.name, item: `${SITE_URL}/category/${makeCatSlug(category.id)}` }]
+      : []),
+    { '@type': 'ListItem', position: category ? 3 : 2, name: initialProduct.name, item: `${SITE_URL}/product/${canonicalSlug}` },
+  ];
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbItems,
+  };
+
+  // 🆕 ব্যাচ ৮: FAQPage — প্রোডাক্টের ডাটাবেজ-ভিত্তিক FAQ থাকলেই শুধু যোগ হবে
+  const faqJsonLd = initialProduct.faqs && initialProduct.faqs.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: initialProduct.faqs.map((f) => ({
+          '@type': 'Question',
+          name: f.q,
+          acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+      }
+    : null;
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <ProductDetailClient
         slug={slug}
         initialId={id}
