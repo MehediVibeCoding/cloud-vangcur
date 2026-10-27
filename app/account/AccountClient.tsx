@@ -538,6 +538,14 @@ export default function AccountClient() {
         {!authReady ? (
           <AccountMainSkeleton />
         ) : !currentUser ? (
+          // ⚡ CLS ফিক্স: স্কেলেটন (লম্বা) → লগইন কার্ড (ছোট) বদলালে নিচের ফুটার ওপরে লাফিয়ে উঠত (CLS ০.২৩৭)।
+          // তাই স্কেলেটনের একটা অদৃশ্য কপি (visibility:hidden — জায়গা নেয়, আঁকা হয় না) একই গ্রিড-ঘরে রেখে
+          // কার্ডটা তার ওপরে বসানো হয়; উচ্চতা সব ব্রেকপয়েন্টে স্কেলেটনের সমান থাকে, ফুটার আর সরে না।
+          <div className="grid">
+            <div className="invisible pointer-events-none col-start-1 row-start-1" aria-hidden="true">
+              <AccountMainSkeleton />
+            </div>
+            <div className="col-start-1 row-start-1">
           <div className="mx-auto my-12 max-w-[420px] rounded-[28px] border border-white/80 bg-white/85 p-8 text-center shadow-sh2 backdrop-blur-md animate-section-reveal">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-bg/50 text-brand-light shadow-xs">
               <IconLockAlt />
@@ -556,6 +564,8 @@ export default function AccountClient() {
             >
               {t('লগইন করুন')}
             </button>
+          </div>
+            </div>
           </div>
         ) : (
           <>

@@ -376,7 +376,7 @@ export default function OffersClient({ initialOffer }: { initialOffer?: ActiveOf
         </main>
       </div>
 
-      <Footer eager />
+      <Footer eager hotImage />
 
       <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>

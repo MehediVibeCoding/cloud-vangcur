@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import Image, { getImageProps } from 'next/image';
 import VangcurLogoMark from '@/app/components/ui/VangcurLogoMark';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/authStore';
@@ -158,7 +158,54 @@ const colLinkClass =
 const FOOTER_CONTACT: FooterContact = computeContact(null);
 const FOOTER_EXTRAS: FooterExtras = computeFooterExtras(null);
 
-function FooterContent() {
+// ⚡ `hotImage` (শুধু /offers): সেখানে ফুটারের ছবিই LCP, কিন্তু সাধারণ <Image>-এ `loading="lazy"` ও কোনো
+// priority নেই বলে ব্রাউজার ছবিটা দেরিতে নামায় (PageSpeed: lazy ✗, fetchpriority ✗)। মোবাইল ও ডেস্কটপের ছবি
+// আলাদা wrapper-এ থাকে (একটা `display:none`) — `eager` ছবি `display:none`-এও নামে, তাই সরাসরি eager করলে
+// দুটোই নামত। সমাধান: <picture> — যে ব্রেকপয়েন্টে wrapper লুকানো, সেখানে <source> একটা ১×১ ফাঁকা GIF দেয়,
+// ফলে ব্রাউজার শুধু দেখা-যাওয়া ছবিটাই high-priority-তে আনে। `hotImage` না দিলে আগের <Image> হুবহু।
+const BLANK_GIF = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+
+function FooterPhoto({
+  src,
+  hideMedia,
+  hot,
+}: {
+  src: string;
+  /** যে media-তে এই ছবির wrapper লুকানো থাকে */
+  hideMedia: string;
+  hot: boolean;
+}) {
+  if (!hot) {
+    return (
+      <Image
+        src={src}
+        alt="Vangcur Gadgets Lifestyle"
+        fill
+        sizes="100vw"
+        className="object-cover object-bottom"
+        priority={false}
+      />
+    );
+  }
+  const { props } = getImageProps({
+    src,
+    alt: 'Vangcur Gadgets Lifestyle',
+    fill: true,
+    sizes: '100vw',
+    className: 'object-cover object-bottom',
+    loading: 'eager',
+    fetchPriority: 'high',
+  });
+  return (
+    <picture>
+      <source media={hideMedia} srcSet={BLANK_GIF} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img {...props} alt={props.alt} />
+    </picture>
+  );
+}
+
+function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
   const { t, lang } = useT();
   const currentUser = useAuthStore((s) => s.currentUser);
   const contact = FOOTER_CONTACT;
@@ -197,14 +244,7 @@ function FooterContent() {
             transform: 'translateZ(0)',
           }}
         >
-          <Image
-            src="/footer-illustration-mobile.webp"
-            alt="Vangcur Gadgets Lifestyle"
-            fill
-            sizes="100vw"
-            className="object-cover object-bottom"
-            priority={false}
-          />
+          <FooterPhoto src="/footer-illustration-mobile.webp" hideMedia="(min-width: 768px)" hot={hotImage} />
 
           {/* 🌊 ছবির মাথার কাটিং এজের ঠিক ওপরে ১০০% লক করা ওয়াটার রিবন ও ক্রেস্ট */}
           <svg
@@ -240,14 +280,7 @@ function FooterContent() {
             transform: 'translateZ(0)',
           }}
         >
-          <Image
-            src="/footer-illustration-desktop.webp"
-            alt="Vangcur Gadgets Lifestyle"
-            fill
-            sizes="100vw"
-            className="object-cover object-bottom"
-            priority={false}
-          />
+          <FooterPhoto src="/footer-illustration-desktop.webp" hideMedia="(max-width: 767px)" hot={hotImage} />
 
           {/* 🌊 ডেস্কটপে ছবির মাথার কাটিং এজের ঠিক ওপরে ১০০% লক করা ওয়াটার রিবন ও ক্রেস্ট */}
           <svg
@@ -520,7 +553,7 @@ function FooterContent() {
 // দিলে ফুটার (ছবিসহ) প্রথম HTML-এই রেন্ডার হয় — ছবি আগের মতোই `loading="lazy"`, তাই স্ক্রিনের বাইরে
 // থাকলে নামে না। ফুটারের কোনো নেটওয়ার্ক রিকোয়েস্ট নেই, তাই নতুন রিকোয়েস্টও যোগ হয় না।
 // `eager` না দিলে (হোম, প্রোডাক্ট ইত্যাদি) আচরণ আগের মতোই লেজি।
-export default function Footer({ eager = false }: { eager?: boolean } = {}) {
+export default function Footer({ eager = false, hotImage = false }: { eager?: boolean; hotImage?: boolean } = {}) {
   const holderRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(eager);
 
@@ -545,6 +578,6 @@ export default function Footer({ eager = false }: { eager?: boolean } = {}) {
     return () => io.disconnect();
   }, [eager]);
 
-  if (mounted) return <FooterContent />;
+  if (mounted) return <FooterContent hotImage={hotImage} />;
   return <div ref={holderRef} aria-hidden="true" className="mt-12 h-10" />;
 }
