@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -17,32 +17,11 @@ import {
 import { useT } from '@/lib/i18n/useT';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
 import { sanitizeHref } from '@/lib/security';
-import { fetchProductById, productHref, startQuickOrder } from '@/lib/productData';
+import { productHref, startQuickOrder } from '@/lib/productData';
+import { fetchActiveOffer, type ActiveOffer, type OfferConfig } from '@/lib/offerData';
 import type { Product } from '@/types';
 
 const LoginModal = dynamic(() => import('@/app/components/auth/LoginModal'));
-
-interface OfferModel1 {
-  title: string;
-  body: string;
-  btn_text: string;
-  btn_url: string;
-}
-interface OfferModel2 {
-  img: string;
-  url: string;
-}
-interface OfferModel3 {
-  product_id: string;
-  badge_text: string;
-}
-type OfferActiveModel = 'none' | 'model1' | 'model2' | 'model3';
-interface OfferConfig {
-  active_model: OfferActiveModel;
-  model1: OfferModel1;
-  model2: OfferModel2;
-  model3: OfferModel3;
-}
 
 function HeaderDecor() {
   return (
@@ -126,70 +105,40 @@ function GiftBoxIcon() {
   );
 }
 
-async function fetchOfferConfig(supabase: ReturnType<typeof createClient>): Promise<OfferConfig | null> {
-  try {
-    const { data, error } = await supabase
-      .from('store_settings')
-      .select('setting_value')
-      .eq('setting_key', 'vc_offer_popup')
-      .maybeSingle();
-    if (error || !data?.setting_value) return null;
-    const raw = data.setting_value;
-    const parsed: unknown = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (parsed && typeof parsed === 'object') return parsed as OfferConfig;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-export default function OffersClient() {
+// initialOffer: সার্ভার (ISR) থেকে আনা অফার — থাকলে প্রথম HTML-এই আসল কনটেন্ট থাকে (স্কেলেটন/CLS/ব্রাউজারের
+// Supabase কল নেই)। সার্ভারে আনা না গেলে (ok:false বা prop নেই) আগের মতোই ক্লায়েন্টে আনা হয়।
+export default function OffersClient({ initialOffer }: { initialOffer?: ActiveOffer | null } = {}) {
   const { t, lang } = useT();
   const router = useRouter();
-  const supabase = useRef(createClient()).current;
 
   const cartQty = useCartStore((s) => cartCount(s.cart));
   const wishQty = useWishlistStore((s) => s.wishlist.length);
   const currentUser = useAuthStore((s) => s.currentUser);
   const [loginOpen, setLoginOpen] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState<OfferConfig | null>(null);
-  const [model3Product, setModel3Product] = useState<Product | null>(null);
+  const serverReady = !!initialOffer?.ok;
+  const [loading, setLoading] = useState(!serverReady);
+  const [config, setConfig] = useState<OfferConfig | null>(serverReady ? initialOffer!.config : null);
+  const [model3Product, setModel3Product] = useState<Product | null>(serverReady ? initialOffer!.model3Product : null);
 
   useEffect(() => {
+    // সার্ভার থেকে অফার এসে গেলে ব্রাউজারে আর কোনো রিকোয়েস্ট নেই।
+    if (serverReady) return;
     let cancelled = false;
 
     (async () => {
       setLoading(true);
-      const cfg = await fetchOfferConfig(supabase);
+      const res = await fetchActiveOffer(createClient());
       if (cancelled) return;
-
-      let validConfig: OfferConfig | null = null;
-      let m3Product: Product | null = null;
-
-      if (cfg && cfg.active_model && cfg.active_model !== 'none') {
-        if (cfg.active_model === 'model1' && cfg.model1?.title?.trim()) {
-          validConfig = cfg;
-        } else if (cfg.active_model === 'model2' && cfg.model2?.img?.trim()) {
-          validConfig = cfg;
-        } else if (cfg.active_model === 'model3' && cfg.model3?.product_id) {
-          m3Product = await fetchProductById(supabase, cfg.model3.product_id);
-          if (m3Product) {
-            validConfig = cfg;
-          }
-        }
-      }
-
-      setConfig(validConfig);
-      setModel3Product(m3Product);
+      setConfig(res.config);
+      setModel3Product(res.model3Product);
       setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, [serverReady]);
 
   const handleNavigate = (url: string) => {
     if (!url) return;
@@ -427,7 +376,7 @@ export default function OffersClient() {
         </main>
       </div>
 
-      <Footer />
+      <Footer eager />
 
       <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
