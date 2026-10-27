@@ -119,8 +119,12 @@ export default function ProductReviews({
   const supabase = useRef(createClient()).current;
   const currentUser = useAuthStore((s) => s.currentUser);
 
-  const [reviews, setReviews] = useState<ProductReview[]>([]);
-  const [loading, setLoading] = useState(true);
+  // সার্ভার-ডেটা মেলে (একই প্রোডাক্ট) হলে প্রথম রেন্ডারেই সেই ডেটা বসে — স্কেলেটন ঝলকে না গিয়ে সরাসরি আসল
+  // রিভিউ (বা খালি অবস্থা) দেখায়। currentUser-এর ওপর নির্ভর করা হয়নি, যাতে SSR ও ক্লায়েন্টের প্রথম রেন্ডার মেলে।
+  const seedReviews =
+    initialData && String(initialData.productId) === String(productId) ? initialData.reviews : null;
+  const [reviews, setReviews] = useState<ProductReview[]>(() => seedReviews ?? []);
+  const [loading, setLoading] = useState(!seedReviews);
   const [isAdmin, setIsAdmin] = useState(false);
   const [likedList, setLikedList] = useState<string[]>([]);
   const [activeCardIdx, setActiveCardIdx] = useState(0);
@@ -185,8 +189,6 @@ export default function ProductReviews({
   }, [supabase]);
 
   const loadReviewsData = useCallback(async () => {
-    setLoading(true);
-
     // 🆕 গেস্ট-ভিজিটর + সার্ভার-ডেটা মেলে (একই প্রোডাক্ট): কোনো নেটওয়ার্ক কল ছাড়াই দেখানো হয়।
     // কেন নিরাপদ: গেস্ট RLS-এ শুধু অনুমোদিত রিভিউ দেখে — সার্ভার (anon) ঠিক সেটাই এনেছে; গেস্টের
     // অ্যাডমিন-স্ট্যাটাস সবসময় false; আর `get_profile_completion_status` anon-কে দেওয়া নেই, তাই গেস্টের
@@ -201,6 +203,10 @@ export default function ProductReviews({
       setLoading(false);
       return;
     }
+
+    // সার্ভার-ডেটা আগে থেকেই দেখানো হচ্ছে (লগইন-করা ইউজার/অ্যাডমিন): স্কেলেটন না দেখিয়ে পেছনে ফ্রেশ ডেটা আনা হয়।
+    // সার্ভার-ডেটা না থাকলেই কেবল স্কেলেটন।
+    if (!seed) setLoading(true);
 
     // 🛡️ try/finally: fetchProductReviews/checkIsReviewAdminOrMod নিজেরাই
     // try/catch + withTimeout দিয়ে সুরক্ষিত (কখনো থ্রো/ঝুলে থাকবে না), কিন্তু

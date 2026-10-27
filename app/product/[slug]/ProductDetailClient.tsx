@@ -1242,13 +1242,15 @@ export default function ProductDetailClient({
                   +
                 </button>
               </div>
+              {!sold && qty > 1 && (
+                <>
+                  <span className="h-5 w-px shrink-0 bg-border-base" aria-hidden="true" />
+                  <span className="whitespace-nowrap pr-3.5 text-[13px] text-muted">
+                    {t('মোট')} <span className="font-bold text-ink">৳{(prod.price * qty).toLocaleString('en-US')}</span>
+                  </span>
+                </>
+              )}
             </div>
-
-            {!sold && qty > 1 && (
-              <span className="text-[13px] text-muted">
-                {t('মোট')} <span className="font-bold text-ink">৳{(prod.price * qty).toLocaleString('en-US')}</span>
-              </span>
-            )}
 
             <div className="ml-auto flex items-center gap-1">
               <div className="relative h-9 w-9">

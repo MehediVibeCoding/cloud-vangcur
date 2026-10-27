@@ -93,8 +93,15 @@ export default function ProductQnA({ productId, productName, initialData }: Prod
   const supabase = useRef(createClient()).current;
   const currentUser = useAuthStore((s) => s.currentUser);
 
-  const [questions, setQuestions] = useState<QuestionWithThread[]>([]);
-  const [loading, setLoading] = useState(true);
+  // সার্ভার-ডেটা মেলে (একই প্রোডাক্ট) হলে প্রথম রেন্ডারেই সেই ডেটা বসে — তাই স্কেলেটন ঝলকে না গিয়ে সরাসরি
+  // আসল তালিকা (বা খালি অবস্থা) দেখায়। currentUser-এর ওপর নির্ভর করা হয়নি ইচ্ছাকৃতভাবে, যাতে SSR ও
+  // ক্লায়েন্টের প্রথম রেন্ডার একই থাকে (hydration মিসম্যাচ নেই)।
+  const seedQuestions =
+    initialData && String(initialData.productId) === String(productId) ? initialData.questions : null;
+  const [questions, setQuestions] = useState<QuestionWithThread[]>(() =>
+    seedQuestions ? (seedQuestions.map((q) => ({ ...q, answers: q.answers || [] })) as QuestionWithThread[]) : [],
+  );
+  const [loading, setLoading] = useState(!seedQuestions);
   const [isAdmin, setIsAdmin] = useState(false);
   // 🆕 কাস্টমার-প্রোফাইল-সম্পূর্ণতার ম্যাপ (userId -> সবুজ ব্যাজ দেখাবে কিনা)
   const [verifiedMap, setVerifiedMap] = useState<Record<string, boolean>>({});
@@ -113,8 +120,6 @@ export default function ProductQnA({ productId, productName, initialData }: Prod
   const [submittingR, setSubmittingR] = useState(false);
 
   const loadQuestionsData = useCallback(async () => {
-    setLoading(true);
-
     // 🆕 গেস্ট-ভিজিটর + সার্ভার-ডেটা মেলে (একই প্রোডাক্ট): নেটওয়ার্ক কল ছাড়াই। প্রশ্ন-উত্তর RLS-এ সবার
     // জন্য খোলা, তাই সার্ভারের ডেটা আর ব্রাউজারের গেস্ট-কোয়েরি একই; গেস্ট অ্যাডমিন নয়; আর প্রোফাইল-ব্যাজ
     // RPC anon-কে দেওয়া নেই (আগেও গেস্টের জন্য খালি ম্যাপ আসত)। লগইন-করা ইউজার আগের পথেই ফ্রেশ
@@ -126,6 +131,10 @@ export default function ProductQnA({ productId, productName, initialData }: Prod
       setLoading(false);
       return;
     }
+
+    // সার্ভার-ডেটা আগে থেকেই দেখানো হচ্ছে (লগইন-করা ইউজার): স্কেলেটন না দেখিয়ে পেছনে ফ্রেশ ডেটা আনা হয়।
+    // সার্ভার-ডেটা না থাকলেই কেবল স্কেলেটন।
+    if (!seed) setLoading(true);
 
     try {
       // 🛡️ withTimeout: নেটওয়ার্ক/ডিভাইস দুর্বল হলে এই কলগুলো ঝুলে থাকতে
