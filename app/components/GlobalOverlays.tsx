@@ -229,7 +229,7 @@ export default function GlobalOverlays() {
       {mounted && (
         <>
           {!hideFloatingBadges && !isProductPage && !isGuidePage && <FloatContactButtons />}
-          {!hideFloatingBadges && !isProductPage && <BackToTopButton />}
+          {!hideFloatingBadges && <BackToTopButton />}
           <RareOverlays />
         </>
       )}
