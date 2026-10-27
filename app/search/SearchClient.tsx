@@ -17,6 +17,7 @@ import { useT } from '@/lib/i18n/useT';
 import { RippleLayer, rippleThen } from '@/lib/ripple';
 import type { Category, Product } from '@/types';
 import SearchFilterPanel, { ActiveFilterChips } from './SearchFilterPanel';
+import SearchPager from './SearchPager';
 import {
   EMPTY_FILTERS, applyFilters, buildFacets, buildSearchUrl,
   filtersSignature, hasActiveFilters, parseFilters, type SearchFilters,
@@ -33,7 +34,6 @@ function pageSizeForViewport(): number {
   if (w >= 768) return 24;  // md: ৩ কলাম × ৮ সারি
   return 20;                // মোবাইল: ২ কলাম × ১০ সারি
 }
-const PRODS_AUTO_THRESHOLD = 2;
 const MAX_SEARCH_LEN = 60;
 
 function SearchHeader({ query, onQueryChange, filterSlot }: { query: string; onQueryChange: (v: string) => void; filterSlot?: React.ReactNode }) {
@@ -228,103 +228,54 @@ function cleanQuery(raw: string): string {
   return raw.replace(/[<>`]/g, '').trim().slice(0, MAX_SEARCH_LEN);
 }
 
-// ফলাফলের তালিকা + "আরো লোড" লজিক। `key={query}` দিয়ে বসানো হয়, তাই শুধু সার্চ শব্দ বদলালেই
-// এটা নতুন করে শুরু হয় — দাম/স্টকের আপডেট বা ইনডেক্স লোড হওয়ায় তালিকা আর খালি/রিসেট হয় না।
-function ResultsList({ results, total }: { results: Product[]; total: number }) {
+// ফলাফলের তালিকা — নাম্বার পেজিনেশনসহ (১ ২ ৩ … পরের), /products পেজের মতো।
+// আগে এখানে ইনফিনিট-স্ক্রল + "আরো প্রোডাক্ট দেখুন" বাটন ছিল; এখন প্রতিটা পেজে ডিভাইস অনুযায়ী নির্দিষ্ট সংখ্যা কার্ড,
+// আর নিচে পেজ-নাম্বার। `key={query|ফিল্টার}` দিয়ে বসানো হয়, তাই শব্দ/ফিল্টার বদলালে আবার ১ নম্বর পেজ থেকে শুরু হয় —
+// কিন্তু দাম/স্টকের আপডেট বা ইনডেক্স লোড হওয়ায় বর্তমান পেজ আর রিসেট হয় না।
+function ResultsList({ results, total, initialPage }: { results: Product[]; total: number; initialPage: number }) {
   const { t } = useT();
   const supabase = useRef(createClient()).current;
 
-  // প্রথম রেন্ডারেই (সার্ভার HTML-এও) প্রথম ব্যাচ থাকে — আগের মতো useEffect/setTimeout-এর অপেক্ষা নেই
-  const pageSizeRef = useRef(PRODS_PER_PAGE);
-  const [renderedCount, setRenderedCount] = useState(() => Math.min(PRODS_PER_PAGE, results.length));
-  const [showLoadMoreBtn, setShowLoadMoreBtn] = useState(false);
-  const [showSpinner, setShowSpinner] = useState(results.length > PRODS_PER_PAGE);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const batchCountRef = useRef(1);
-  const loadMorePausedRef = useRef(false);
-  const renderedCountRef = useRef(Math.min(PRODS_PER_PAGE, results.length));
-  const listRef = useRef<Product[]>(results);
+  // সার্ভার/প্রথম রেন্ডারে সবসময় PRODS_PER_PAGE (হাইড্রেশন মিলে যায়); mount-এর পর ডিভাইস অনুযায়ী বদলায়
+  const [pageSize, setPageSize] = useState(PRODS_PER_PAGE);
+  const [page, setPage] = useState(Math.max(1, initialPage));
+  const topRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { setPageSize(pageSizeForViewport()); }, []);
 
-  useEffect(() => { listRef.current = results; }, [results]);
+  // বাকি ম্যাচ এখনো ইনডেক্স থেকে আসছে — তখন মোট সংখ্যা `total`, আসা তালিকা তার চেয়ে ছোট
+  const pending = results.length < total;
+  const knownCount = Math.max(results.length, total);
+  const totalPages = Math.max(1, Math.ceil(knownCount / pageSize));
+  // ইনডেক্স লোড শেষে মোট পেজ কমে গেলে (বা URL-এ বড় ?page= থাকলে) শেষ পেজে নামিয়ে আনি
+  const curPage = pending ? page : Math.min(page, totalPages);
+  const start = (curPage - 1) * pageSize;
+  const pageItems = results.slice(start, start + pageSize);
+  const waitingForData = pending && pageItems.length === 0; // দূরের পেজ, কিন্তু ডেটা এখনো আসেনি
 
-  // mount-এর পর ডিভাইস অনুযায়ী পেজ-সাইজ বসানো; বড় হলে প্রথম ব্যাচও একবার বাড়ে (আগের কার্ড নড়ে না, নিচে যোগ হয়)
-  useEffect(() => {
-    const size = pageSizeForViewport();
-    pageSizeRef.current = size;
-    const list = listRef.current;
-    if (size > renderedCountRef.current && renderedCountRef.current < list.length) {
-      const n = Math.min(size, list.length);
-      renderedCountRef.current = n;
-      setRenderedCount(n);
-      setShowSpinner(n < list.length);
+  const goToPage = useCallback((p: number) => {
+    setPage(p);
+    try {
+      const u = new URL(window.location.href);
+      if (p > 1) u.searchParams.set('page', String(p));
+      else u.searchParams.delete('page');
+      window.history.replaceState(window.history.state, '', u.pathname + u.search);
+    } catch {
+      // ignore
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const appendNextBatch = useCallback(() => {
-    const currentList = listRef.current;
-    const cur = renderedCountRef.current;
-    if (cur >= currentList.length) return;
-    const nextCount = Math.min(cur + pageSizeRef.current, currentList.length);
-    batchCountRef.current += 1;
-    renderedCountRef.current = nextCount;
-    setRenderedCount(nextCount);
-
-    if (nextCount >= currentList.length) {
-      loadMorePausedRef.current = false;
-      setShowLoadMoreBtn(false);
-      setShowSpinner(false);
-    } else if (batchCountRef.current % PRODS_AUTO_THRESHOLD === 0) {
-      loadMorePausedRef.current = true;
-      setShowLoadMoreBtn(true);
-      setShowSpinner(false);
-    } else {
-      loadMorePausedRef.current = false;
-      setShowLoadMoreBtn(false);
-      setShowSpinner(true);
+    // নতুন পেজের শুরুতে — স্টিকি হেডারের নিচে — স্ক্রল
+    const el = topRef.current;
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 90;
+      window.scrollTo({ top: Math.max(0, y), left: 0, behavior: 'instant' as ScrollBehavior });
     }
   }, []);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const obs = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && renderedCountRef.current < listRef.current.length && !loadMorePausedRef.current) {
-        appendNextBatch();
-      }
-    }, { rootMargin: '300px' });
-    obs.observe(sentinel);
-    return () => obs.disconnect();
-  }, [appendNextBatch]);
-
-  // সার্ভার থেকে প্রথমে সীমিত ম্যাচ এলে, পরে পুরো ইনডেক্স লোড হয়ে তালিকা বড় হলে —
-  // আমরা যদি আগের তালিকার শেষে এসে অপেক্ষা করতে থাকি, তাহলে পরের ব্যাচ চালু করি
-  const prevLenRef = useRef(results.length);
-  useEffect(() => {
-    const prevLen = prevLenRef.current;
-    prevLenRef.current = results.length;
-    if (results.length <= prevLen) return;
-    if (renderedCountRef.current >= prevLen && !loadMorePausedRef.current) {
-      const el = sentinelRef.current;
-      const nearView = !!el && el.getBoundingClientRect().top < window.innerHeight + 300;
-      if (nearView) appendNextBatch();
-      else setShowSpinner(false);
-    }
-  }, [results.length, appendNextBatch]);
-
-  const handleLoadMoreClick = () => {
-    setShowLoadMoreBtn(false);
-    batchCountRef.current = 0;
-    loadMorePausedRef.current = false;
-    appendNextBatch();
-  };
 
   // 🔒 দাম/স্টক আপডেট (প্রতি ৩ মিনিটে, ট্যাব দৃশ্যমান থাকলে) — শুধু যে প্রোডাক্টগুলো
   // এখন স্ক্রিনে আছে সেগুলোর জন্য। ফলাফল আলাদা `fresh` ম্যাপে থাকে; ব্যর্থ হলে বা ফাঁকা
   // এলে কিছুই মোছা হয় না (আগে ব্যর্থ হলে পুরো তালিকা মুছে "০টি পণ্য" হয়ে যেত)।
   const [fresh, setFresh] = useState<Map<string, Product>>(() => new Map());
   const visibleIdsRef = useRef<(number | string)[]>([]);
-  visibleIdsRef.current = results.slice(0, renderedCount).map((p) => p.id);
+  visibleIdsRef.current = pageItems.map((p) => p.id);
 
   useEffect(() => {
     let cancelled = false;
@@ -357,46 +308,32 @@ function ResultsList({ results, total }: { results: Product[]; total: number }) 
     };
   }, [supabase]);
 
-  const visibleItems = useMemo(
-    () => results.slice(0, renderedCount).map((p) => {
-      const f = fresh.get(String(p.id));
-      return f ? { ...p, ...f } : p;
-    }),
-    [results, renderedCount, fresh],
-  );
+  const visibleItems = pageItems.map((p) => {
+    const f = fresh.get(String(p.id));
+    return f ? { ...p, ...f } : p;
+  });
 
-  const pending = results.length < total; // বাকি ম্যাচ ইনডেক্স থেকে আসছে
-  const isDone = renderedCount >= results.length && !pending;
-  const spinnerOn = showSpinner || (pending && renderedCount >= results.length);
+  const isLastPage = curPage >= totalPages && !pending;
 
   return (
-    <>
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        {visibleItems.map((p, i) => (
-          <ProductCard key={p.id} prod={p} isFirst={i === 0} index={i} />
-        ))}
-        {isDone && !spinnerOn && !showLoadMoreBtn && <EndOfResults />}
-      </div>
-      <div className="mt-2.5 flex h-[60px] items-center justify-center" ref={sentinelRef}>
-        {spinnerOn && (
-          <div className="flex items-center gap-2 text-[13px] text-muted">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            </svg>
-            {t('লোড হচ্ছে...')}
-          </div>
-        )}
-        {showLoadMoreBtn && (
-          <button
-            onClick={handleLoadMoreClick}
-            className="inline-flex items-center gap-2 rounded-full border-none bg-gradient-to-r from-info to-brand-light px-8 py-[13px] font-body text-sm font-bold text-white shadow-sh2 transition-colors duration-brand hover:brightness-[1.03]"
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" /></svg>
-            {t('আরো প্রোডাক্ট দেখুন')}
-          </button>
-        )}
-      </div>
-    </>
+    <div ref={topRef}>
+      {waitingForData ? (
+        <div className="flex h-[200px] items-center justify-center gap-2 text-[13px] text-muted">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+          </svg>
+          {t('লোড হচ্ছে...')}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {visibleItems.map((p, i) => (
+            <ProductCard key={p.id} prod={p} isFirst={i === 0} index={i} />
+          ))}
+          {isLastPage && <EndOfResults />}
+        </div>
+      )}
+      <SearchPager page={curPage} totalPages={totalPages} onChange={goToPage} />
+    </div>
   );
 }
 
@@ -472,12 +409,29 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
   const filtersActive = hasActiveFilters(filters);
   const filterSig = filtersSignature(filters);
 
+  // পেজ নম্বর (?page=N): শুধু প্রথম লোডে URL থেকে পড়া হয় (শেয়ার/ব্যাক করা লিংকে ওই পেজেই নামবে)।
+  // শব্দ বা ফিল্টার বদলালে ফলাফল নতুন, তাই আবার ১ নম্বর পেজ — ?page= তখন URL থেকে বাদ যায়।
+  const initialPageRef = useRef<number>((() => {
+    const n = parseInt(searchParams.get('page') || '1', 10);
+    return Number.isFinite(n) && n > 1 && n < 10000 ? n : 1;
+  })());
+  const firstListKeyRef = useRef<string | null>(null);
+
   // ফিল্টার বদলালে URL আপডেট (কোয়েরি থাকলে)
+  const urlFirstRunRef = useRef(true);
   useEffect(() => {
     if (!query) return;
+    const wasFirst = urlFirstRunRef.current;
+    urlFirstRunRef.current = false;
     const url = buildSearchUrl(query, filters);
-    if (typeof window !== 'undefined' && url !== window.location.pathname + window.location.search) {
-      window.history.replaceState(window.history.state, '', url);
+    if (typeof window === 'undefined') return;
+    const cur = new URL(window.location.href);
+    const pg = cur.searchParams.get('page');
+    cur.searchParams.delete('page');
+    const curNoPage = cur.pathname + cur.search;
+    if (url !== curNoPage) {
+      // প্রথম রান ছাড়া সবসময় page বাদ; প্রথম রানে (URL-এর ফরম্যাট আলাদা হলেও) পেজ নম্বর ধরে রাখি
+      window.history.replaceState(window.history.state, '', wasFirst && pg ? `${url}&page=${encodeURIComponent(pg)}` : url);
     }
   }, [filters, query]);
 
@@ -515,6 +469,11 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
   const total = count ?? 0;
   const showCategorySection = matchedCats.length > 0;
   const showCountLine = count !== null && (matchedCats.length > 0 || count > 0);
+
+  // প্রথম তালিকার key মনে রাখি: শুধু সেটার জন্যই URL-এর ?page= কাজ করে; পরে শব্দ/ফিল্টার বদলালে ১ নম্বর পেজ
+  const listKey = `${query}|${filterSig}`;
+  if (firstListKeyRef.current === null) firstListKeyRef.current = listKey;
+  const initialPage = listKey === firstListKeyRef.current ? initialPageRef.current : 1;
 
   return (
     <>
@@ -579,7 +538,7 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
             ) : results.length === 0 ? (
               <ZeroResultsState query={query} />
             ) : (
-              <ResultsList key={`${query}|${filterSig}`} results={results} total={total} />
+              <ResultsList key={listKey} results={results} total={total} initialPage={initialPage} />
             )}
           </>
         )}

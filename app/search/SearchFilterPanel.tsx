@@ -72,7 +72,12 @@ export default function SearchFilterPanel({ filters, onChange, brands, priceBoun
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    const onResize = () => setOpen(false);
+    // ব্যাচ ৯.৪-ফিক্স: মোবাইলে আগে যেকোনো `resize`-এ প্যানেল বন্ধ হতো। সার্চ-বক্সে ফোকাস থাকা অবস্থায় ফিল্টার চাপলে
+    // কীবোর্ড নেমে যায়, আর অ্যাড্রেস-বার ওঠানামা করে — দুটোতেই `resize` ফায়ার হয় (শুধু উচ্চতা বদলায়)।
+    // ফলে শিট খুলেই সাথে সাথে বন্ধ হয়ে যেত ("বাড়ি খেয়ে ফিরে যাওয়া")। এখন শুধু প্রস্থ বদলালেই
+    // (ডেস্কটপে রিসাইজ/ফোন ঘোরানো) বন্ধ হয়, কারণ তখন পপওভারের পজিশন ভুল হয়ে যায়।
+    const openWidth = window.innerWidth;
+    const onResize = () => { if (window.innerWidth !== openWidth) setOpen(false); };
     document.addEventListener('keydown', onKey);
     window.addEventListener('resize', onResize);
     return () => {
@@ -81,8 +86,13 @@ export default function SearchFilterPanel({ filters, onChange, brands, priceBoun
     };
   }, [open]);
 
+  const openedAtRef = useRef(0);
   const toggleOpen = () => {
     if (open) { setOpen(false); return; }
+    // সার্চ-বক্সের কীবোর্ড আগে নামিয়ে দিই — শিট খোলার পরে কীবোর্ড নামলে লেআউট লাফিয়ে উঠত
+    const active = document.activeElement as HTMLElement | null;
+    if (active && active !== document.body && typeof active.blur === 'function') active.blur();
+    openedAtRef.current = Date.now();
     const el = btnRef.current;
     if (el && window.innerWidth >= 640) {
       const r = el.getBoundingClientRect();
@@ -120,7 +130,8 @@ export default function SearchFilterPanel({ filters, onChange, brands, priceBoun
     <>
       <div
         className={`fixed inset-0 z-[1290] ${pos ? 'bg-transparent' : 'bg-black/35'}`}
-        onClick={() => setOpen(false)}
+        // খোলার ঠিক পরের ~৩৫০ms-এর ট্যাপ (মোবাইলের ghost click) ব্যাকড্রপ ধরে বন্ধ করে দিত — তাই উপেক্ষা
+        onClick={() => { if (Date.now() - openedAtRef.current > 350) setOpen(false); }}
         aria-hidden
       />
       <div

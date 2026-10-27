@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { getCachedCatalogIndex, getCachedCategories } from '@/lib/catalogIndex';
-import { searchProducts } from '@/lib/searchData';
+import { searchProducts, matchCategories } from '@/lib/searchData';
+import { DEFAULT_CATEGORIES } from '@/lib/categoryData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
 import SearchClient from './SearchClient';
 import SearchSkeleton from './SearchSkeleton';
+import { chipWidthFor } from './skeletonUtil';
 
 const MAX_SEARCH_LEN = 60;
 // সার্ভার থেকে সর্বোচ্চ এতগুলো ম্যাচ পাঠানো হয় (পুরো ক্যাটালগ না)। এর বেশি মিললে
@@ -51,8 +53,21 @@ export default async function SearchPage({
   const truncated = matches.length > MAX_SERVER_RESULTS;
   const initialResults = truncated ? matches.slice(0, MAX_SERVER_RESULTS) : matches;
 
+  // স্কেলেটন আসল পেজের মতোই: কোয়েরি/ক্যাটাগরি-মিল/ম্যাচ-সংখ্যা সার্ভারে জানা, তাই সঠিক অংশগুলোই আঁকা হয়
+  const cats = initialCategories && initialCategories.length ? initialCategories : DEFAULT_CATEGORIES;
+  const chipWidths = matchCategories(cats, query, 8).map((c) => chipWidthFor(c.name));
+
   return (
-    <Suspense fallback={<SearchSkeleton />}>
+    <Suspense
+      fallback={
+        <SearchSkeleton
+          hasQuery={query.length > 0}
+          chipWidths={chipWidths}
+          showCount={matches.length > 0 || chipWidths.length > 0}
+          cardCount={Math.min(12, matches.length)}
+        />
+      }
+    >
       <SearchClient
         initialQuery={query}
         initialResults={initialResults}

@@ -20,6 +20,7 @@ import {
 import { useT } from '@/lib/i18n/useT';
 import WaitingGame from '@/app/components/checkout/WaitingGame';
 import type { Order, OrderStatus } from '@/types';
+import WaitingTip from './WaitingTip';
 
 // অর্ডারের বয়স এর বেশি হলে "প্রসেস হচ্ছে" বাবল/কার্ড আর দেখানো হয় না (কোয়াইট মোড) — শুধু কনফার্ম/রিজেক্টে পপআপ আসে।
 const QUIET_AFTER_MS = 30 * 60 * 1000;
@@ -499,11 +500,12 @@ export default function WaitingOverlay() {
               </div>
 
               {/* ফ্রেশ স্কাই-ব্লু টিপ বক্স — কনসেন্ট্রিক রেডিয়াস ফিক্স (rounded-[10px]) */}
-              <div className="relative z-10 mb-4 rounded-[10px] border border-brand-light/30 bg-brand-bg/30 p-3.5 text-center font-body text-[12px] leading-[1.75] text-ink/85">
-                <IconBulb className="relative -top-[1px] mr-1 inline-block align-middle text-brand-light" />
-                {t('আপনি চাইলে এখন ওয়েবসাইট ব্রাউজ করতে পারেন অথবা গেম খেলতে পারেন।')}
-                <div>{t('অর্ডার কনফার্ম হলে স্বয়ংক্রিয় নোটিফিকেশন দেখাবে।')}</div>
-              </div>
+              <WaitingTip
+                className="rounded-[10px]"
+                icon={<IconBulb className="relative -top-[1px] mr-1 inline-block align-middle text-brand-light" />}
+                line1={t('আপনি চাইলে এখন ওয়েবসাইট ব্রাউজ করতে পারেন অথবা গেম খেলতে পারেন।')}
+                line2={t('অর্ডার কনফার্ম হলে স্বয়ংক্রিয় নোটিফিকেশন দেখাবে।')}
+              />
 
               {/* 🎮 মিনি গেম — শুধু "গেম খেলুন" বাটন; সাবমিটের ৫ মিনিট পর আর দেখায় না */}
               <WaitingGame variant="overlay" active={isPending} />

@@ -18,6 +18,7 @@ import { useT } from '@/lib/i18n/useT';
 import type { Order, OrderStatus } from '@/types';
 import { DesktopBackdrop } from '@/app/components/ui/DesktopBackdrop';
 import WaitingGame from '@/app/components/checkout/WaitingGame';
+import WaitingTip from '@/app/components/checkout/WaitingTip';
 
 // ⏱️ ৫ মিনিটের বেশি পেন্ডিং থাকলে আশ্বস্তকারী স্ক্রিন। সময় গোনা হয় অর্ডার সাবমিটের
 // টাইমস্ট্যাম্প (vc_pending_ts) থেকে — setTimeout একা ভরসাযোগ্য না, কারণ ব্যাকগ্রাউন্ড/মিনিমাইজ
@@ -524,11 +525,12 @@ export default function StatusClient() {
                 </div>
               </div>
 
-              <div className="relative z-10 mb-4 rounded-[16px] border border-brand-light/30 bg-brand-bg/30 p-3.5 text-center font-body text-[12px] leading-[1.75] text-ink/85">
-                <IconBulb className="relative -top-[1px] mr-1 inline-block align-middle text-brand-light" />
-                {t('আপনি চাইলে এখন ওয়েবসাইট ব্রাউজ করতে পারেন অথবা গেম খেলতে পারেন।')}
-                <div>{t('অর্ডার কনফার্ম হলে স্বয়ংক্রিয় নোটিফিকেশন দেখাবে।')}</div>
-              </div>
+              <WaitingTip
+                className="rounded-[16px]"
+                icon={<IconBulb className="relative -top-[1px] mr-1 inline-block align-middle text-brand-light" />}
+                line1={t('আপনি চাইলে এখন ওয়েবসাইট ব্রাউজ করতে পারেন অথবা গেম খেলতে পারেন।')}
+                line2={t('অর্ডার কনফার্ম হলে স্বয়ংক্রিয় নোটিফিকেশন দেখাবে।')}
+              />
 
               {/* 🎮 মিনি গেম — ছোট বাটন + ৪০ সেকেন্ড পর পপআপ; ৫ মিনিট পূর্ণ হলে (timedOut) এই ব্লকের সাথেই বিদায় */}
               <WaitingGame variant="page" active={isPending && !timedOut} />

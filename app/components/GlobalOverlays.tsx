@@ -13,6 +13,7 @@ import { useWishlistStore } from '@/lib/store/wishlistStore';
 import { useAuthStore } from '@/lib/store/authStore';
 import { TOAST_EVENT, type ToastDetail, type ToastType, showToast } from '@/lib/toast';
 import { RESERVED_URL_PREFIXES } from '@/types/guides';
+import ScrollMemory from './layout/ScrollMemory';
 
 const CartSidebar = dynamic(() => import('./cart/CartSidebar'), { ssr: false });
 const WishlistDrawer = dynamic(() => import('./cart/WishlistDrawer'), { ssr: false });
@@ -223,6 +224,7 @@ export default function GlobalOverlays() {
       <TrackOrderModal isOpen={trackOpen} onClose={() => setTrackOpen(false)} />
       <PendingLockModal />
       <ConfirmDialog />
+      <ScrollMemory />
       
       {!hideFloatingBadges && !isGuidePage && <FloatCartBadge />}
 

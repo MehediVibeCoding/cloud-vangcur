@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
 import { RippleLayer, rippleThen } from '@/lib/ripple';
+import { markScrollRestore } from '@/lib/scrollMemory';
 
 export const policyPClass = 'mb-3 font-body text-[13.5px] sm:text-[14px] leading-[1.85] text-ink/85';
 export const policyUlClass = 'mb-3 list-none space-y-2.5 pl-0.5';
@@ -103,6 +104,8 @@ export function PolicyHeader({
   const handleBack = (e: React.MouseEvent<HTMLElement>) => {
     rippleThen(e, () => {
       if (typeof window !== 'undefined' && window.history.length > 1) {
+        // ব্যাচ ১৪: গন্তব্য পেজে সেভ করা স্ক্রল-পজিশন ফেরানোর অনুরোধ
+        markScrollRestore();
         router.back();
       } else {
         router.push('/');
