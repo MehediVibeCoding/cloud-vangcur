@@ -34,7 +34,7 @@ export interface Product {
   powerInfo?: string;
   infoBoxes?: ProductInfoBox[];
   seoH1?: string;
-  brand?: string; // 🆕 ব্যাচ ৯ — শুধু JSON-LD স্কিমা ও সার্চ-ম্যাচিং-এর জন্য, UI-তে আলাদা দেখানো হয় না
+  brand?: string; // 🆕 ব্যাচ ৯ — JSON-LD স্কিমা, সার্চ-ম্যাচিং ও সার্চ-ফিল্টারের জন্য। প্রোডাক্ট পেজ/কার্ডে আলাদা করে দেখানো হয় না (সিদ্ধান্ত)
   metaTitle?: string;
   metaDescription?: string;
   ogDescription?: string;

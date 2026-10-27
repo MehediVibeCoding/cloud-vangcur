@@ -4,6 +4,7 @@ import { getCachedCatalogIndex, getCachedCategories } from '@/lib/catalogIndex';
 import { searchProducts } from '@/lib/searchData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
 import SearchClient from './SearchClient';
+import SearchSkeleton from './SearchSkeleton';
 
 const MAX_SEARCH_LEN = 60;
 // সার্ভার থেকে সর্বোচ্চ এতগুলো ম্যাচ পাঠানো হয় (পুরো ক্যাটালগ না)। এর বেশি মিললে
@@ -51,7 +52,7 @@ export default async function SearchPage({
   const initialResults = truncated ? matches.slice(0, MAX_SERVER_RESULTS) : matches;
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<SearchSkeleton />}>
       <SearchClient
         initialQuery={query}
         initialResults={initialResults}
