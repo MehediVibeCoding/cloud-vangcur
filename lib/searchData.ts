@@ -2,6 +2,19 @@ import type { Product, Category } from '@/types';
 
 const BANGLA_RE = /[\u0980-\u09FF]/;
 const MIN_EN_LEN = 3;
+// ব্যাচ ১১: "3d"/"5g"/"4k"-এর মতো সংখ্যাযুক্ত ছোট কোয়েরির জন্য ব্যতিক্রম — সাধারণ
+// ৩-অক্ষরের নিয়ম (স্প্যাম/অপ্রাসঙ্গিক ফলাফল ঠেকানোর জন্য) বাকি সব কোয়েরির জন্য বহাল থাকে।
+const MIN_EN_LEN_DIGIT = 2;
+// বাংলা বানান ↔ ইংরেজি-অঙ্কযুক্ত শব্দ এলিয়াস — "থ্রিডি" লিখলেও "3D" প্রোডাক্ট মেলে
+const BN_DIGIT_ALIASES: Record<string, string> = {
+  'থ্রিডি': '3d',
+  'ফোরকে': '4k',
+  'ফাইভজি': '5g',
+};
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // বাংলা টেক্সট থেকে "শব্দ" আলাদা করার জন্য সাধারণ ফাঁকা জায়গা/যতিচিহ্নে ভাঙা হয়,
 // যাতে "সম্পূর্ণ শব্দ মিলেছে কিনা" নির্ভুলভাবে চেক করা যায় (substring না)।
@@ -96,15 +109,35 @@ export function searchProducts(prods: Product[], query: string): Product[] {
       // বাংলায় লিখলে nameBn/tags-এর কোনো একটা শব্দের সাথে হুবহু (exact) মিলতে
       // হবে — আংশিক মিল (যেমন "নিয়" দিয়ে "নিয়ন" ধরা) গ্রহণযোগ্য না।
       const words = [...bnWords(p.nameBn || ''), ...bnWords(p.tags || '')];
-      return words.some((w) => w === raw) ? 0 : null;
+      if (words.some((w) => w === raw)) return 0;
+      // ব্যাচ ১১: "থ্রিডি"-জাতীয় বাংলা বানান এলিয়াস — nameBn খালি/আলাদা হলেও
+      // নাম/ট্যাগে ইংরেজি অঙ্কযুক্ত শব্দ (3D) থাকলে সেটার সাথে মেলানো
+      const alias = BN_DIGIT_ALIASES[raw];
+      if (alias) {
+        const enHay = [p.name || '', p.tags || ''].join(' ').toLowerCase();
+        const wb = new RegExp(`(^|[^a-z0-9])${escapeRegExp(alias)}([^a-z0-9]|$)`, 'i');
+        if (wb.test(enHay)) return 0;
+      }
+      return null;
     }
-    // ইংরেজিতে লিখলে কমপক্ষে ৩ অক্ষর টাইপ করতে হবে (তার আগে কোনো রেজাল্ট
-    // দেখানো হবে না), তারপর বড়/ছোট হাতের অক্ষর নির্বিশেষে (case-insensitive)
+    // ইংরেজিতে লিখলে সাধারণত কমপক্ষে ৩ অক্ষর টাইপ করতে হবে, তবে সংখ্যাযুক্ত
+    // ছোট কোয়েরিতে (3d/5g/4k) ২ অক্ষরই যথেষ্ট — তারপর case-insensitive
     // substring মিল যথেষ্ট — যেমন "neo" লিখলেই "Neon Light" ধরা পড়বে।
     const lower = raw.toLowerCase();
-    if (lower.length < MIN_EN_LEN) return null;
+    const isDigitQuery = /\d/.test(lower);
+    const minLen = isDigitQuery ? MIN_EN_LEN_DIGIT : MIN_EN_LEN;
+    if (lower.length < minLen) return null;
+
+    if (lower.length < MIN_EN_LEN) {
+      // ছোট (২-অক্ষর সংখ্যাযুক্ত) কোয়েরি: পুরো বিবরণের বদলে শুধু নাম/ট্যাগ/
+      // ক্যাটাগরির শব্দ-সীমানায় মেলানো, যাতে ভুলভাবে অপ্রাসঙ্গিক প্রোডাক্ট চলে না আসে।
+      const restrictedHay = [p.name || '', p.tags || '', p.cat || '', p.brand || ''].join(' ').toLowerCase();
+      const wb = new RegExp(`(^|[^a-z0-9])${escapeRegExp(lower)}`, 'i');
+      return wb.test(restrictedHay) ? 0 : null;
+    }
+
     const hay = [
-      p.name || '', p.desc || '', p.cat || '', p.tags || '',
+      p.name || '', p.desc || '', p.cat || '', p.tags || '', p.brand || '',
       Object.values(p.specs || {}).join(' '),
     ].join(' ').toLowerCase();
     if (hay.includes(lower)) return 0;
@@ -113,7 +146,7 @@ export function searchProducts(prods: Product[], query: string): Product[] {
     // বড় ডেসক্রিপশনের এলোমেলো শব্দে ভুল মিল না হয়।
     const qWords = lower.split(/[^a-z0-9]+/).filter(Boolean);
     if (!qWords.length) return null;
-    const fuzzyHay = enWords([p.name, p.tags, p.cat].filter(Boolean).join(' '));
+    const fuzzyHay = enWords([p.name, p.tags, p.cat, p.brand].filter(Boolean).join(' '));
     const fs = fuzzyScore(qWords.filter((w) => w.length >= FUZZY_MIN_LEN), fuzzyHay);
     // ছোট (<৪ অক্ষর) শব্দ থাকলে সেগুলো সাধারণ substring-এই মিলতে হবে
     const shortOk = qWords.filter((w) => w.length < FUZZY_MIN_LEN).every((w) => hay.includes(w));

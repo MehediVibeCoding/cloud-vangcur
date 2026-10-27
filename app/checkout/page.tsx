@@ -1812,7 +1812,7 @@ export default function CheckoutPage() {
                 <div className="border-b border-border-base/70 pb-2 mb-2">
                   {cartItems.map((i) => (
                     <div key={i.id} className="flex items-center justify-between gap-2 py-1.5 font-body text-[13px] text-ink/85">
-                      <span className="line-clamp-1 leading-snug">{i.name} × {i.qty}</span>
+                      <span className="line-clamp-2 leading-snug">{i.name} × {i.qty}</span>
                       <span className="font-bold shrink-0">৳{(i.price * i.qty).toLocaleString('en-US')}</span>
                     </div>
                   ))}

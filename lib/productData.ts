@@ -70,6 +70,7 @@ interface RawCustomProduct {
   power_info?: string | null;
   info_boxes?: unknown;
   seo_h1?: string | null;
+  brand?: string | null;
   meta_title?: string | null;
   meta_description?: string | null;
   og_description?: string | null;
@@ -127,6 +128,7 @@ export function mapCustomProduct(p: RawCustomProduct): Product {
     powerInfo: p.power_info || '',
     infoBoxes: Array.isArray(p.info_boxes) ? (p.info_boxes as { title: string; body: string }[]) : parseJsonish(p.info_boxes, []),
     seoH1: p.seo_h1 || '',
+    brand: p.brand || '',
     metaTitle: p.meta_title || '',
     metaDescription: p.meta_description || '',
     ogDescription: p.og_description || '',
@@ -139,7 +141,7 @@ export function mapCustomProduct(p: RawCustomProduct): Product {
   };
 }
 
-const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch,seo_h1';
+const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch,seo_h1,brand';
 const DETAIL_COLS = `${GRID_COLS},img_alts,desc_text,long_desc,features,faqs,closing,power_info,info_boxes,seo_h1,meta_title,meta_description,og_description,quick_specs_text,packaging_content`;
 
 const QUERY_TIMEOUT_MS = 4000;
