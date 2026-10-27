@@ -29,8 +29,13 @@ const fade = {
   exit: { opacity: 0, transition: { duration: 0.14, ease: EASE_BRAND } },
 };
 
+// /search-এ ঢোকার সময় fade-in (opacity 0 → 1) বাদ: আগের পেজ মিলিয়ে যাওয়ার পর নতুন পেজ ০ opacity থেকে
+// শুরু হয়ে স্কেলেটনের আগে এক ঝলক ফাঁকা স্ক্রিন দেখাত। এখানে নতুন পেজ (স্কেলেটন) সাথে সাথে দৃশ্যমান।
+const fadeNoEnter = { ...fade, initial: { opacity: 1 } };
+
 export default function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const variants = pathname === '/search' ? fadeNoEnter : fade;
 
   return (
     // mode="wait" — আগের পেজ পুরো fade-out না হওয়া পর্যন্ত নতুন পেজ mount
@@ -38,7 +43,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
     // initial={false} — প্রথমবার সাইট লোড হওয়ার সময় fade-in না দেখিয়ে
     // সরাসরি কন্টেন্ট দেখায়।
     <AnimatePresence mode="wait" initial={false}>
-      <motion.div key={pathname} {...fade}>
+      <motion.div key={pathname} {...variants}>
         {children}
       </motion.div>
     </AnimatePresence>

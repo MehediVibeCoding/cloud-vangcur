@@ -16,12 +16,27 @@ import { showToast } from '@/lib/toast';
 import { useT } from '@/lib/i18n/useT';
 import { RippleLayer, rippleThen } from '@/lib/ripple';
 import type { Category, Product } from '@/types';
+import SearchFilterPanel, { ActiveFilterChips } from './SearchFilterPanel';
+import {
+  EMPTY_FILTERS, applyFilters, buildFacets, buildSearchUrl,
+  filtersSignature, hasActiveFilters, parseFilters, type SearchFilters,
+} from '@/lib/searchFilters';
 
+// ব্যাচ ১০: পেজপ্রতি সংখ্যা গ্রিডের কলামের গুণিতক — ডেস্কটপে সারি অসম্পূর্ণ থাকে না।
+// সার্ভার/প্রথম রেন্ডারে সবসময় PRODS_PER_PAGE (হাইড্রেশন মিলে যায়); mount-এর পর ডিভাইস অনুযায়ী বদলায়।
 const PRODS_PER_PAGE = 20;
+function pageSizeForViewport(): number {
+  if (typeof window === 'undefined') return PRODS_PER_PAGE;
+  const w = window.innerWidth;
+  if (w >= 1280) return 36; // xl: ৬ কলাম × ৬ সারি
+  if (w >= 1024) return 28; // lg: ৪ কলাম × ৭ সারি
+  if (w >= 768) return 24;  // md: ৩ কলাম × ৮ সারি
+  return 20;                // মোবাইল: ২ কলাম × ১০ সারি
+}
 const PRODS_AUTO_THRESHOLD = 2;
 const MAX_SEARCH_LEN = 60;
 
-function SearchHeader({ query, onQueryChange }: { query: string; onQueryChange: (v: string) => void }) {
+function SearchHeader({ query, onQueryChange, filterSlot }: { query: string; onQueryChange: (v: string) => void; filterSlot?: React.ReactNode }) {
   const { t, lang } = useT();
   const router = useRouter();
   const [value, setValue] = useState(query);
@@ -123,6 +138,7 @@ function SearchHeader({ query, onQueryChange }: { query: string; onQueryChange: 
               </div>
             )}
           </div>
+          {filterSlot}
         </div>
       </nav>
     </div>
@@ -219,6 +235,7 @@ function ResultsList({ results, total }: { results: Product[]; total: number }) 
   const supabase = useRef(createClient()).current;
 
   // প্রথম রেন্ডারেই (সার্ভার HTML-এও) প্রথম ব্যাচ থাকে — আগের মতো useEffect/setTimeout-এর অপেক্ষা নেই
+  const pageSizeRef = useRef(PRODS_PER_PAGE);
   const [renderedCount, setRenderedCount] = useState(() => Math.min(PRODS_PER_PAGE, results.length));
   const [showLoadMoreBtn, setShowLoadMoreBtn] = useState(false);
   const [showSpinner, setShowSpinner] = useState(results.length > PRODS_PER_PAGE);
@@ -230,11 +247,25 @@ function ResultsList({ results, total }: { results: Product[]; total: number }) 
 
   useEffect(() => { listRef.current = results; }, [results]);
 
+  // mount-এর পর ডিভাইস অনুযায়ী পেজ-সাইজ বসানো; বড় হলে প্রথম ব্যাচও একবার বাড়ে (আগের কার্ড নড়ে না, নিচে যোগ হয়)
+  useEffect(() => {
+    const size = pageSizeForViewport();
+    pageSizeRef.current = size;
+    const list = listRef.current;
+    if (size > renderedCountRef.current && renderedCountRef.current < list.length) {
+      const n = Math.min(size, list.length);
+      renderedCountRef.current = n;
+      setRenderedCount(n);
+      setShowSpinner(n < list.length);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const appendNextBatch = useCallback(() => {
     const currentList = listRef.current;
     const cur = renderedCountRef.current;
     if (cur >= currentList.length) return;
-    const nextCount = Math.min(cur + PRODS_PER_PAGE, currentList.length);
+    const nextCount = Math.min(cur + pageSizeRef.current, currentList.length);
     batchCountRef.current += 1;
     renderedCountRef.current = nextCount;
     setRenderedCount(nextCount);
@@ -417,22 +448,52 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
       .finally(() => { fetchingRef.current = false; });
   }, [needIndex, index, initialResults]);
 
+  // ── ফিল্টার ও সর্ট ──────────────────────────────────────────────────────────
+  // অবস্থা লোকাল স্টেটে (তাৎক্ষণিক), URL-এ লেখা হয় history.replaceState দিয়ে (সার্ভার রিকোয়েস্ট ছাড়া)।
+  // শুরুর মান useSearchParams থেকে — শেয়ার করা লিংক খুললে সার্ভারের প্রথম HTML-ই ফিল্টার-করা আসে।
+  const [filters, setFilters] = useState<SearchFilters>(() => parseFilters(searchParams));
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
   // null = এখনো লোড হচ্ছে
-  const results = useMemo<Product[] | null>(() => {
+  const baseResults = useMemo<Product[] | null>(() => {
     if (!query) return [];
     if (index) return searchProducts(index, query);
     if (query === initialQuery) return initialResults;
     return null;
   }, [query, index, initialQuery, initialResults]);
 
+  const results = useMemo<Product[] | null>(
+    () => (baseResults === null ? null : applyFilters(baseResults, filters)),
+    [baseResults, filters],
+  );
+  const facets = useMemo(() => (baseResults ? buildFacets(baseResults, filters) : { brands: [], price: null }), [baseResults, filters]);
+  const brandLabels = useMemo(() => Object.fromEntries(facets.brands.map((b) => [b.key, b.label])), [facets.brands]);
+  const filtersActive = hasActiveFilters(filters);
+  const filterSig = filtersSignature(filters);
+
+  // ফিল্টার বদলালে URL আপডেট (কোয়েরি থাকলে)
+  useEffect(() => {
+    if (!query) return;
+    const url = buildSearchUrl(query, filters);
+    if (typeof window !== 'undefined' && url !== window.location.pathname + window.location.search) {
+      window.history.replaceState(window.history.state, '', url);
+    }
+  }, [filters, query]);
+
   // URL আপডেট শুধু ব্রাউজারের history-তে — Next.js-এর সার্ভার-রিকোয়েস্ট ছাড়া (router.replace
   // প্রতিবার সার্ভার থেকে পুরো পেজ আবার আনত)। useSearchParams এটা নিজে ধরে নেয়।
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleQueryChange = useCallback((value: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    // নতুন শব্দে আগের ব্র্যান্ড-নির্বাচন অপ্রাসঙ্গিক হতে পারে — তাই শুধু ব্র্যান্ড মুছে যায়; দাম/সর্ট/স্টক থাকে
+    if (filtersRef.current.brands.length) {
+      setFilters((f) => (f.brands.length ? { ...f, brands: [] } : f));
+      filtersRef.current = { ...filtersRef.current, brands: [] };
+    }
     debounceRef.current = setTimeout(() => {
       const clean = cleanQuery(value);
-      const url = clean ? `/search?q=${encodeURIComponent(clean)}` : '/search';
+      const url = buildSearchUrl(clean, filtersRef.current);
       window.history.replaceState(window.history.state, '', url);
     }, 300);
   }, []);
@@ -450,14 +511,28 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
 
   const matchedCats = useMemo(() => matchCategories(cats, query, 8), [cats, query]);
   const hasQuery = query.length > 0;
-  const count = results === null ? null : (index || query !== initialQuery ? results.length : initialTotal);
+  const count = results === null ? null : (filtersActive || index || query !== initialQuery ? results.length : initialTotal);
   const total = count ?? 0;
   const showCategorySection = matchedCats.length > 0;
   const showCountLine = count !== null && (matchedCats.length > 0 || count > 0);
 
   return (
     <>
-      <SearchHeader query={query} onQueryChange={handleQueryChange} />
+      <SearchHeader
+        query={query}
+        onQueryChange={handleQueryChange}
+        filterSlot={(
+          <SearchFilterPanel
+            filters={filters}
+            onChange={setFilters}
+            brands={facets.brands}
+            priceBounds={facets.price}
+            resultCount={count ?? 0}
+            lang={lang}
+            hidden={!hasQuery}
+          />
+        )}
+      />
 
       <div className="mx-auto mb-11 mt-3 min-h-[40vh] max-w-[1300px] px-5">
         {!hasQuery ? (
@@ -487,12 +562,24 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
               <p className="mb-4 text-[13px] text-muted">{lang === 'en' ? `${count} products found` : `${count}টি পণ্য পাওয়া গেছে`}</p>
             )}
 
+            <ActiveFilterChips filters={filters} onChange={setFilters} brandLabels={brandLabels} lang={lang} />
+
             {results === null ? (
               <ResultsSkeleton />
+            ) : results.length === 0 && filtersActive && baseResults && baseResults.length > 0 ? (
+              <div className="flex flex-col items-center gap-3 px-5 py-14 text-center">
+                <SearchGlyph />
+                <p className="text-[15px] font-bold text-ink">
+                  {lang === 'en' ? 'No products match these filters' : 'এই ফিল্টারে কোনো পণ্য মেলেনি'}
+                </p>
+                <button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS, sort: filters.sort })} className={brandCtaBtnClass}>
+                  {lang === 'en' ? 'Clear all filters' : 'সব ফিল্টার মুছুন'}
+                </button>
+              </div>
             ) : results.length === 0 ? (
               <ZeroResultsState query={query} />
             ) : (
-              <ResultsList key={query} results={results} total={total} />
+              <ResultsList key={`${query}|${filterSig}`} results={results} total={total} />
             )}
           </>
         )}

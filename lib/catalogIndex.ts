@@ -19,13 +19,14 @@ export const getCachedCatalogIndex = unstable_cache(
     const all = await fetchCustomProducts(supabase);
     return all.map(toIndexProduct);
   },
-  // 🆕 v2: ইনডেক্সের আকার ছোট হয়েছে (toIndexProduct) — কী বদলানোয় আগের বড় আকারের ক্যাশ আর ব্যবহার হবে না
-  ['catalog-index-v2'],
+  // 🆕 v3: ইনডেক্সে `brand` যোগ (সার্চ-ম্যাচিং ও ব্র্যান্ড-ফিল্টারের জন্য) — কী বদলানোয় brand-হীন পুরনো ক্যাশ আর ব্যবহার হবে না
+  ['catalog-index-v3'],
   { revalidate: 300, tags: ['catalog'] },
 );
 
 // ইনডেক্সের একেকটা প্রোডাক্টে শুধু সেই ফিল্ডগুলোই রাখা হয় যা এর ব্যবহারকারীরা সত্যিই পড়ে:
-//  • সার্চ (lib/searchData.ts): name, nameBn, tags, desc, cat, specs-এর মান
+//  • সার্চ (lib/searchData.ts): name, nameBn, tags, desc, cat, brand, specs-এর মান
+//  • সার্চ ফিল্টার (lib/searchFilters.ts): brand, price, stock, id
 //  • প্রোডাক্ট কার্ড (সার্চ রেজাল্ট): id, name, price, old, rating, badge, stock, imgs[0]
 //  • নেভবার ড্রপডাউন: id, name, price, stock, cat, imgs[0]
 //  • কার্ট/কুইক-অর্ডার (stock চেক): id, stock, price, name, cat, imgs[0]
@@ -41,6 +42,7 @@ function toIndexProduct(p: Product): Product {
     name: p.name,
     nameBn: p.nameBn,
     tags: p.tags,
+    brand: p.brand, // ব্যাচ ৯: আগে এখানে বাদ পড়ত — তাই ব্র্যান্ড-সার্চ আসলে কাজ করত না
     price: p.price,
     old: p.old,
     stock: p.stock,

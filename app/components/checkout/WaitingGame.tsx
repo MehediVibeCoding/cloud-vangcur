@@ -77,8 +77,12 @@ export default function WaitingGame({ variant, active }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    submitTsRef.current = readSubmitTs();
+    // ব্যাচ ১৫: অর্ডার পেন্ডিং কিন্তু এই ডিভাইসে `vc_pending_ts` নেই (অন্য ডিভাইসে খোলা / লোকাল স্টোরেজ মোছা)
+    // — আগে এতে সাথে সাথে "৫ মিনিট পেরিয়েছে" ধরে গেম বাটন লুকিয়ে যেত। এখন সেক্ষেত্রে এখন থেকে ৫ মিনিট গোনা হয়
+    // (শুধু মেমোরিতে, localStorage/StatusClient-এর নিজস্ব হিসাবে হাত না দিয়ে)।
+    submitTsRef.current = readSubmitTs() || (active ? Date.now() : 0);
     setMounted(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const closeAll = useCallback(() => {
