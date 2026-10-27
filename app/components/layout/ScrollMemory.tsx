@@ -7,6 +7,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { isPolicyPath, restoreScrollIfRequested, saveScrollPosition } from '@/lib/scrollMemory';
+import { clearPolicyNavHint, policyBasePath, setPolicyNavHint } from '@/lib/policyNavHint';
 
 export default function ScrollMemory() {
   const pathname = usePathname();
@@ -24,7 +25,20 @@ export default function ScrollMemory() {
       } catch {
         return;
       }
-      if (isPolicyPath(path) && !isPolicyPath(window.location.pathname)) saveScrollPosition();
+      if (isPolicyPath(path) && !isPolicyPath(window.location.pathname)) {
+        // ক্লিক করা লিংকটাও দিই — ফুটারের লিংক হলে ফেরার সময় সেটাই নোঙর হয় (lib/scrollMemory.ts)
+        saveScrollPosition(a);
+        // সঠিক পলিসি-স্কেলেটনের হিন্ট (app/loading.tsx পড়ে): নতুন ট্যাব/মডিফায়ার/ডাউনলোড হলে সাধারণ নেভিগেশন নয়
+        const plain =
+          e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.defaultPrevented &&
+          (!a.target || a.target === '_self') && !a.hasAttribute('download');
+        const base = policyBasePath(path);
+        if (plain && base && path !== window.location.pathname) setPolicyNavHint(base, window.location.pathname);
+        else clearPolicyNavHint();
+      } else {
+        // অন্য যেকোনো লিংকে ক্লিক — আটকে থাকা পুরনো পলিসি-হিন্ট সরাই, যাতে ভুল স্কেলেটন না আসে
+        clearPolicyNavHint();
+      }
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -32,6 +46,8 @@ export default function ScrollMemory() {
 
   // পেজ বদলালে (ব্যাক করে গন্তব্যে পৌঁছালে) অনুরোধ থাকলে পজিশন ফেরাই
   useEffect(() => {
+    // নেভিগেশন শেষ (URL বদলেছে) — পলিসি-হিন্টের কাজ শেষ
+    clearPolicyNavHint();
     restoreScrollIfRequested();
   }, [pathname]);
 
