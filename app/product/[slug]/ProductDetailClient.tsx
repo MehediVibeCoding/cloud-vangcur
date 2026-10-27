@@ -497,9 +497,37 @@ export default function ProductDetailClient({
     !!initialProduct || (initialProducts && initialProducts.length > 0)
   );
 
+  // ⚡ প্রিফেচ পেজ লোড ও idle হওয়ার পরে — আগে হাইড্রেশনের সঙ্গে সঙ্গেই চলত, তখন প্রোডাক্টের LCP ছবির
+  // সাথে ব্যান্ডউইথ ভাগ করত (বিশেষত '/' প্রিফেচ: হোমের ছবি-প্রিলোড হিন্ট সাথে চলে আসতে পারে)।
+  // গন্তব্য একই; শুধু সময় পিছিয়েছে। "অর্ডার করুন" বাটনে hover/touch-এ /checkout প্রিফেচ আলাদাভাবে আছেই।
   useEffect(() => {
-    router.prefetch('/checkout');
-    router.prefetch('/');
+    let cancelled = false;
+    let idleId: number | undefined;
+    let timeoutId: number | undefined;
+    const run = () => {
+      if (cancelled) return;
+      router.prefetch('/checkout');
+      router.prefetch('/');
+    };
+    const schedule = () => {
+      if (cancelled) return;
+      if (typeof window.requestIdleCallback === 'function') {
+        idleId = window.requestIdleCallback(run, { timeout: 5000 });
+      } else {
+        timeoutId = window.setTimeout(run, 3000);
+      }
+    };
+    if (document.readyState === 'complete') {
+      schedule();
+    } else {
+      window.addEventListener('load', schedule, { once: true });
+    }
+    return () => {
+      cancelled = true;
+      window.removeEventListener('load', schedule);
+      if (idleId !== undefined && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
   }, [router]);
 
   useEffect(() => {
