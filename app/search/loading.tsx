@@ -1,6 +1,6 @@
 // GitHub পাথ: app/search/loading.tsx
-import SearchSkeleton from './SearchSkeleton';
+import { SearchSkeletonAuto } from './SearchSkeleton';
 
 export default function SearchLoading() {
-  return <SearchSkeleton />;
+  return <SearchSkeletonAuto />;
 }
