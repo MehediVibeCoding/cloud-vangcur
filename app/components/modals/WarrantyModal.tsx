@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { getWarrantyModalContent, formatWarrantyLabel } from '@/lib/warrantyData';
+import { getWarrantyModalContent, formatWarrantyLabel, parseWarranty, toEnglishDigits } from '@/lib/warrantyData';
 import { lockBody, unlockBody } from '@/lib/bodyScrollLock';
 import { useT } from '@/lib/i18n/useT';
 import useHistoryModal, { suppressHistoryCleanup } from '@/lib/useHistoryModal';
@@ -85,23 +85,40 @@ export default function WarrantyModal({ isOpen, onClose, warrantyText }: Warrant
     let title = t(rawContent.title);
     let body = t(rawContent.body);
 
+    // বাংলা মোডেও মডালের শিরোনাম/বিবরণে সংখ্যা ইংরেজি অঙ্কে দেখানো হয় (৭ → 7)।
+    // আগে এটা শুধু ৪টা নির্দিষ্ট মেয়াদের জন্য আলাদা regex দিয়ে করা হতো, ফলে অন্য
+    // যেকোনো মেয়াদে (যেমন ৩ দিন) বাংলা অঙ্ক থেকে যেত। এখন যেকোনো সংখ্যার জন্য একই নিয়ম।
     if (lang === 'bn') {
-      title = title
-        .replace(/১ সপ্তাহ \(৭ দিন\)/g, '7 দিন (1 সপ্তাহ)')
-        .replace(/৬ মাস/g, '6 মাস')
-        .replace(/১ বছর \(১২ মাস\)/g, '1 বছর (12 মাস)')
-        .replace(/২ বছর \(২৪ মাস\)/g, '2 বছর (24 মাস)');
-
-      body = body
-        .replace(/৭ দিন/g, '7 দিন')
-        .replace(/১৮০ দিন \(৬ মাস\)/g, '180 দিন (6 মাস)')
-        .replace(/৩৬৫ দিন/g, '365 দিন')
-        .replace(/১ বছর/g, '1 বছর')
-        .replace(/২ বছর/g, '2 বছর');
+      title = toEnglishDigits(title);
+      body = toEnglishDigits(body);
     }
 
     return { title, body };
   }, [rawContent, t, lang]);
+
+  // ওয়ারেন্টির ধরন (রিপ্লেসমেন্ট / সার্ভিস / অফিসিয়াল) — তৃতীয় পয়েন্টের লেখা এর ওপর নির্ভর করে
+  const warrantyKind = useMemo(() => parseWarranty(warrantyText)?.kind ?? 'plain', [warrantyText]);
+  const benefit =
+    warrantyKind === 'service'
+      ? {
+          title: lang === 'en' ? 'Free Service: ' : 'ফ্রি সার্ভিস: ',
+          text: lang === 'en'
+            ? 'Manufacturing defects or internal technical issues are resolved through the brand\'s free service during the warranty period.'
+            : 'ওয়ারেন্টির মেয়াদের মধ্যে ম্যানুফ্যাকচারিং ত্রুটি বা অভ্যন্তরীণ টেকনিক্যাল সমস্যা ব্র্যান্ডের ফ্রি সার্ভিসের মাধ্যমে সমাধান করা হবে।',
+        }
+      : warrantyKind === 'official'
+        ? {
+            title: lang === 'en' ? 'Free Replacement or Service: ' : 'ফ্রি রিপ্লেসমেন্ট বা সার্ভিস: ',
+            text: lang === 'en'
+              ? 'For manufacturing defects or internal technical issues, you get a free replacement or the brand\'s official free service, whichever applies.'
+              : 'ম্যানুফ্যাকচারিং ত্রুটি বা অভ্যন্তরীণ টেকনিক্যাল সমস্যার ক্ষেত্রে যেটা প্রযোজ্য — ফ্রি রিপ্লেসমেন্ট অথবা ব্র্যান্ডের অফিসিয়াল ফ্রি সার্ভিস পাবেন।',
+          }
+        : {
+            title: lang === 'en' ? 'Free Replacement: ' : '১০০% ফ্রি রিপ্লেসমেন্ট: ',
+            text: lang === 'en'
+              ? 'Free replacement is provided for manufacturing defects or internal technical issues with zero additional logistics fees.'
+              : 'ম্যানুফ্যাকচারিং ত্রুটি বা অভ্যন্তরীণ টেকনিক্যাল সমস্যার ক্ষেত্রে সম্পূর্ণ ফ্রিতে নতুন প্রোডাক্ট রিপ্লেসমেন্ট প্রদান করা হবে।',
+          };
 
   useHistoryModal(isOpen, onClose, 'warranty-modal');
 
@@ -127,13 +144,13 @@ export default function WarrantyModal({ isOpen, onClose, warrantyText }: Warrant
   const handleNavigateToWarranty = (e: React.MouseEvent) => {
     e.preventDefault();
     onClose();
-    setTimeout(() => {
-      // মডাল বন্ধ হওয়ার deferred cleanup (setTimeout(...,0)) এই push-এর
-      // আগেই ফায়ার হয়ে গেছে, কিন্তু নিশ্চিত হতে push-এর ঠিক আগে আবার
-      // suppress করা হচ্ছে — যদি এর মধ্যে অন্য কোনো মডাল স্লট নিয়ে থাকে।
-      suppressHistoryCleanup();
-      router.push('/warranty');
-    }, 120);
+    // মডাল বন্ধ হওয়ার effect cleanup যেন নিচের router.push()-কে deferred
+    // history.back() দিয়ে উল্টে না দেয় — তাই বিলম্ব ছাড়াই, একই সিঙ্ক্রোনাস
+    // ধাপে suppress + push (বাকি সব মডালের মতো)। আগে এখানে ১২০ms পরে
+    // suppress হতো; ততক্ষণে cleanup-এর history.back() শিডিউল হয়ে যেত, আর
+    // ধীরগতির ডিভাইসে (iPhone 7) সেটা নতুন নেভিগেশনের পরে এসে সেটাকে বাতিল করত।
+    suppressHistoryCleanup();
+    router.push('/warranty');
   };
 
   return (
@@ -224,10 +241,8 @@ export default function WarrantyModal({ isOpen, onClose, warrantyText }: Warrant
                     3
                   </span>
                   <div className="font-body text-[12.5px] leading-[1.65] text-ink/85">
-                    <strong>{lang === 'en' ? 'Free Replacement: ' : '১০০% ফ্রি রিপ্লেসমেন্ট: '}</strong>
-                    {lang === 'en'
-                      ? 'Free replacement is provided for manufacturing defects or internal technical issues with zero additional logistics fees.'
-                      : 'ম্যানুফ্যাকচারিং ত্রুটি বা অভ্যন্তরীণ টেকনিক্যাল সমস্যার ক্ষেত্রে সম্পূর্ণ ফ্রিতে নতুন প্রোডাক্ট রিপ্লেসমেন্ট প্রদান করা হবে।'}
+                    <strong>{benefit.title}</strong>
+                    {benefit.text}
                   </div>
                 </div>
               </div>

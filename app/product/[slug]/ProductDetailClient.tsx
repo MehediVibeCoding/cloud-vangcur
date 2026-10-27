@@ -687,6 +687,8 @@ export default function ProductDetailClient({
   const [msgLink, setMsgLink] = useState<string | null>(DEFAULT_MSG_LINK);
 
   const cartQty = useCartStore((s) => cartCount(s.cart));
+  // এই পণ্যটি কার্টে আগে থেকে কতটি আছে — পরিমাণ-সিলেক্টরের সীমা হিসাবের জন্য
+  const inCartQty = useCartStore((s) => (prod ? (s.cart.find((x) => String(x.id) === String(prod.id))?.qty ?? 0) : 0));
   const wishQty = useWishlistStore((s) => s.wishlist.length);
   const currentUser = useAuthStore((s) => s.currentUser);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -782,7 +784,14 @@ export default function ProductDetailClient({
   }, [prod?.id]);
 
   const sold = prod ? prod.stock <= 0 : false;
-  const maxQty = prod ? (prod.stock > 0 ? Math.min(prod.stock, MAX_QTY_PER_PRODUCT) : 1) : 1;
+  // কার্টে যা আছে তা বাদ দিয়ে আর কতটি যোগ করা যাবে (স্টক ও সর্বোচ্চ ১০ — দুটোর ছোটটা)
+  const roomLeft = prod ? Math.max(0, Math.min(prod.stock, MAX_QTY_PER_PRODUCT) - inCartQty) : 0;
+  const maxQty = Math.max(1, roomLeft);
+
+  // কার্টে পরিমাণ বাড়লে (বা অন্য ট্যাবে বদলালে) সিলেক্টরের মান সীমার ভেতরে টেনে আনা
+  useEffect(() => {
+    setQty((q) => Math.min(q, maxQty));
+  }, [maxQty]);
 
   const chgQty = (d: number) => {
     if (sold) return;
@@ -794,14 +803,16 @@ export default function ProductDetailClient({
 
     const res = useCartStore.getState().addToCart([prod], prod.id, qty);
     if (res.ok && res.capped) {
+      // সীমার কারণে চাওয়ার চেয়ে কম যোগ হয়েছে — শুধু এই একটাই টোস্ট, "কার্টে যোগ হয়েছে" আলাদা দেখানো হবে না
       showToast(t('একটি পণ্য সর্বোচ্চ ১০টি নেওয়া যাবে'));
     }
     if (res.ok) {
+      const wasCapped = !!res.capped;
       setCartButtonState('animating');
 
       setTimeout(() => {
         setCartButtonState('added');
-        showToast(t('কার্টে যোগ হয়েছে'));
+        if (!wasCapped) showToast(t('কার্টে যোগ হয়েছে'));
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent(QUICK_CART_EVENT, { detail: { id: prod.id, qty } }));
