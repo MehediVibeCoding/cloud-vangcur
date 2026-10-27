@@ -498,7 +498,7 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
         )}
       </div>
 
-      <Footer />
+      <Footer eager />
     </>
   );
 }

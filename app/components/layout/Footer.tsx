@@ -1,16 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import VangcurLogoMark from '@/app/components/ui/VangcurLogoMark';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/store/authStore';
-import {
-  DEFAULT_FOOTER,
-  fetchFooterSettings,
-  subscribeFooterSettings,
-} from '@/lib/footerData';
+import { DEFAULT_FOOTER } from '@/lib/footerData';
 import { sanitizeHref } from '@/lib/security';
 import { useT } from '@/lib/i18n/useT';
 import type { FooterContact, FooterExtras, FooterLogo } from '@/types';
@@ -156,41 +151,18 @@ function UsersGroupIcon() {
 const colLinkClass =
   'block bg-transparent border-0 p-0 text-left font-body text-[13.5px] font-medium text-slate-700 no-underline transition-colors hover:text-brand-light cursor-pointer leading-snug';
 
+// ⚡ ফুটারের ডেটা (যোগাযোগ, সোশ্যাল লিংক, বর্ণনা, কপিরাইট) এখন কোড থেকেই আসে (lib/footerData.ts-এর
+// DEFAULT_FOOTER) — আগের মতো Supabase fetch/Realtime চ্যানেল আসলে কিছুই আনত না (fetchFooterSettings
+// সবসময় {} দিত)। তাই এখানে আর Supabase ক্লায়েন্ট/ইফেক্ট নেই; কনটেন্ট বদলাতে হলে DEFAULT_FOOTER বদলান।
+// মান আগের মতোই (computeX(null) = DEFAULT_FOOTER), তাই দেখতে কোনো পরিবর্তন নেই।
+const FOOTER_CONTACT: FooterContact = computeContact(null);
+const FOOTER_EXTRAS: FooterExtras = computeFooterExtras(null);
+
 function FooterContent() {
   const { t, lang } = useT();
   const currentUser = useAuthStore((s) => s.currentUser);
-  const supabase = useMemo(() => createClient(), []);
-  const [logo, setLogo] = useState<FooterLogo>(computeLogo(null));
-
-  const [contact, setContact] = useState<FooterContact>(DEFAULT_FOOTER.contact);
-  const [extras, setExtras] = useState<FooterExtras>({
-    desc: DEFAULT_FOOTER.desc,
-    copy: DEFAULT_FOOTER.copy,
-    social: DEFAULT_FOOTER.social,
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const settings = await fetchFooterSettings(supabase);
-      if (cancelled) return;
-
-      if (settings.vc_logo) setLogo(computeLogo(settings.vc_logo));
-      if (settings.vc_contact) setContact(computeContact(settings.vc_contact));
-      if (settings.vc_footer) setExtras(computeFooterExtras(settings.vc_footer));
-    })();
-
-    const channel = subscribeFooterSettings(supabase, (key, val) => {
-      if (key === 'vc_logo') setLogo(computeLogo(val as FooterLogo));
-      if (key === 'vc_contact') setContact(computeContact(val as Partial<FooterContact>));
-    });
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(channel);
-    };
-  }, [supabase]);
+  const contact = FOOTER_CONTACT;
+  const extras = FOOTER_EXTRAS;
 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   const scrollToCategories = () => document.getElementById('catCardsGrid')?.scrollIntoView({ behavior: 'smooth' });
@@ -542,11 +514,18 @@ function FooterContent() {
 // • ফুটার সবসময় পেজের শেষ উপাদান, তাই নিচে বড় হলে দেখা-যাওয়া অংশ সরে না (layout shift নেই)।
 // • IntersectionObserver না থাকলে (খুব পুরনো ব্রাউজার) সঙ্গে সঙ্গে মাউন্ট — আগের আচরণ।
 // • কোনো নতুন রিকোয়েস্ট নয়; উল্টো ফুটার না-দেখা ভিজিটরের জন্য ২টা ছবি + ১টা Supabase কল + ১টা WebSocket কমে।
-export default function Footer() {
+//
+// ⚡ `eager`: ছোট পেজে (অফার, সার্চ, অ্যাকাউন্ট ইত্যাদি) ফুটার প্রথম স্ক্রিনেই পড়ে এবং তার বড় ছবিই
+// LCP হয়ে যায়। লেজি-মাউন্টে ছবিটা হাইড্রেশনের পর HTML-এ ঢুকত (PageSpeed-এ ~২.৫ সেকেন্ড দেরি)। `eager`
+// দিলে ফুটার (ছবিসহ) প্রথম HTML-এই রেন্ডার হয় — ছবি আগের মতোই `loading="lazy"`, তাই স্ক্রিনের বাইরে
+// থাকলে নামে না। ফুটারের কোনো নেটওয়ার্ক রিকোয়েস্ট নেই, তাই নতুন রিকোয়েস্টও যোগ হয় না।
+// `eager` না দিলে (হোম, প্রোডাক্ট ইত্যাদি) আচরণ আগের মতোই লেজি।
+export default function Footer({ eager = false }: { eager?: boolean } = {}) {
   const holderRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(eager);
 
   useEffect(() => {
+    if (eager) return;
     const el = holderRef.current;
     if (!el) return;
     if (typeof IntersectionObserver === 'undefined') {
@@ -564,7 +543,7 @@ export default function Footer() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [eager]);
 
   if (mounted) return <FooterContent />;
   return <div ref={holderRef} aria-hidden="true" className="mt-12 h-10" />;
