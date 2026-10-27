@@ -5,21 +5,64 @@
 // রুট-লেভেল fallback। আগে এটা সবসময় হোমপেজের স্কেলেটন দেখাত — ফলে কার্ডে ট্যাপ করলে (প্রোডাক্ট পেজের নিজস্ব
 // loading.tsx প্রিফেচ না থাকলে) প্রোডাক্টের বদলে হোমের গ্রিড-স্কেলেটন ভেসে উঠত।
 // এখন গন্তব্য /product/... হলে (অথবা কার্ড-ক্লিকের হিন্ট থাকলে) প্রোডাক্ট-স্কেলেটন দেখানো হয়;
+// [NEW] গন্তব্য পলিসি/গ্রাহক-সেবা পেজ (/guide, /shipping, /warranty, /refund-policy, /privacy-policy, /terms) হলে
+// (অথবা ফুটার-লিংক ক্লিকের হিন্ট থাকলে) সেই পেজেরই স্কেলেটন দেখানো হয় — হোমের গ্রিড নয়;
 // বাকি সব রুটে আগের মতোই হোম স্কেলেটন।
+import type { ComponentType } from 'react';
 import { usePathname } from 'next/navigation';
 import SkeletonNavbar from '@/app/components/ui/SkeletonNavbar';
 import ProductSkeletonAuto from '@/app/components/product/ProductSkeletonAuto';
 import { useProductNavHint } from '@/lib/productNavHint';
+import { policyBasePath, usePolicyNavHint } from '@/lib/policyNavHint';
+import GuideLoading from '@/app/(policies)/guide/loading';
+import ShippingLoading from '@/app/(policies)/shipping/loading';
+import WarrantyLoading from '@/app/(policies)/warranty/loading';
+import RefundPolicyLoading from '@/app/(policies)/refund-policy/loading';
+import PrivacyPolicyLoading from '@/app/(policies)/privacy-policy/loading';
+import TermsLoading from '@/app/(policies)/terms/loading';
+import PolicyLoading from '@/app/(policies)/loading';
+
+const POLICY_SKELETONS: Record<string, ComponentType> = {
+  '/guide': GuideLoading,
+  '/shipping': ShippingLoading,
+  '/warranty': WarrantyLoading,
+  '/refund-policy': RefundPolicyLoading,
+  '/privacy-policy': PrivacyPolicyLoading,
+  '/terms': TermsLoading,
+};
 
 export default function RootLoading() {
   const pathname = usePathname();
   const hint = useProductNavHint();
+  const policyHint = usePolicyNavHint();
   const goingToProduct =
     (pathname ? pathname.startsWith('/product/') : false) ||
     // নিরাপত্তা-জাল: ফলব্যাকে pathname পুরনোটা এলেও (ক্লিকের আগের পাথ) হিন্ট থাকলে প্রোডাক্ট-স্কেলেটন
     (hint !== null && pathname === hint.fromPath);
   if (goingToProduct) return <ProductSkeletonAuto />;
+
+  // পলিসি পেজ: pathname গন্তব্য হলে সেটাই; পুরনো থাকলে ফুটার-লিংকের হিন্ট (একই নিরাপত্তা-জাল)
+  const policyDest =
+    policyBasePath(pathname) ?? (policyHint !== null && pathname === policyHint.fromPath ? policyHint.to : null);
+  if (policyDest) return <PolicyFallback dest={policyDest} />;
+
   return <HomeLoading />;
+}
+
+// (policies)/layout.tsx-এর চেহারা (গ্রেডিয়েন্ট + নেভবার + ৮৪০px কলাম) — ভেতরে সেই পেজের নিজস্ব স্কেলেটন,
+// তাই আসল পেজ এলে নেভবার/কলাম নড়ে না।
+function PolicyFallback({ dest }: { dest: string }) {
+  const Skeleton = POLICY_SKELETONS[dest] ?? PolicyLoading;
+  return (
+    <div className="relative min-h-screen bg-gradient-to-b from-brand-bg/35 via-[#DCEBFD]/45 to-white">
+      <div className="relative z-10">
+        <SkeletonNavbar sticky={false} />
+        <main className="mx-auto w-full max-w-[840px] px-4 pb-16 pt-3.5 sm:px-6 sm:pt-5">
+          <Skeleton />
+        </main>
+      </div>
+    </div>
+  );
 }
 
 function HomeLoading() {
