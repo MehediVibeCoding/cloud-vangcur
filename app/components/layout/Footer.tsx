@@ -229,11 +229,11 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
         <defs>
           {/* মোবাইল ডিভাইসে উচ্চতায় স্লিক ও হালকা কাটআউট */}
           <clipPath id="footer-top-wave-clip-mobile" clipPathUnits="objectBoundingBox">
-            <path d="M 0,0.020 C 0.14,0.010 0.24,0.006 0.35,0.006 C 0.52,0.006 0.65,0.028 0.78,0.028 C 0.88,0.028 0.94,0.022 1,0.018 L 1,1 L 0,1 Z" />
+            <path d="M 0,0.034 C 0.14,0.034 0.22,0.012 0.36,0.012 C 0.52,0.012 0.64,0.052 0.80,0.052 C 0.90,0.052 0.96,0.040 1,0.036 L 1,1 L 0,1 Z" />
           </clipPath>
           {/* ডেস্কটপ ডিভাইসে উচ্চতায় স্লিক ও হালকা কাটআউট */}
           <clipPath id="footer-top-wave-clip-desktop" clipPathUnits="objectBoundingBox">
-            <path d="M 0,0.014 C 0.14,0.007 0.24,0.004 0.35,0.004 C 0.52,0.004 0.65,0.020 0.78,0.020 C 0.88,0.020 0.94,0.016 1,0.012 L 1,1 L 0,1 Z" />
+            <path d="M 0,0.024 C 0.14,0.024 0.22,0.008 0.36,0.008 C 0.52,0.008 0.64,0.036 0.80,0.036 C 0.90,0.036 0.96,0.028 1,0.025 L 1,1 L 0,1 Z" />
           </clipPath>
         </defs>
       </svg>
@@ -241,9 +241,35 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
       {/* ইলাস্ট্রেশন ছবি ও পারফেক্ট কাটআউট আর্কিটেকচার */}
       <div className="relative w-full select-none pointer-events-none bg-transparent">
         
+        {/* 🌊 ছবির কাটা-ঢেউয়ের ঠিক ওপরে লেগে থাকা সরু সমান্তরাল ফিতা-ঢেউ (সব জায়গায় প্রায় সমান পুরু) */}
+        <svg
+          viewBox="0 0 400 52"
+          preserveAspectRatio="none"
+          className="relative z-0 block h-auto w-full md:hidden"
+          aria-hidden="true"
+          shapeRendering="geometricPrecision"
+        >
+          <path
+            d="M0,28 C48,28 80,16 136,16 C200,16 248,38 312,38 C352,38 380,33 400,30 L400,52 L0,52 Z"
+            className="fill-[#9CCBF7] dark:fill-[#1D4F8C]"
+          />
+        </svg>
+        <svg
+          viewBox="0 0 1440 56"
+          preserveAspectRatio="none"
+          className="relative z-0 hidden h-auto w-full md:block"
+          aria-hidden="true"
+          shapeRendering="geometricPrecision"
+        >
+          <path
+            d="M0,26 C190,26 295,10 490,10 C725,10 900,37 1125,37 C1275,37 1375,29 1440,27 L1440,56 L0,56 Z"
+            className="fill-[#9CCBF7] dark:fill-[#1D4F8C]"
+          />
+        </svg>
+
         {/* মোবাইল ইমেজ (লম্বা কম্পোজিশন) */}
         <div
-          className="relative aspect-[20/27] w-full overflow-hidden md:hidden"
+          className="relative -mt-[7.2vw] aspect-[20/27] w-full overflow-hidden md:hidden"
           style={{
             clipPath: 'url(#footer-top-wave-clip-mobile)',
             WebkitClipPath: 'url(#footer-top-wave-clip-mobile)',
@@ -252,34 +278,11 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
         >
           <FooterPhoto src="/footer-illustration-mobile.webp" hideMedia="(min-width: 768px)" hot={hotImage} />
 
-          {/* 🌊 ছবির মাথার কাটিং এজের ঠিক ওপরে ১০০% লক করা ওয়াটার রিবন ও ক্রেস্ট */}
-          <svg
-            viewBox="0 0 1 1"
-            preserveAspectRatio="none"
-            className="absolute inset-0 z-10 h-full w-full pointer-events-none"
-          >
-            <path
-              d="M 0,0.020 C 0.14,0.010 0.24,0.006 0.35,0.006 C 0.52,0.006 0.65,0.028 0.78,0.028 C 0.88,0.028 0.94,0.022 1,0.018 L 1,0.026 C 0.94,0.030 0.88,0.036 0.78,0.036 C 0.65,0.036 0.52,0.014 0.35,0.014 C 0.24,0.014 0.14,0.018 0,0.028 Z"
-              fill="#38BDF8"
-              fillOpacity="0.30"
-              className="dark:fill-[#38BDF8] dark:fill-opacity-25"
-            />
-            <path
-              d="M 0,0.020 C 0.14,0.010 0.24,0.006 0.35,0.006 C 0.52,0.006 0.65,0.028 0.78,0.028 C 0.88,0.028 0.94,0.022 1,0.018"
-              fill="none"
-              stroke="#E0F2FE"
-              strokeWidth="2"
-              vectorEffect="non-scaling-stroke"
-              strokeOpacity="0.85"
-              strokeLinecap="round"
-              className="dark:stroke-[#7DD3FC] dark:stroke-opacity-60"
-            />
-          </svg>
         </div>
 
         {/* ডেস্কটপ ইমেজ (চওড়া কম্পোজিশন) */}
         <div
-          className="relative hidden aspect-[2000/1333] w-full overflow-hidden md:block"
+          className="relative hidden aspect-[2000/1333] w-full overflow-hidden md:-mt-[2.5vw] md:block"
           style={{
             clipPath: 'url(#footer-top-wave-clip-desktop)',
             WebkitClipPath: 'url(#footer-top-wave-clip-desktop)',
@@ -288,29 +291,6 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
         >
           <FooterPhoto src="/footer-illustration-desktop.webp" hideMedia="(max-width: 767px)" hot={hotImage} />
 
-          {/* 🌊 ডেস্কটপে ছবির মাথার কাটিং এজের ঠিক ওপরে ১০০% লক করা ওয়াটার রিবন ও ক্রেস্ট */}
-          <svg
-            viewBox="0 0 1 1"
-            preserveAspectRatio="none"
-            className="absolute inset-0 z-10 h-full w-full pointer-events-none"
-          >
-            <path
-              d="M 0,0.014 C 0.14,0.007 0.24,0.004 0.35,0.004 C 0.52,0.004 0.65,0.020 0.78,0.020 C 0.88,0.020 0.94,0.016 1,0.012 L 1,0.020 C 0.94,0.023 0.88,0.027 0.78,0.027 C 0.65,0.027 0.52,0.011 0.35,0.011 C 0.24,0.011 0.14,0.014 0,0.021 Z"
-              fill="#38BDF8"
-              fillOpacity="0.30"
-              className="dark:fill-[#38BDF8] dark:fill-opacity-25"
-            />
-            <path
-              d="M 0,0.014 C 0.14,0.007 0.24,0.004 0.35,0.004 C 0.52,0.004 0.65,0.020 0.78,0.020 C 0.88,0.020 0.94,0.016 1,0.012"
-              fill="none"
-              stroke="#E0F2FE"
-              strokeWidth="2"
-              vectorEffect="non-scaling-stroke"
-              strokeOpacity="0.85"
-              strokeLinecap="round"
-              className="dark:stroke-[#7DD3FC] dark:stroke-opacity-60"
-            />
-          </svg>
         </div>
 
         {/* 🌊 ২. নিচের নিখুঁত কাটআউট ঢেউ */}
@@ -586,4 +566,4 @@ export default function Footer({ eager = false, hotImage = false }: { eager?: bo
 
   if (mounted) return <FooterContent hotImage={hotImage} />;
   return <div ref={holderRef} aria-hidden="true" className="mt-12 h-10" />;
-}
+        }
