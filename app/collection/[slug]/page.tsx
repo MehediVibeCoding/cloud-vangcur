@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { cache } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import { fetchShowcase, DEFAULT_SHOWCASE } from '@/lib/showcaseData';
+import { fetchShowcase, DEFAULT_SHOWCASE, LEGACY_COLLECTION_IDS } from '@/lib/showcaseData';
 import { fetchCollectionProducts, isCollectionId } from '@/lib/collectionData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
 import { brandedTitle } from '@/lib/seoTitle';
@@ -74,6 +74,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const renamed = LEGACY_COLLECTION_IDS[slug];
+  if (renamed) permanentRedirect(`/collection/${renamed}`);
   if (!isCollectionId(slug)) notFound();
 
   const showcase = await getShowcase();

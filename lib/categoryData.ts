@@ -17,7 +17,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১. অল প্রোডাক্টস (All Products — প্রিমিয়াম ৪-গ্রিড উইজেট ও গোল্ড স্পার্ক)
   {
     id: 'all',
-    name: 'অল প্রোডাক্টস',
+    name: 'All Products',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-all-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-all-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-all-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="4.5" y="4.5" width="10" height="10" rx="3.2" fill="url(#vc-all-a)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -32,7 +32,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২. টি ডব্লিউ এস (TWS Earbuds — চার্জিং কেস ও দুটি বাডস)
   {
     id: 'tws',
-    name: 'টি ডব্লিউ এস',
+    name: 'TWS Earbuds',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-tws-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-tws-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-tws-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M7 14C7 9.6 10.6 6 15 6H17C21.4 6 25 9.6 25 14" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -47,7 +47,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ৩. পাওয়ার ব্যাংক (Power Bank — গোল্ড বোল্ট ও চার্জ ইন্ডিকেটর)
   {
     id: 'powerbank',
-    name: 'পাওয়ার ব্যাংক',
+    name: 'Power Bank',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-powerbank-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-powerbank-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-powerbank-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="13" y="2.4" width="6" height="3.6" rx="1.2" fill="url(#vc-powerbank-a)" stroke="#0A1A3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -63,7 +63,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ৪. আরজিবি লাইট (RGB Light — গ্লো লাইটবার ও অ্যাম্বিয়েন্ট রে)
   {
     id: 'rgb',
-    name: 'আরজিবি লাইট',
+    name: 'RGB Light',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-rgb-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-rgb-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-rgb-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="12" y="3.8" width="8" height="21.5" rx="4" fill="url(#vc-rgb-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -77,7 +77,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ৫. স্মার্ট ওয়াচ (Smart Watch — অ্যামোলেড ফেস ও গোল্ড ওয়াচ হ্যান্ড)
   {
     id: 'smartwatch',
-    name: 'স্মার্ট ওয়াচ',
+    name: 'Smart Watch',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-smartwatch-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-smartwatch-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-smartwatch-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="11" y="2.4" width="10" height="7.6" rx="2.2" fill="url(#vc-smartwatch-a)" stroke="#0A1A3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -93,7 +93,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ৬. একরেলিক ল্যাম্প (Acrylic Lamp — ক্রিস্টাল প্যানেল, এচড মুন ও গোল্ড বেস)
   {
     id: 'acrylic',
-    name: 'একরেলিক ল্যাম্প',
+    name: 'Acrylic Lamp',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-acrylic-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-acrylic-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-acrylic-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="9.5" y="3.4" width="13" height="20" rx="3.6" fill="url(#vc-acrylic-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -109,7 +109,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ৭. হেডফোন (Headphone — প্রিমিয়াম ওভার-ইয়ার ব্যান্ড ও কুশন)
   {
     id: 'headphone',
-    name: 'হেডফোন',
+    name: 'Headphone',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-headphone-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-headphone-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-headphone-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M7 20V16A9 9 0 0 1 25 16V20" stroke="#0A1A3F" stroke-width="5.6" stroke-linecap="round" fill="none"/>
@@ -125,7 +125,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ৮. রিচার্জেবল ফ্যান (Rechargeable Fan — ৩-ব্লেড ফ্যান ও স্ট্যান্ড)
   {
     id: 'fan',
-    name: 'রিচার্জেবল ফ্যান',
+    name: 'Rechargeable Fan',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-fan-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-fan-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-fan-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <circle cx="16" cy="12.5" r="10" fill="url(#vc-fan-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -141,7 +141,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ৯. ইউনিক কালেকশন (Unique Collection — প্রিমিয়াম গিফট বক্স ও গোল্ড রিবন)
   {
     id: 'unique',
-    name: 'ইউনিক কালেকশন',
+    name: 'Unique Collection',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-unique-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-unique-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-unique-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="6" y="14.6" width="20" height="13.2" rx="3" fill="url(#vc-unique-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -156,7 +156,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১০. ক্রিস্টাল বল (Crystal Ball — মিস্টিক ক্রিস্টাল গোলক ও গোল্ড বেস)
   {
     id: 'crystalball',
-    name: 'ক্রিস্টাল বল',
+    name: 'Crystal Ball',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-crystalball-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-crystalball-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-crystalball-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <circle cx="16" cy="13.6" r="10" fill="url(#vc-crystalball-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -169,7 +169,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১১. ওয়াটার বোতল (Water Bottle — পানির লেভেল ও ড্রপ)
   {
     id: 'waterbottle',
-    name: 'ওয়াটার বোতল',
+    name: 'Water Bottle',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-waterbottle-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-waterbottle-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-waterbottle-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="13.4" y="6.4" width="5.2" height="3.4" rx="1" fill="url(#vc-waterbottle-b)" stroke="#0A1A3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -185,7 +185,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১২. ওয়াইফাই ইউপিএস (WiFi UPS — সিগন্যাল আর্ক ও ব্যাকআপ পাওয়ার)
   {
     id: 'wifiups',
-    name: 'ওয়াইফাই ইউপিএস',
+    name: 'WiFi UPS',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-wifiups-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-wifiups-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-wifiups-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M8.4 11.4Q16 4.2 23.6 11.4" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -202,7 +202,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১৩. হিউমিডিফায়ার (Humidifier — মিস্ট পাফ ও ওয়াটার ড্রপ)
   {
     id: 'humidifier',
-    name: 'হিউমিডিফায়ার',
+    name: 'Humidifier',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-humidifier-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-humidifier-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-humidifier-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <circle cx="12.5" cy="5.8" r="2.3" fill="url(#vc-humidifier-b)" stroke="#0A1A3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -218,7 +218,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১৪. কিবোর্ড (Keyboard — মেকানিক্যাল কি-ক্যাপ ও স্পেসবার)
   {
     id: 'keyboard',
-    name: 'কিবোর্ড',
+    name: 'Keyboard',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-keyboard-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-keyboard-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-keyboard-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="2.5" y="7.4" width="27" height="17.4" rx="4.2" fill="url(#vc-keyboard-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -231,7 +231,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১৫. গিম্বল (Gimbal — মোটর আর্ম ও স্মার্টফোন স্ট্যাবিলাইজার)
   {
     id: 'gimbal',
-    name: 'গিম্বল',
+    name: 'Gimbal',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-gimbal-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-gimbal-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-gimbal-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M8.8 14.4V18.2Q8.8 21.6 13 22" stroke="#0A1A3F" stroke-width="2.3" stroke-linecap="round" fill="none"/>
@@ -248,7 +248,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১৬. লাইট (Light — গ্লো বাল্ব ও গোল্ড রে)
   {
     id: 'light',
-    name: 'লাইট',
+    name: 'Light',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-light-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-light-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-light-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M16 1.6V3M5.2 6.1L6.2 7.1M26.8 6.1L25.8 7.1M2.8 12.4H4.2M27.8 12.4H29.2" stroke="#C9962F" stroke-width="1.7" stroke-linecap="round"/>
@@ -263,7 +263,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১৭. মাউস (Mouse — এরগোনমিক বডি ও স্ক্রল হুইল)
   {
     id: 'mouse',
-    name: 'মাউস',
+    name: 'Mouse',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-mouse-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-mouse-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-mouse-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M16 3.5C21.8 3.5 24.5 7.8 24.5 12.2V19.5C24.5 25 20.8 29 16 29C11.2 29 7.5 25 7.5 19.5V12.2C7.5 7.8 10.2 3.5 16 3.5Z" fill="url(#vc-mouse-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -277,7 +277,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১৮. ক্যাবল অ্যান্ড চার্জার (Cable & Charger — ফাস্ট চার্জার ও টাইপ-সি প্লাগ)
   {
     id: 'cable',
-    name: 'ক্যাবল অ্যান্ড চার্জার',
+    name: 'Cable & Charger',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-cable-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-cable-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-cable-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="9.4" y="2.4" width="2.6" height="3.6" rx=".9" fill="url(#vc-cable-a)" stroke="#0A1A3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -293,7 +293,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ১৯. ইউনিক টুল (Unique Tools — প্রেসিশন ইলেকট্রিক স্ক্রু-ড্রাইভার)
   {
     id: 'unique-tools',
-    name: 'ইউনিক টুল',
+    name: 'Unique Tools',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-unique-tools-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-unique-tools-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-unique-tools-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <g transform="rotate(40 16 16)">
@@ -311,7 +311,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২০. হেয়ার ড্রায়ার (Hair Dryer — ব্যারেল, নোজল ও গ্রিপ)
   {
     id: 'hairdryer',
-    name: 'হেয়ার ড্রায়ার',
+    name: 'Hair Dryer',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-hairdryer-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-hairdryer-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-hairdryer-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <g transform="rotate(16 12 20)">
@@ -327,7 +327,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২১. টয়েস (Toys — রেট্রো হ্যান্ডহেল্ড গেম কনসোল)
   {
     id: 'toys',
-    name: 'টয়েস',
+    name: 'Toys',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-toys-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-toys-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-toys-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="7" y="2.8" width="18" height="26.4" rx="3.8" fill="url(#vc-toys-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -344,7 +344,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২২. অ্যালার্ম ক্লক (Alarm Clock — গোল্ড বেল ও ক্লক ফেস)
   {
     id: 'alarmclock',
-    name: 'অ্যালার্ম ক্লক',
+    name: 'Alarm Clock',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-alarmclock-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-alarmclock-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-alarmclock-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <circle cx="7.2" cy="7.8" r="3.6" fill="url(#vc-alarmclock-g)" stroke="#0A1A3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -361,7 +361,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২৩. ল্যাম্প (Lamp — টেবিল ল্যাম্প, গোল্ড শেড ও গ্লো)
   {
     id: 'lamp',
-    name: 'ল্যাম্প',
+    name: 'Lamp',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-lamp-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-lamp-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-lamp-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="14.8" y="13.4" width="2.4" height="11.4" rx="1.2" fill="url(#vc-lamp-a)" stroke="#0A1A3F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -375,7 +375,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২৪. ইউএসবি হাব (USB Hub — ৪ পোর্ট ও কানেক্টর)
   {
     id: 'usbhub',
-    name: 'ইউএসবি হাব',
+    name: 'USB Hub',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-usbhub-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-usbhub-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-usbhub-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M9 13.6V9.6A3 3 0 0 1 12 6.6H16.6" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -390,7 +390,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২৫. এক্সেসরিজ (Accessories — প্রিমিয়াম ফোন কেস, ক্যামেরা আইল্যান্ড ও রিং)
   {
     id: 'accessories',
-    name: 'এক্সেসরিজ',
+    name: 'Accessories',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-accessories-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-accessories-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-accessories-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="8" y="2.8" width="16" height="26.4" rx="4.6" fill="url(#vc-accessories-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -406,7 +406,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২৬. পাওয়ার স্ট্রিপ (Power Strip — ৩ সকেট ও প্লাগ)
   {
     id: 'powerstrip',
-    name: 'পাওয়ার স্ট্রিপ',
+    name: 'Power Strip',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-powerstrip-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-powerstrip-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-powerstrip-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M16 21.8V23.6A2.4 2.4 0 0 0 18.4 26H21" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -419,7 +419,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২৭. প্রজেক্টর (Projector — লেন্স ও ভেন্ট)
   {
     id: 'projector',
-    name: 'প্রজেক্টর',
+    name: 'Projector',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-projector-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-projector-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-projector-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <rect x="2.5" y="8.4" width="27" height="15" rx="5" fill="url(#vc-projector-b)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -435,7 +435,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২৮. নেকব্যান্ড (Neckband — ফ্লেক্সি কলার ও ম্যাগনেটিক বাডস)
   {
     id: 'neckband',
-    name: 'নেকব্যান্ড',
+    name: 'Neckband',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-neckband-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-neckband-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-neckband-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M8.5 7V15.5A7.5 7.5 0 0 0 23.5 15.5V7" stroke="#0A1A3F" stroke-width="5.4" stroke-linecap="round" fill="none"/>
@@ -449,22 +449,23 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ২৯. কিচেন এক্সেসরিজ (Kitchen Accessories — পোর্টেবল রিচার্জেবল ব্লেন্ডার)
   {
     id: 'kitchenaccessories',
-    name: 'কিচেন এক্সেসরিজ',
+    name: 'Kitchen Accessories',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-kitchenaccessories-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-kitchenaccessories-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-kitchenaccessories-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
-      <path d="M9 10H23L21.6 25.3A3 3 0 0 1 18.6 28H13.4A3 3 0 0 1 10.4 25.3Z" fill="url(#vc-kitchenaccessories-b)"/>
-      <path d="M9.64 17.2Q12.8 15.4 16 17.2T22.36 17.2L21.6 25.3A3 3 0 0 1 18.6 28H13.4A3 3 0 0 1 10.4 25.3Z" fill="url(#vc-kitchenaccessories-a)"/>
-      <path d="M9 10H23L21.6 25.3A3 3 0 0 1 18.6 28H13.4A3 3 0 0 1 10.4 25.3Z" fill="none" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="16" cy="22.4" r="1.8" fill="url(#vc-kitchenaccessories-g)" stroke="#0A1A3F" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-      <rect x="7.4" y="5" width="17.2" height="5.2" rx="2.3" fill="url(#vc-kitchenaccessories-a)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 12.6L11.6 15" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.8"/>
+      <path d="M9.4 8H22.6L21.5 21.4H10.5Z" fill="url(#vc-kitchenaccessories-b)"/>
+      <path d="M9.9 14.6Q13 12.9 16 14.6T22.1 14.6L21.5 21.4H10.5Z" fill="url(#vc-kitchenaccessories-a)"/>
+      <path d="M9.4 8H22.6L21.5 21.4H10.5Z" fill="none" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="8" y="3.6" width="16" height="4.4" rx="2.2" fill="url(#vc-kitchenaccessories-a)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="8.6" y="21.4" width="14.8" height="6.4" rx="2.4" fill="url(#vc-kitchenaccessories-g)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M13.4 24.6H18.6" stroke="#0A1A3F" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+      <path d="M12.2 10.6L11.8 13.2" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.85"/>
     </svg>`,
   },
 
   // ৩০. অফার (Offers — ডিসকাউন্ট স্টারবার্স্ট ব্যাজ)
   {
     id: 'offer',
-    name: 'অফার',
+    name: 'Offers',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-offer-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-offer-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-offer-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <polygon points="16.00,2.60 18.95,4.99 22.70,4.40 24.06,7.94 27.60,9.30 27.01,13.05 29.40,16.00 27.01,18.95 27.60,22.70 24.06,24.06 22.70,27.60 18.95,27.01 16.00,29.40 13.05,27.01 9.30,27.60 7.94,24.06 4.40,22.70 4.99,18.95 2.60,16.00 4.99,13.05 4.40,9.30 7.94,7.94 9.30,4.40 13.05,4.99" fill="url(#vc-offer-a)" stroke="#0A1A3F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -478,7 +479,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // ৩১. বিটি স্পিকার (BT Speaker — ট্যুইটার, উফার ও সাউন্ড ওয়েভ)
   {
     id: 'btspeaker',
-    name: 'বিটি স্পিকার',
+    name: 'BT Speaker',
     icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="vc-btspeaker-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF5FF"/><stop offset="1" stop-color="#7FC3FD"/></linearGradient><linearGradient id="vc-btspeaker-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DBBFD"/><stop offset="1" stop-color="#44A7FC"/></linearGradient><linearGradient id="vc-btspeaker-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#CC9A35"/></linearGradient></defs>
       <path d="M5 11.4Q3 16 5 20.6" stroke="#C9962F" stroke-width="1.9" stroke-linecap="round" fill="none"/>

@@ -6,7 +6,7 @@
 // অ্যাডমিন প্যানেলের "হোম শোকেস" পেজ (/design/home-showcase) এই key-তেই সেভ করে।
 // কিছু না পেলে (বা ফেচ ব্যর্থ হলে) নিচের DEFAULT_SHOWCASE ব্যবহার হয় — পেজ কখনো ক্র্যাশ করে না।
 //
-// কালেকশন: ৪টা কার্ডের প্রতিটার স্থায়ী collectionId (gift/premium/unique/cute) আছে। কার্ডে ক্লিক করলে
+// কালেকশন: ৪টা কার্ডের প্রতিটার স্থায়ী collectionId (gift/premium/room-decor/useful-tools) আছে। কার্ডে ক্লিক করলে
 // /collection/<collectionId> পেজে যায়, আর সেখানে custom_products.collections কলামে ওই id থাকা
 // প্রোডাক্টগুলো দেখায় (lib/collectionData.ts)।
 //
@@ -23,7 +23,13 @@ export const SHOWCASE_CARD_COUNT = 4;
 export const SHOWCASE_SPOTLIGHT_COUNT = 2;
 
 // প্রতিটা কার্ড-স্লটের স্থায়ী কালেকশন id (ক্রম গুরুত্বপূর্ণ — কার্ড #১ = gift ...)
-export const COLLECTION_IDS = ['gift', 'premium', 'unique', 'cute'] as const;
+export const COLLECTION_IDS = ['gift', 'premium', 'room-decor', 'useful-tools'] as const;
+
+// পুরনো কালেকশন আইডি → নতুন আইডি (পুরনো লিংক/বুকমার্ক যেন ভাঙে না)
+export const LEGACY_COLLECTION_IDS: Record<string, CollectionId> = {
+  unique: 'room-decor',
+  cute: 'useful-tools',
+};
 export type CollectionId = (typeof COLLECTION_IDS)[number];
 
 // অক্ষর সীমা
@@ -116,8 +122,8 @@ export const DEFAULT_SHOWCASE: ShowcaseConfig = {
   cards: [
     { img: IMG_TALL, title: 'গিফট আইডিয়া', titleEn: 'Gift Ideas', collectionId: 'gift' },
     { img: IMG_WIDE, title: 'প্রিমিয়াম গ্যাজেট', titleEn: 'Premium Gadgets', collectionId: 'premium' },
-    { img: IMG_SQUARE, title: 'ইউনিক গ্যাজেট', titleEn: 'Unique Gadgets', collectionId: 'unique' },
-    { img: IMG_TALL, title: 'কিউট গ্যাজেট', titleEn: 'Cute Gadgets', collectionId: 'cute' },
+    { img: IMG_SQUARE, title: 'রুম ডেকর', titleEn: 'Room Decor', collectionId: 'room-decor' },
+    { img: IMG_TALL, title: 'ইউজফুল টুলস', titleEn: 'Useful Tools', collectionId: 'useful-tools' },
   ],
   spotlights: [
     {
