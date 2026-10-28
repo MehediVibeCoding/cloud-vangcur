@@ -25,23 +25,22 @@ function EmptyBoxIcon() {
 
 function ArrowRightIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M4.5 12h15M13 5.5 20 12l-7 6.5" />
     </svg>
   );
 }
 
-// "সকল প্রোডাক্ট দেখুন" CTA — প্রিমিয়াম পিল: সিগনেচার স্কাই-ব্লু গ্রেডিয়েন্ট, ওপরে সূক্ষ্ম হাইলাইট, নরম রঙিন গ্লো-শ্যাডো,
-// ডানে সাদা তীর-চিপ। হোভারে বাটন সামান্য ওপরে ওঠে ও তীর ডানে সরে; চাপলে নেমে যায়। ধীর স্বয়ংক্রিয় শিমার (shimmer-sheen)
-// শুধু transform ব্যবহার করে — তাই কম দামি ফোন/ল্যাপটপেও হালকা। reduced-motion চালু থাকলে শিমার বন্ধ হয়ে যায়।
+// "সকল প্রোডাক্ট দেখুন" CTA — "ওয়েবসাইটে ফিরে যান" বাটনের মতোই সিগনেচার গ্রেডিয়েন্ট পিল (একই উচ্চতা, ছায়া ও হোভার);
+// ডানে ছোট (২৮px) সাদা তীর-চিপ থাকে, যা বাটনের উচ্চতা বাড়ায় না। হোভারে শুধু তীর সামান্য ডানে সরে।
 const viewAllBtnClass =
-  'shimmer-sheen group relative inline-flex h-[52px] cursor-pointer items-center gap-3.5 whitespace-nowrap rounded-full bg-gradient-to-r from-info via-[#4B9DF8] to-brand-light py-1.5 pl-7 pr-1.5 font-body text-[15px] font-bold tracking-[0.2px] text-white no-underline shadow-[0_10px_24px_-8px_rgba(59,130,246,0.65),inset_0_1px_0_rgba(255,255,255,0.35)] ring-1 ring-inset ring-white/25 transition-[transform,box-shadow,filter] duration-300 ease-brand hover:-translate-y-0.5 hover:brightness-[1.04] hover:shadow-[0_14px_28px_-8px_rgba(59,130,246,0.75),inset_0_1px_0_rgba(255,255,255,0.4)] active:translate-y-0 active:scale-[0.97]';
+  'group relative inline-flex h-[49px] cursor-pointer items-center gap-3 whitespace-nowrap rounded-full bg-gradient-to-r from-info to-brand-light py-0 pl-6 pr-[10px] font-body text-[14.5px] font-bold text-white no-underline shadow-sh2 transition-all duration-brand hover:brightness-[1.03] active:scale-95';
 
 function ViewAllLabel({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <span className="relative z-[1] drop-shadow-[0_1px_1px_rgba(0,50,120,0.25)]">{children}</span>
-      <span className="relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-info shadow-[0_2px_8px_rgba(0,60,140,0.28)] transition-transform duration-300 ease-brand group-hover:translate-x-0.5 group-active:translate-x-1">
+      <span className="relative z-[1]">{children}</span>
+      <span className="relative z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-info shadow-sh1 transition-transform duration-brand group-hover:translate-x-0.5">
         <ArrowRightIcon />
       </span>
     </>

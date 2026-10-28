@@ -6,6 +6,7 @@
 // কোনো লাফ হয় না। এখানের মার্কআপ বদলালে দুই জায়গাতেই একসাথে বদলায়।
 import { useT } from '@/lib/i18n/useT';
 import { formatWarrantyLabel } from '@/lib/warrantyData';
+import { badgeColorClass } from '@/lib/badgeStyle';
 
 export function ShieldIcon({ className = '' }: { className?: string }) {
   return (
@@ -28,7 +29,7 @@ export function GalleryBadge({ sold, badge }: { sold: boolean; badge?: string })
   }
   if (!badge) return null;
   return (
-    <div className="absolute left-3.5 top-3.5 z-10 rounded-full bg-brand-light px-3 py-1 text-[11px] font-bold text-white shadow-sh1">
+    <div className={`absolute left-3.5 top-3.5 z-10 rounded-full ${badgeColorClass(badge)} px-3 py-1 text-[11px] font-bold shadow-sh1`}>
       {badge}
     </div>
   );

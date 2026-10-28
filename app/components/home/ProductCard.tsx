@@ -23,6 +23,7 @@ import { useImageRetry } from '@/lib/useImageRetry';
 import { useT } from '@/lib/i18n/useT';
 import { prefersReducedMotion, makeHeartBurst, BurstHeart, type HeartParticle } from '@/lib/wishHeartBurst';
 import type { Product } from '@/types';
+import { badgeColorClass } from '@/lib/badgeStyle';
 
 function StarRating({ rating }: { rating: number }) {
   const r = Math.max(0, Math.min(5, rating || 4.5));
@@ -273,7 +274,7 @@ export default function ProductCard({ prod: p, isFirst, index = 0, lazyImage = f
             {lang === 'en' ? 'Sold Out' : 'স্টক শেষ'}
           </div>
         ) : p.badge && (
-          <div className="absolute left-[4.5%] top-[4.5%] z-[2] rounded-full bg-brand-light px-2.5 py-1 text-[10px] font-bold text-white shadow-sh1">
+          <div className={`absolute left-[4.5%] top-[4.5%] z-[2] rounded-full ${badgeColorClass(p.badge)} px-2.5 py-1 text-[10px] font-bold shadow-sh1`}>
             {p.badge}
           </div>
         )}

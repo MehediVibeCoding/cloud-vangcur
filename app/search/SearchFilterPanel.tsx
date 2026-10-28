@@ -4,6 +4,7 @@
 // [NEW] সার্চ হেডারের ডান পাশের ফিল্টার বাটন + প্যানেল।
 // ডেস্কটপে বাটনের নিচে পপওভার, মোবাইলে নিচ থেকে ওঠা শিট। প্যানেল document.body-তে (portal) রেন্ডার হয়,
 // কারণ হেডারের backdrop-blur তার ভেতরের `fixed` এলিমেন্টের পজিশন ভেঙে দেয়।
+// নতুন ডিজাইন: সর্ট রেডিও-কার্ড (আইকন + তীর), দামের ৬টা প্রিসেট, ফ্লোটিং-লেবেলের মূল্য ঘর, মোবাইলে হ্যান্ডেলসহ শিট।
 // প্রতিটা বদলে সাথে সাথে প্রয়োগ হয় (আলাদা "Apply" নেই) — ফলাফল ইন-মেমোরি ফিল্টার হয়, তাই তাৎক্ষণিক।
 
 import { useEffect, useRef, useState } from 'react';
@@ -26,31 +27,65 @@ interface Props {
   hidden?: boolean; // কোয়েরি না থাকলে লুকানো (লেআউট জায়গা ধরে রাখে, যাতে হেডার লাফ না দেয়)
 }
 
-const SORTS: { key: SortKey; bn: string; en: string }[] = [
-  { key: 'relevance', bn: 'প্রাসঙ্গিক', en: 'Relevance' },
-  { key: 'price_asc', bn: 'দাম: কম → বেশি', en: 'Price: Low → High' },
-  { key: 'price_desc', bn: 'দাম: বেশি → কম', en: 'Price: High → Low' },
-  { key: 'newest', bn: 'নতুন আগে', en: 'Newest first' },
+type SortIcon = 'relevance' | 'asc' | 'desc' | 'newest';
+
+const SORTS: { key: SortKey; icon: SortIcon; bn: [string, string?]; en: [string, string?] }[] = [
+  { key: 'relevance', icon: 'relevance', bn: ['সবচেয়ে প্রাসঙ্গিক'], en: ['Most relevant'] },
+  { key: 'price_asc', icon: 'asc', bn: ['দাম: কম', 'বেশি'], en: ['Price: Low', 'High'] },
+  { key: 'price_desc', icon: 'desc', bn: ['দাম: বেশি', 'কম'], en: ['Price: High', 'Low'] },
+  { key: 'newest', icon: 'newest', bn: ['নতুন পণ্য আগে'], en: ['Newest first'] },
 ];
 
 const PRESETS: { min: number | null; max: number | null; bn: string; en: string }[] = [
   { min: null, max: 500, bn: '৳৫০০ এর নিচে', en: 'Under ৳500' },
   { min: 500, max: 1000, bn: '৳৫০০ – ১,০০০', en: '৳500 – 1,000' },
   { min: 1000, max: 2000, bn: '৳১,০০০ – ২,০০০', en: '৳1,000 – 2,000' },
-  { min: 2000, max: null, bn: '৳২,০০০ এর উপরে', en: 'Over ৳2,000' },
+  { min: 2000, max: 5000, bn: '৳২,০০০ – ৫,০০০', en: '৳2,000 – 5,000' },
+  { min: 5000, max: 10000, bn: '৳৫,০০০ – ১০,০০০', en: '৳5,000 – 10,000' },
+  { min: 10000, max: null, bn: '৳১০,০০০ এর উপরে', en: 'Over ৳10,000' },
 ];
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
 function FilterIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 5h18M6 12h12M10 19h4" />
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+      <circle cx="15" cy="7" r="2.2" />
+      <circle cx="9" cy="17" r="2.2" />
     </svg>
   );
 }
 
-const chipBase = 'rounded-full border px-3 py-1.5 font-body text-[12.5px] font-semibold transition-colors duration-brand';
+function ArrowRight({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4.5 12h15M13.5 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+function SortGlyph({ kind }: { kind: SortIcon }) {
+  const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
+  if (kind === 'asc')
+    return <svg {...common}><path d="M7 19V5M7 5l-3.5 3.5M7 5l3.5 3.5" /><path d="M14 7h6M14 12h4M14 17h2" /></svg>;
+  if (kind === 'desc')
+    return <svg {...common}><path d="M7 5v14M7 19l-3.5-3.5M7 19l3.5-3.5" /><path d="M14 17h6M14 12h4M14 7h2" /></svg>;
+  if (kind === 'newest')
+    return <svg {...common}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>;
+  return <svg {...common}><path d="M12 3.5l2.4 5.1 5.6.7-4.1 3.9 1 5.5L12 16l-4.9 2.7 1-5.5L4 9.3l5.6-.7z" /></svg>;
+}
+
+function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: React.ReactNode }) {
+  return (
+    <div className="mb-2.5 flex items-center justify-between">
+      <h3 className="font-body text-[13px] font-extrabold tracking-[0.1px] text-ink">{children}</h3>
+      {hint}
+    </div>
+  );
+}
+
+const chipBase = 'rounded-full border px-3.5 py-2 font-body text-[12.5px] font-semibold transition-colors duration-brand';
 const chipOff = 'border-border-base bg-white text-ink hover:border-brand-light hover:text-brand-light';
 const chipOn = 'border-brand-light bg-brand-bg text-brand-light';
 
@@ -126,10 +161,31 @@ export default function SearchFilterPanel({ filters, onChange, brands, priceBoun
     return priceBounds.max >= lo && priceBounds.min <= hi;
   });
 
+  const priceField = (
+    value: string, setValue: (v: string) => void, label: string, placeholder: string,
+  ) => (
+    <label className="flex h-[52px] min-w-0 flex-1 flex-col justify-center rounded-[14px] border border-border-base bg-white px-3.5 transition-colors duration-brand focus-within:border-brand-light">
+      <span className="font-body text-[10.5px] font-bold uppercase tracking-[0.4px] text-muted">{label}</span>
+      <span className="flex items-center gap-1">
+        <span className="text-[13.5px] font-bold text-muted">৳</span>
+        <input
+          inputMode="numeric"
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, '').slice(0, 7))}
+          onBlur={commitPrice}
+          onKeyDown={(e) => { if (e.key === 'Enter') commitPrice(); }}
+          className="w-full min-w-0 bg-transparent text-[14.5px] font-bold text-ink outline-none placeholder:font-medium placeholder:text-muted/60"
+          aria-label={label}
+        />
+      </span>
+    </label>
+  );
+
   const panel = (
     <>
       <div
-        className={`fixed inset-0 z-[1290] ${pos ? 'bg-transparent' : 'bg-black/35'}`}
+        className={`fixed inset-0 z-[1290] ${pos ? 'bg-transparent' : 'bg-black/40'}`}
         // খোলার ঠিক পরের ~৩৫০ms-এর ট্যাপ (মোবাইলের ghost click) ব্যাকড্রপ ধরে বন্ধ করে দিত — তাই উপেক্ষা
         onClick={() => { if (Date.now() - openedAtRef.current > 350) setOpen(false); }}
         aria-hidden
@@ -140,18 +196,25 @@ export default function SearchFilterPanel({ filters, onChange, brands, priceBoun
         style={pos ? { top: pos.top, right: pos.right } : undefined}
         className={`fixed z-[1300] flex flex-col overflow-hidden border border-border-base bg-white shadow-sh2 ${
           pos
-            ? 'max-h-[calc(100vh-110px)] w-[380px] rounded-[20px]'
-            : 'inset-x-0 bottom-0 max-h-[85vh] rounded-t-[24px]'
+            ? 'max-h-[calc(100vh-110px)] w-[400px] rounded-[24px]'
+            : 'inset-x-0 bottom-0 max-h-[88vh] rounded-t-[28px] border-b-0'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-border-base px-4 py-3">
-          <h2 className="font-body text-[14.5px] font-extrabold text-ink">{en ? 'Filter & Sort' : 'ফিল্টার ও সর্ট'}</h2>
+        {!pos && <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-border-base" aria-hidden />}
+
+        <div className="flex items-center justify-between px-5 pb-3 pt-3.5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-bg text-brand-light">
+              <FilterIcon />
+            </span>
+            <h2 className="font-body text-[16px] font-extrabold text-ink">{en ? 'Filter & Sort' : 'ফিল্টার ও সর্ট'}</h2>
+          </div>
           <div className="flex items-center gap-1">
             {(active > 0 || filters.sort !== 'relevance') && (
               <button
                 type="button"
                 onClick={() => onChange(EMPTY_FILTERS)}
-                className="rounded-full px-2.5 py-1 font-body text-[12px] font-bold text-brand-light hover:bg-brand-bg"
+                className="rounded-full px-3 py-1.5 font-body text-[12.5px] font-bold text-brand-light hover:bg-brand-bg"
               >
                 {en ? 'Reset all' : 'সব রিসেট'}
               </button>
@@ -160,71 +223,70 @@ export default function SearchFilterPanel({ filters, onChange, brands, priceBoun
               type="button"
               onClick={() => setOpen(false)}
               aria-label={en ? 'Close' : 'বন্ধ করুন'}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-muted"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
           </div>
         </div>
 
-        <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
-          {/* সর্ট */}
+        <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain border-t border-border-base px-5 py-5">
+          {/* সর্ট — রেডিও-স্টাইল তালিকা, প্রতিটার সামনে আইকন, দামের লাইনে স্পষ্ট তীর */}
           <section>
-            <h3 className="mb-2 font-body text-[12.5px] font-bold text-muted">{en ? 'Sort by' : 'সাজান'}</h3>
-            <div className="flex flex-wrap gap-2">
-              {SORTS.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => onChange({ ...filters, sort: s.key })}
-                  className={`${chipBase} ${filters.sort === s.key ? chipOn : chipOff}`}
-                >
-                  {en ? s.en : s.bn}
-                </button>
-              ))}
+            <SectionTitle>{en ? 'Sort by' : 'সাজান'}</SectionTitle>
+            <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+              {SORTS.map((o) => {
+                const on = filters.sort === o.key;
+                const [first, second] = en ? o.en : o.bn;
+                return (
+                  <button
+                    key={o.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => onChange({ ...filters, sort: o.key })}
+                    className={`flex min-h-[48px] items-center gap-2.5 rounded-[14px] border px-3 py-2.5 text-left transition-colors duration-brand ${
+                      on ? 'border-brand-light bg-brand-bg' : 'border-border-base bg-white hover:border-brand-light'
+                    }`}
+                  >
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${on ? 'bg-white text-brand-light' : 'bg-surface-muted text-muted'}`}>
+                      <SortGlyph kind={o.icon} />
+                    </span>
+                    <span className={`flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 font-body text-[13px] font-bold leading-tight ${on ? 'text-brand-light' : 'text-ink'}`}>
+                      <span>{first}</span>
+                      {second && (
+                        <>
+                          <ArrowRight />
+                          <span>{second}</span>
+                        </>
+                      )}
+                    </span>
+                    <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${on ? 'border-brand-light bg-brand-light' : 'border-border-base'}`}>
+                      {on && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
           {/* দাম */}
           <section>
-            <h3 className="mb-2 font-body text-[12.5px] font-bold text-muted">{en ? 'Price range' : 'দামের রেঞ্জ'}</h3>
+            <SectionTitle>{en ? 'Price range' : 'দামের রেঞ্জ'}</SectionTitle>
             <div className="flex items-center gap-2">
-              <label className="flex h-10 flex-1 items-center gap-1 rounded-full border border-border-base bg-white px-3 focus-within:border-brand-light">
-                <span className="text-[13px] text-muted">৳</span>
-                <input
-                  inputMode="numeric"
-                  value={minTxt}
-                  placeholder={priceBounds ? fmt(priceBounds.min) : (en ? 'Min' : 'সর্বনিম্ন')}
-                  onChange={(e) => setMinTxt(e.target.value.replace(/[^\d]/g, '').slice(0, 7))}
-                  onBlur={commitPrice}
-                  onKeyDown={(e) => { if (e.key === 'Enter') commitPrice(); }}
-                  className="w-full min-w-0 bg-transparent text-[13.5px] font-semibold text-ink outline-none"
-                  aria-label={en ? 'Minimum price' : 'সর্বনিম্ন দাম'}
-                />
-              </label>
-              <span className="text-muted">–</span>
-              <label className="flex h-10 flex-1 items-center gap-1 rounded-full border border-border-base bg-white px-3 focus-within:border-brand-light">
-                <span className="text-[13px] text-muted">৳</span>
-                <input
-                  inputMode="numeric"
-                  value={maxTxt}
-                  placeholder={priceBounds ? fmt(priceBounds.max) : (en ? 'Max' : 'সর্বোচ্চ')}
-                  onChange={(e) => setMaxTxt(e.target.value.replace(/[^\d]/g, '').slice(0, 7))}
-                  onBlur={commitPrice}
-                  onKeyDown={(e) => { if (e.key === 'Enter') commitPrice(); }}
-                  className="w-full min-w-0 bg-transparent text-[13.5px] font-semibold text-ink outline-none"
-                  aria-label={en ? 'Maximum price' : 'সর্বোচ্চ দাম'}
-                />
-              </label>
+              {priceField(minTxt, setMinTxt, en ? 'Min' : 'সর্বনিম্ন', priceBounds ? fmt(priceBounds.min) : '0')}
+              <span className="text-muted" aria-hidden><ArrowRight size={14} /></span>
+              {priceField(maxTxt, setMaxTxt, en ? 'Max' : 'সর্বোচ্চ', priceBounds ? fmt(priceBounds.max) : '∞')}
             </div>
             {presetsToShow.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {presetsToShow.map((p) => {
                   const on = filters.min === p.min && filters.max === p.max;
                   return (
                     <button
                       key={`${p.min}-${p.max}`}
                       type="button"
+                      aria-pressed={on}
                       onClick={() => onChange({ ...filters, min: on ? null : p.min, max: on ? null : p.max })}
                       className={`${chipBase} ${on ? chipOn : chipOff}`}
                     >
@@ -239,7 +301,7 @@ export default function SearchFilterPanel({ filters, onChange, brands, priceBoun
           {/* ব্র্যান্ড — ফলাফলে অন্তত একটা ব্র্যান্ডযুক্ত পণ্য থাকলেই দেখায় */}
           {brands.length > 0 && (
             <section>
-              <h3 className="mb-2 font-body text-[12.5px] font-bold text-muted">{en ? 'Brand' : 'ব্র্যান্ড'}</h3>
+              <SectionTitle>{en ? 'Brand' : 'ব্র্যান্ড'}</SectionTitle>
               <div className="flex flex-wrap gap-2">
                 {brands.map((b) => {
                   const on = filters.brands.includes(b.key);
@@ -266,21 +328,24 @@ export default function SearchFilterPanel({ filters, onChange, brands, priceBoun
               role="switch"
               aria-checked={filters.inStock}
               onClick={() => onChange({ ...filters, inStock: !filters.inStock })}
-              className="flex w-full items-center justify-between rounded-[14px] border border-border-base px-3.5 py-2.5 text-left hover:border-brand-light"
+              className="flex w-full items-center justify-between rounded-[14px] border border-border-base px-4 py-3 text-left transition-colors duration-brand hover:border-brand-light"
             >
-              <span className="font-body text-[13.5px] font-semibold text-ink">{en ? 'In stock only' : 'শুধু স্টকে আছে'}</span>
-              <span className={`relative h-6 w-11 rounded-full transition-colors duration-brand ${filters.inStock ? 'bg-brand-light' : 'bg-border-base'}`}>
+              <span className="flex flex-col">
+                <span className="font-body text-[13.5px] font-bold text-ink">{en ? 'In stock only' : 'শুধু স্টকে আছে'}</span>
+                <span className="font-body text-[11.5px] text-muted">{en ? 'Hide sold-out products' : 'স্টক শেষ পণ্য লুকান'}</span>
+              </span>
+              <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-brand ${filters.inStock ? 'bg-brand-light' : 'bg-border-base'}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-brand ${filters.inStock ? 'left-[22px]' : 'left-0.5'}`} />
               </span>
             </button>
           </section>
         </div>
 
-        <div className="border-t border-border-base bg-white px-4 py-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+        <div className="border-t border-border-base bg-white px-5 pt-3" style={{ paddingBottom: 'max(14px, env(safe-area-inset-bottom))' }}>
           <button
             type="button"
             onClick={() => { commitPrice(); setOpen(false); }}
-            className="w-full rounded-full border-none bg-gradient-to-r from-info to-brand-light py-3 font-body text-[14px] font-bold text-white shadow-sh2"
+            className="w-full rounded-full border-none bg-gradient-to-r from-info to-brand-light py-3.5 font-body text-[14.5px] font-bold text-white shadow-sh2 transition-all duration-brand hover:brightness-[1.03] active:scale-[0.98]"
           >
             {en ? `Show ${resultCount} products` : `${resultCount}টি পণ্য দেখুন`}
           </button>
