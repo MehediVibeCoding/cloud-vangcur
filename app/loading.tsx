@@ -39,7 +39,7 @@ export default function RootLoading() {
     (pathname ? pathname.startsWith('/product/') : false) ||
     // নিরাপত্তা-জাল: ফলব্যাকে pathname পুরনোটা এলেও (ক্লিকের আগের পাথ) হিন্ট থাকলে প্রোডাক্ট-স্কেলেটন
     (hint !== null && pathname === hint.fromPath);
-  if (goingToProduct) return <ProductSkeletonAuto />;
+  if (goingToProduct) return <ProductSkeletonAuto mode="flow" />;
 
   // পলিসি পেজ: pathname গন্তব্য হলে সেটাই; পুরনো থাকলে ফুটার-লিংকের হিন্ট (একই নিরাপত্তা-জাল)
   const policyDest =

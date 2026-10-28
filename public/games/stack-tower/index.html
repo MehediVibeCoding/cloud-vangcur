@@ -71,6 +71,21 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 .card.rec .big{background:linear-gradient(180deg,#F8BE1A 10%,#B7791F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
 .card.rec .rtxt{display:block;margin:-4px 0 12px;font-size:13px;font-weight:700;color:#7A4B00}
 .card.rec .chip{border-color:rgba(214,154,0,.45)}
+/* ── লিডারবোর্ড (টপ ৩) ── */
+#lbReady{position:absolute;left:50%;top:calc(112px + env(safe-area-inset-top,0px));transform:translateX(-50%);display:flex;gap:6px;z-index:4;pointer-events:none;max-width:calc(100% - 16px)}
+#lbReady.hide{display:none}
+#lbReady .it{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.88);border:1px solid rgba(68,167,252,.3);font-weight:800;font-size:11.5px;color:#334155;white-space:nowrap;box-shadow:0 2px 8px rgba(0,88,199,.08)}
+.lb{display:none;flex-direction:column;gap:5px;margin-top:10px;text-align:left}
+.lb.on{display:flex}
+.lb .row{display:flex;align-items:center;gap:9px;padding:6px 12px;border-radius:14px;background:#fff;border:1px solid rgba(68,167,252,.3);font-weight:800;font-size:13px;color:#334155}
+.lb .row.me{border-color:#F5B301;background:#FFF8DC}
+.lb .mk{width:22px;text-align:center;font-size:16px;line-height:1}
+.lb .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb .sc{font-variant-numeric:tabular-nums;color:#0058C7}
+.lbme{display:none;margin-top:10px;font-weight:800;font-size:13px;color:#0058C7}
+.lbme.on{display:block}.lbme.wr{color:#B7791F}
+.card.hasLb .big{font-size:52px;margin-bottom:6px}
+.card.hasLb .btn{margin-top:12px}
 @media (prefers-reduced-motion:reduce){.card,.card *,.btn::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
 /* গেম সবসময় ফোনের মতো একটা লম্বা কলাম। ফোনে পুরো স্ক্রিন; ল্যাপটপ/ডেস্কটপের চওড়া স্ক্রিনে কলামটা মাঝখানে (উপর-নিচ পুরো উচ্চতা),
    আর দুই পাশে শুধু একটা সিঙ্গেল আইস-ব্লু রং — সেখানে কোনো রেন্ডারিং/অ্যানিমেশন নেই। তাই CPU/GPU শুধু মাঝের কলামের পিক্সেলই আঁকে। */
@@ -92,6 +107,7 @@ html,body{overflow:hidden;background:var(--bg)}body{display:block}
     <div class="hg r"><button class="hb" id="cl" aria-label="বন্ধ করুন"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
   </div>
   <div id="hint">ব্লক ফেলতে স্ক্রিনে ট্যাপ করুন</div>
+  <div id="lbReady" class="hide"></div>
   <div id="pop"></div>
   <div class="ov hide" id="ovOver"><div class="card" id="card">
     <div class="rbadge"><div class="rays"></div><div class="disc"><svg viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div><i class="sp"></i><i class="sp"></i><i class="sp"></i><i class="sp"></i></div>
@@ -100,6 +116,8 @@ html,body{overflow:hidden;background:var(--bg)}body{display:block}
     <div class="lbl" id="oLbl">আপনার স্কোর</div>
     <div class="big" id="fScore">0</div>
     <div class="chip"><svg class="tr" viewBox="0 0 24 24"><use href="#i-trophy"/></svg><span id="fBest"></span></div>
+    <div class="lbme" id="lbMe"></div>
+    <div class="lb" id="lbBox"></div>
     <button class="btn" id="bAgain">আবার খেলুন</button>
     <button class="lnk" id="bBack">ওয়েটিং পেজে ফিরে যান</button>
   </div></div>
@@ -360,7 +378,7 @@ function noise(d=.12,v=.035){if(muted)return;try{AC=AC||new(window.AudioContext|
 function snd(f,d,type,v){if(muted)return;try{AC=AC||new(window.AudioContext||webkitAudioContext)();if(AC.state==='suspended')AC.resume();
   const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.type=type||'triangle';o.frequency.value=f;g.gain.setValueAtTime(v||.1,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(out());o.start();o.stop(t+d)}catch(e){}}
 function hud(){const e=$('score');e.textContent=score;$('bestN').textContent=best;e.animate&&e.animate([{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:200})}
-function start(){if(!muted)ambient();stopConf();reset();st='playing';overShown=false;$('ovOver').classList.add('hide');showHint()}
+function start(){$('lbReady').classList.add('hide');if(!muted)ambient();stopConf();reset();st='playing';overShown=false;$('ovOver').classList.add('hide');showHint()}
 let hintOn=false;
 function showHint(){const h=$('hint');if(!h)return;h.classList.remove('off');hintOn=true}
 function hideHint(){if(!hintOn)return;hintOn=false;$('hint').classList.add('off')}
@@ -444,6 +462,7 @@ function gameOver(){
   st='over';shake=.3;prevBest=best;
   if(score>best){best=score;try{localStorage.setItem(KEY,best)}catch(e){}}
   hud();navigator.vibrate&&navigator.vibrate(40);
+  myRes=null;renderLb();if(ONLINE&&score>0)post({type:'vc-game-score',score});
   pendingOver=true;
 }
 function act(){
@@ -518,6 +537,40 @@ const syncMute=()=>{$('mute').innerHTML=muted?IC.off:IC.on};
 const syncFs=()=>{$('fs').innerHTML=(document.fullscreenElement||document.webkitFullscreenElement)?IC.min:IC.max};
 
 document.addEventListener('pointerdown',e=>{if(e.button>0||e.target.closest('button'))return;if(e.pointerType==='touch')e.preventDefault();unlockAudio();act()},{passive:false});
+// 🏆 লিডারবোর্ড (টপ ৩): সার্ভারের সাথে কথা বলে প্যারেন্ট (WaitingGame) — গেম শুধু বার্তা পাঠায় ও দেখায়
+const ONLINE=parent!==window;
+const BNUM=n=>EN?String(n):String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[d]);
+const ORD_BN={1:'১ম',2:'২য়',3:'৩য়',4:'৪র্থ',5:'৫ম',6:'৬ষ্ঠ',7:'৭ম',8:'৮ম',9:'৯ম',10:'১০ম'};
+function ord(n){if(EN){const v=n%100,x=['th','st','nd','rd'];return n+(x[(v-20)%10]||x[v]||x[0])}return ORD_BN[n]||BNUM(n)+'তম'}
+const LT=EN?{you:'You are ',wr:'New record! You are now #1 overall'}:{you:'আপনি ',wr:'নতুন রেকর্ড! আপনিই এখন সবার ১ম'};
+let lbTop=null,myRes=null;
+function post(m){try{parent.postMessage(m,location.origin)}catch(e){}}
+function renderLb(){
+  const box=$('lbBox'),me=$('lbMe'),rd=$('lbReady'),has=!!(lbTop&&lbTop.length),medals=['🥇','🥈','🥉'];
+  box.textContent='';rd.textContent='';
+  if(has)lbTop.forEach(r=>{
+    const row=document.createElement('div');row.className='row'+(myRes&&myRes.accepted&&r.rank===myRes.rank?' me':'');
+    const mk=document.createElement('span');mk.className='mk';mk.textContent=medals[r.rank-1]||BNUM(r.rank);
+    const n=document.createElement('span');n.className='nm';n.textContent=r.name;
+    const sc=document.createElement('span');sc.className='sc';sc.textContent=BNUM(r.score);
+    row.append(mk,n,sc);box.appendChild(row);
+    const it=document.createElement('span');it.className='it';it.textContent=(medals[r.rank-1]||'')+' '+r.name+' '+BNUM(r.score);rd.appendChild(it);
+  });
+  box.classList.toggle('on',has);$('card').classList.toggle('hasLb',has);
+  rd.classList.toggle('hide',!(has&&st==='ready'));
+  me.textContent='';me.className='lbme';
+  if(myRes&&myRes.accepted&&myRes.rank>0){
+    if(myRes.worldRecord){me.textContent=LT.wr;me.className='lbme on wr'}
+    else{me.textContent=LT.you+ord(myRes.rank);me.className='lbme on'}
+  }
+}
+addEventListener('message',e=>{
+  if(e.origin!==location.origin||e.source!==parent)return;
+  const d=e.data||{};
+  if(d.type==='vc-game-lb'&&d.ok&&Array.isArray(d.top)){lbTop=d.top.slice(0,3);renderLb()}
+  else if(d.type==='vc-game-result'&&d.ok){if(Array.isArray(d.top))lbTop=d.top.slice(0,3);myRes=d;renderLb()}
+});
+if(ONLINE)post({type:'vc-game-lb-request'});
 $('bAgain').addEventListener('click',start);
 const closeGame=()=>{try{parent.postMessage({type:'vc-game-close'},location.origin)}catch(e){}};
 $('cl').addEventListener('click',closeGame);
