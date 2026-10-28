@@ -8,6 +8,8 @@ import { renderInvoiceSvg } from '@/lib/invoice/renderInvoiceSvg';
 import { ensureResvgWasm } from '@/lib/invoice/satoriAssets';
 import { logError } from '@/lib/logger';
 import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
+import { createServiceClient } from '@/lib/supabase/serviceClient';
+import { MAX_INVOICE_DOWNLOADS } from '@/lib/invoice/invoiceLimit';
 
 // 🖨️ এই রুট আগে headless Chromium (Puppeteer) চালাত — Cloudflare Workers-এ
 // সেটা চালানো সম্ভব না বলে satori (JSX → SVG) + @resvg/resvg-wasm
@@ -17,10 +19,15 @@ import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(req: NextRequest) {
   const clientIp = getClientIp(req.headers);
+  const isStatusCheck = req.nextUrl.searchParams.get('status') === '1';
 
-  const rl = await slidingWindowLimit(`invoice:${clientIp}`, 8, 60);
+  const rl = isStatusCheck
+    ? await slidingWindowLimit(`invoice-status:${clientIp}`, 30, 60)
+    : await slidingWindowLimit(`invoice:${clientIp}`, 8, 60);
   if (!rl.allowed) {
     return NextResponse.json(
       { ok: false, error: 'Too many requests. Please try again later.' },
@@ -35,6 +42,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Missing order id' }, { status: 400 });
   }
 
+  let claimed = false;
+  let claimedOrderId = '';
+  let service: ReturnType<typeof createServiceClient> | null = null;
+
   try {
     const supabase = await createClient();
     const row = await fetchFullOrder(supabase, String(orderId), phone);
@@ -42,6 +53,46 @@ export async function GET(req: NextRequest) {
     if (!row) {
       return NextResponse.json({ ok: false, error: 'Order not found' }, { status: 404 });
     }
+
+    const verifiedId = String(row.id || '');
+    if (!UUID_RE.test(verifiedId)) {
+      return NextResponse.json({ ok: false, error: 'Order not found' }, { status: 404 });
+    }
+
+    try {
+      service = createServiceClient();
+    } catch (err) {
+      logError('[InvoicePNG] service client unavailable:', err);
+      return NextResponse.json({ ok: false, unavailable: true, error: 'Invoice service unavailable' }, { status: 503 });
+    }
+
+    if (isStatusCheck) {
+      const { data, error } = await service.rpc('invoice_downloads_status', { p_order_id: verifiedId });
+      if (error || typeof data !== 'number') {
+        logError('[InvoicePNG] status check failed:', error);
+        return NextResponse.json({ ok: false, unavailable: true }, { status: 503 });
+      }
+      return NextResponse.json(
+        { ok: true, remaining: data, limit: MAX_INVOICE_DOWNLOADS },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
+    const { data: claim, error: claimError } = await service.rpc('claim_invoice_download', { p_order_id: verifiedId });
+    const claimRow = Array.isArray(claim) ? claim[0] : claim;
+    if (claimError || !claimRow) {
+      logError('[InvoicePNG] claim failed:', claimError);
+      return NextResponse.json({ ok: false, unavailable: true, error: 'Invoice service unavailable' }, { status: 503 });
+    }
+    if (!claimRow.allowed) {
+      return NextResponse.json(
+        { ok: false, limitReached: true, remaining: 0, error: 'Download limit reached' },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+    claimed = true;
+    claimedOrderId = verifiedId;
+    const remaining = Number(claimRow.remaining);
 
     const order = mapSupabaseOrderRow(row);
     const { ds, advancePaid, balanceDue, isFreeShipping, dueMsg } = buildInvoiceViewModel(order);
@@ -95,9 +146,18 @@ export async function GET(req: NextRequest) {
         'Content-Type': 'image/png',
         'Content-Disposition': `attachment; filename="${fileName}"`,
         'Cache-Control': 'no-store',
+        'X-Invoice-Remaining': String(remaining),
+        'Access-Control-Expose-Headers': 'X-Invoice-Remaining',
       },
     });
   } catch (err) {
+    if (claimed && service) {
+      try {
+        await service.rpc('release_invoice_download', { p_order_id: claimedOrderId });
+      } catch (releaseErr) {
+        logError('[InvoicePNG] release failed:', releaseErr);
+      }
+    }
     logError('[InvoicePNG] generation failed:', err);
     return NextResponse.json({ ok: false, error: 'Failed to generate invoice image' }, { status: 500 });
   }
