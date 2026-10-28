@@ -4,5 +4,5 @@
 import ProductSkeletonAuto from '@/app/components/product/ProductSkeletonAuto';
 
 export default function ProductLoading() {
-  return <ProductSkeletonAuto />;
+  return <ProductSkeletonAuto mode="flow" />;
 }

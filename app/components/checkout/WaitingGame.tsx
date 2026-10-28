@@ -6,6 +6,7 @@ import {
 import { createPortal } from 'react-dom';
 import { lockBody, unlockBody } from '@/lib/bodyScrollLock';
 import { SHOW_BG_CONFIRM_EVENT } from '@/lib/uiEvents';
+import { readPendingOrder } from '@/lib/orderStatus';
 import { useT } from '@/lib/i18n/useT';
 import {
   GAME_INVITE_DELAY_MS, GAME_MAX_PLAY_MS, getEnabledGames, gameUrl, type GameDef,
@@ -159,17 +160,59 @@ export default function WaitingGame({ variant, active }: Props) {
     return () => clearTimeout(timer);
   }, [variant, mounted, active, expired, games.length]);
 
-  // গেমের ভেতরের ✕ বাটন থেকে আসা বার্তা (শুধু আমাদের নিজের iframe থেকে)
+  // গেমের ভেতরের বার্তা (শুধু আমাদের নিজের iframe থেকে): ✕ বাটন, লিডারবোর্ড চাওয়া, স্কোর জমা
   useEffect(() => {
-    if (phase !== 'playing') return undefined;
-    const onMessage = (e: MessageEvent) => {
+    if (phase !== 'playing' || !game) return undefined;
+    const gameId = game.id;
+    const reply = (payload: Record<string, unknown>) => {
+      try {
+        iframeRef.current?.contentWindow?.postMessage(payload, window.location.origin);
+      } catch {
+        // iframe ততক্ষণে বন্ধ হয়ে গেলে চুপচাপ উপেক্ষা
+      }
+    };
+    const onMessage = async (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       if (e.source !== iframeRef.current?.contentWindow) return;
-      if ((e.data as { type?: string } | null)?.type === 'vc-game-close') closeAll();
+      const data = e.data as { type?: string; score?: unknown } | null;
+      if (data?.type === 'vc-game-close') {
+        closeAll();
+        return;
+      }
+      if (data?.type === 'vc-game-lb-request') {
+        try {
+          const res = await fetch(`/api/game-score?game=${encodeURIComponent(gameId)}`, { cache: 'no-store' });
+          const json = await res.json();
+          reply({ type: 'vc-game-lb', ok: !!json?.ok, top: json?.top || [] });
+        } catch {
+          reply({ type: 'vc-game-lb', ok: false, top: [] });
+        }
+        return;
+      }
+      if (data?.type === 'vc-game-score' && typeof data.score === 'number') {
+        const pending = readPendingOrder();
+        if (!pending) {
+          reply({ type: 'vc-game-result', ok: false });
+          return;
+        }
+        try {
+          const res = await fetch('/api/game-score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              game: gameId, orderId: pending.id, phone: pending.phone, score: data.score,
+            }),
+          });
+          const json = await res.json();
+          reply({ type: 'vc-game-result', ...json });
+        } catch {
+          reply({ type: 'vc-game-result', ok: false });
+        }
+      }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [phase, closeAll]);
+  }, [phase, game, closeAll]);
 
   // 🖥️ গেম শুরু হওয়ার সাথে সাথে পুরো প্যানেলটা ব্রাউজারের নেটিভ ফুলস্ক্রিনে নেওয়ার চেষ্টা (ডেস্কটপ ও মোবাইল দুটোতেই —
   // ব্যর্থ হলে (ব্রাউজার সাপোর্ট না করলে/পলিসি ব্লক করলে) চুপচাপ বর্তমান কার্ড-সাইজ লেআউটেই পড়ে থাকে)

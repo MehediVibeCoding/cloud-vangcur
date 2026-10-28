@@ -32,7 +32,7 @@ export const GAMES: GameDef[] = [
   {
     id: 'stack-tower',
     src: '/games/stack-tower/index.html',
-    version: 5,
+    version: 6,
     enabled: true,
     titleBn: 'স্ট্যাক টাওয়ার',
     titleEn: 'Stack Tower',
