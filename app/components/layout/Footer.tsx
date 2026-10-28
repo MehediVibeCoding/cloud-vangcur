@@ -163,6 +163,10 @@ const FOOTER_EXTRAS: FooterExtras = computeFooterExtras(null);
 // আলাদা wrapper-এ থাকে (একটা `display:none`) — `eager` ছবি `display:none`-এও নামে, তাই সরাসরি eager করলে
 // দুটোই নামত। সমাধান: <picture> — যে ব্রেকপয়েন্টে wrapper লুকানো, সেখানে <source> একটা ১×১ ফাঁকা GIF দেয়,
 // ফলে ব্রাউজার শুধু দেখা-যাওয়া ছবিটাই high-priority-তে আনে। `hotImage` না দিলে আগের <Image> হুবহু।
+// ⚡ A3 (`unoptimized`): HAR/PageSpeed দেখাচ্ছে এই Cloudflare সেটআপে `/_next/image` ছবি ছোট/রূপান্তর করে না — মূল ফাইলটাই
+// (মোবাইল ~২৩৩ KB, ডেস্কটপ ~৪১৩ KB) ফেরত দেয়, তাও কোনো Cache-Control ছাড়া (প্রতিবার নতুন করে নামে) এবং Worker পেরিয়ে।
+// সরাসরি `/footer-illustration-*.webp` (public/) দিলে একই বাইট আসে, কিন্তু `public/_headers`-এর ৭ দিনের ক্যাশ পায়
+// ও Worker এড়িয়ে Cloudflare Assets থেকে আসে। ছবির চেহারা অপরিবর্তিত।
 const BLANK_GIF = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 
 function FooterPhoto({
@@ -184,6 +188,7 @@ function FooterPhoto({
         sizes="100vw"
         className="object-cover object-bottom"
         priority={false}
+        unoptimized
       />
     );
   }
@@ -195,6 +200,7 @@ function FooterPhoto({
     className: 'object-cover object-bottom',
     loading: 'eager',
     fetchPriority: 'high',
+    unoptimized: true,
   });
   return (
     <picture>
