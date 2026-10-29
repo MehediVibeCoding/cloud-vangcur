@@ -1,13 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import {
-  computeMsgLink,
-  computeWaLink,
-  fetchContactSettings,
-  type ContactSettings,
-} from '@/lib/floatButtonsData';
+import { useEffect, useRef, useState } from 'react';
+import { DEFAULT_MSG_LINK, DEFAULT_WA_LINK } from '@/lib/floatButtonsData';
 import { useT } from '@/lib/i18n/useT';
 
 function MessengerIcon({ size = 24 }: { size?: number }) {
@@ -28,33 +22,9 @@ function WhatsAppIcon({ size = 20 }: { size?: number }) {
 
 export default function FloatContactButtons() {
   const { t } = useT();
-  // If Supabase env vars are missing/misconfigured, createClient() throws.
-  // This component renders on every page, so an unguarded throw here used to
-  // take down the entire app. Fall back to the default WA/Messenger links
-  // instead of crashing.
-  const supabase = useMemo(() => {
-    try {
-      return createClient();
-    } catch {
-      return null;
-    }
-  }, []);
-  const [contact, setContact] = useState<ContactSettings | null>(null);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!supabase) return;
-    let cancelled = false;
-    (async () => {
-      const settings = await fetchContactSettings(supabase);
-      if (!cancelled && settings) setContact(settings);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
 
   // মোবাইলে hover নেই, তাই ট্যাপে টগল হওয়ার জন্য বাইরে ট্যাপ/ক্লিক করলে
   // প্যানেল বন্ধ হয়ে যায়।
@@ -71,8 +41,8 @@ export default function FloatContactButtons() {
     };
   }, [open]);
 
-  const waLink = computeWaLink(contact);
-  const msgLink = computeMsgLink(contact);
+  const waLink = DEFAULT_WA_LINK;
+  const msgLink = DEFAULT_MSG_LINK;
 
   const clearCloseTimer = () => {
     if (closeTimerRef.current) {

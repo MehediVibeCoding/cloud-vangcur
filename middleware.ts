@@ -2,6 +2,10 @@ import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
+// INTENTIONAL: এই ফাইল `proxy.ts`-এ মাইগ্রেট করবেন না। Next 16 "middleware deprecated" warning দেয়, কিন্তু
+// `proxy.ts` Node.js রানটাইমে চলে, আর @opennextjs/cloudflare-এ সেটা experimental/অসমর্থিত (Cloudflare Workers-এ
+// হোস্টিং)। warning উপেক্ষা করাই ঠিক; OpenNext সমর্থন দিলে তখন মাইগ্রেট করা যাবে।
+
 // 🛡️ ক্ষতিকর বট ও ভালনারেবিলিটি স্ক্যানার পাথ (সার্ভার ছোঁয়ার আগেই Edge-এ ব্লক)
 const MALICIOUS_PROBE_REGEX = /\/(?:\.env|\.git|wp-admin|wp-login|xmlrpc|phpmyadmin|\.aws|eval-stdin|composer\.(?:json|lock)|package-lock\.json)/i;
 

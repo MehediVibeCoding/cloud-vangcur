@@ -51,7 +51,6 @@ function HeroCardImage({
   isPriority: boolean;
 }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       className="absolute inset-0 z-0 h-full w-full rounded-[inherit] object-cover object-top opacity-100 transition-transform duration-300 ease-brand group-hover:scale-[1.05]"
       src={src}

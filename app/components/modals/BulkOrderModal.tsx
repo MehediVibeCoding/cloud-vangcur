@@ -1,16 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { createClient } from '@/lib/supabase/client';
 import { lockBody, unlockBody } from '@/lib/bodyScrollLock';
 import { OPEN_BULK_ORDER_EVENT, OPEN_QUICK_CART_MODAL_EVENT } from '@/lib/uiEvents';
 import { useCartStore, cartTotal } from '@/lib/store/cartStore';
-import {
-  DEFAULT_WA_LINK,
-  computeWaLink,
-  fetchContactSettings,
-} from '@/lib/floatButtonsData';
+import { DEFAULT_WA_LINK } from '@/lib/floatButtonsData';
 import useHistoryModal from '@/lib/useHistoryModal';
 import { useT } from '@/lib/i18n/useT';
 
@@ -59,19 +54,11 @@ function HeaderDecor() {
 export default function BulkOrderModal() {
   const { lang } = useT();
   const [open, setOpen] = useState(false);
-  const [waLink, setWaLink] = useState(DEFAULT_WA_LINK);
+  const waLink = DEFAULT_WA_LINK;
   const [customTotal, setCustomTotal] = useState<number | null>(null);
 
   const cart = useCartStore((s) => s.cart);
   const totalBill = customTotal ?? cartTotal(cart);
-
-  const supabase = useMemo(() => {
-    try {
-      return createClient();
-    } catch {
-      return null;
-    }
-  }, []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -99,18 +86,6 @@ export default function BulkOrderModal() {
     else unlockBody();
     return () => unlockBody();
   }, [open]);
-
-  useEffect(() => {
-    if (!supabase) return;
-    let cancelled = false;
-    (async () => {
-      const contact = await fetchContactSettings(supabase);
-      if (!cancelled && contact) setWaLink(computeWaLink(contact));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
 
   const handleModifyCart = () => {
     close();

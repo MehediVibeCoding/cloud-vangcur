@@ -26,7 +26,6 @@ export function ItemThumb({ imgs }: { imgs?: string[] }) {
   const isUrl = typeof url === 'string' && url.startsWith('http');
   if (isUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={optimizeCloudinaryUrl(url, 120)}
         alt=""
@@ -113,7 +112,6 @@ export function InvoiceCardBody({
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`${assetBaseUrl}/vangcur-logo.png`}
             alt="Vangcur"
@@ -368,13 +366,9 @@ export function InvoiceCardBody({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={SOCIAL_BADGE_ICONS.facebook} alt="" width={22} height={22} style={{ marginRight: 4, display: 'block' }} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={SOCIAL_BADGE_ICONS.youtube} alt="" width={22} height={22} style={{ marginRight: 4, display: 'block' }} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={SOCIAL_BADGE_ICONS.tiktok} alt="" width={22} height={22} style={{ marginRight: 4, display: 'block' }} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={SOCIAL_BADGE_ICONS.instagram} alt="" width={22} height={22} style={{ marginRight: 8, display: 'block' }} />
           </div>
           <span

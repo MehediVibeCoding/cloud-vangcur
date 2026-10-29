@@ -247,6 +247,8 @@ export default function QuickOrderModal() {
         showToast(localizeCouponError(couponInvalidReason, lang), 'warning');
       }
     }
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [open, cart.length, appliedCoupon, isCouponStillValid, couponInvalidReason]);
 
   // কার্টের মোট বা ইউজার বদলালে আগের ব্যর্থ-কুপনের ফলাফল বাসি হয়ে যায় (যেমন "মিনিমাম

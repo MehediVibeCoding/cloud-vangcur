@@ -1,16 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { createClient } from '@/lib/supabase/client';
 import { lockBody, unlockBody } from '@/lib/bodyScrollLock';
 import { OPEN_ORDER_LIMIT_EVENT } from '@/lib/uiEvents';
-import {
-  DEFAULT_WA_LINK,
-  computeWaLink,
-  fetchContactSettings,
-} from '@/lib/floatButtonsData';
+import { DEFAULT_WA_LINK } from '@/lib/floatButtonsData';
 import useHistoryModal, { suppressHistoryCleanup } from '@/lib/useHistoryModal';
 import { useT } from '@/lib/i18n/useT';
 
@@ -60,15 +55,7 @@ export default function OrderRateLimitModal() {
   const { lang } = useT();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [waLink, setWaLink] = useState(DEFAULT_WA_LINK);
-
-  const supabase = useMemo(() => {
-    try {
-      return createClient();
-    } catch {
-      return null;
-    }
-  }, []);
+  const waLink = DEFAULT_WA_LINK;
 
   const closeAndGoHome = useCallback(() => {
     setOpen(false);
@@ -91,18 +78,6 @@ export default function OrderRateLimitModal() {
     else unlockBody();
     return () => unlockBody();
   }, [open]);
-
-  useEffect(() => {
-    if (!supabase) return;
-    let cancelled = false;
-    (async () => {
-      const contact = await fetchContactSettings(supabase);
-      if (!cancelled && contact) setWaLink(computeWaLink(contact));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
 
   const handleWhatsAppClick = () => {
     setOpen(false);

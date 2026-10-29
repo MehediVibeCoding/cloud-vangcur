@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
+import { SUPPORT_PHONE_HREF, SUPPORT_PHONE_LABEL } from '@/lib/siteContact';
 import { RippleLayer, rippleThen } from '@/lib/ripple';
 import { markScrollRestore } from '@/lib/scrollMemory';
 import { canGoBackInApp } from '@/lib/navBack';
@@ -225,11 +226,11 @@ export function PolicyContact() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
         <a
-          href="tel:01897804055"
+          href={SUPPORT_PHONE_HREF}
           className="flex items-center gap-2.5 rounded-[12px] border border-border-base bg-white/80 p-3 font-body text-[12.5px] font-bold text-ink transition-colors hover:border-brand-light hover:bg-white"
         >
           <PhoneCallIcon />
-          <span>01897-804055 (WhatsApp / Call)</span>
+          <span>{SUPPORT_PHONE_LABEL} (WhatsApp / Call)</span>
         </a>
 
         <a

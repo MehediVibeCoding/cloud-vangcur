@@ -14,6 +14,7 @@ import { hasExceededLocalOrderLimit } from '@/lib/productData';
 import useHistoryModal from '@/lib/useHistoryModal';
 import { useT } from '@/lib/i18n/useT';
 import type { Product } from '@/types';
+import { getTimeoutSignal, optionalSignal } from '@/lib/abortSignal';
 
 interface InStockItem extends Product {
   key: string;
@@ -24,18 +25,6 @@ const DISMISS_GAP_DELAY_MS = 10000;
 const RECOVERY_DISMISS_KEY = 'vc_recovery_dismissed';
 const RECOVERY_DISMISS_TIME_KEY = 'vc_toast_dismiss_time';
 const MAX_DRAFT_AGE_MS = 3 * 24 * 60 * 60 * 1000;
-
-function getTimeoutSignal(ms: number): AbortSignal | undefined {
-  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
-    return AbortSignal.timeout(ms);
-  }
-  if (typeof AbortController !== 'undefined') {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), ms);
-    return controller.signal;
-  }
-  return undefined;
-}
 
 function HeaderDecor() {
   return (
@@ -142,7 +131,7 @@ export default function BackInStockToast() {
             .from('custom_products')
             .select('id, name, price, old, stock, imgs, cat')
             .in('id', targetIds)
-            .abortSignal(signal as any);
+            .abortSignal(optionalSignal(signal));
 
           if (error || !data || data.length === 0 || cancelled) return;
 

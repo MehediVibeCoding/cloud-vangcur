@@ -107,6 +107,8 @@ export default function Categories({ initialCategories }: CategoriesProps) {
       vp.removeEventListener('touchstart', onTouchStart);
       vp.removeEventListener('touchend', onTouchEnd);
     };
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [maxPage]);
 
   const handleSelect = (catId: string) => {

@@ -1,5 +1,6 @@
 // [REPLACE] ফাইলের পাথ: lib/checkoutData.ts
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { BKASH_NUMBER } from '@/lib/siteContact';
 
 /**
  * ⚠️ শুধু UI দেখানোর জন্য (বাটন show/hide) — এটা অথোরাইজেশন চেক না।
@@ -267,7 +268,7 @@ export function validateTxnId(txn: string): boolean {
 // সরানো হয়েছে), তাই Supabase-এ বারবার খুঁজে দেখার দরকার নেই — সরাসরি ডিফল্ট
 // বিকাশ নম্বরটাই রিটার্ন করা হচ্ছে।
 export async function fetchBkashNumber(_supabase: SupabaseClient): Promise<string> {
-  return '01816365504';
+  return BKASH_NUMBER;
 }
 
 export async function fetchShipConfig(supabase: SupabaseClient): Promise<ShipConfig> {

@@ -1,6 +1,6 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { FooterContact, FooterLogo, ServiceLink } from '@/types';
 import { sanitizeHref } from './security';
+import { SUPPORT_PHONE_HREF, SUPPORT_PHONE_LABEL, SUPPORT_WA_LINK } from './siteContact';
 
 export const DEFAULT_FOOTER = {
   logo: { mode: 'text' as const, main: 'Vangcur', sub: 'ভাঙচুর', img: null, alt: 'Vangcur Logo', height: 50 },
@@ -10,13 +10,13 @@ export const DEFAULT_FOOTER = {
     fb: 'https://facebook.com/vangcurgadgets',
     ig: 'https://instagram.com/vangcurgadgets',
     tk: 'https://tiktok.com/@vangcur.com',
-    wa: 'https://wa.me/8801897804055',
+    wa: SUPPORT_WA_LINK,
     yt: 'https://youtube.com/@vangcurgadgets',
   },
   contact: {
-    phoneLabel: '01897-804055',
-    phoneHref: 'tel:01897804055',
-    waHref: 'https://wa.me/8801897804055',
+    phoneLabel: SUPPORT_PHONE_LABEL,
+    phoneHref: SUPPORT_PHONE_HREF,
+    waHref: SUPPORT_WA_LINK,
     email: 'support@vangcur.com',
     fb: 'https://facebook.com/vangcurgadgets',
     addr: 'Dhaka, Bangladesh',
@@ -51,12 +51,4 @@ export interface FooterSettingsRaw {
   vc_contact?: Partial<FooterContact> & { phone?: string; wa?: string; email?: string; fb?: string; addr?: string };
   vc_footer?: { desc?: string; copy?: string; fb?: string; ig?: string; tk?: string; yt?: string; wa?: string };
   vc_footer_links?: { url?: string; label?: string }[];
-}
-
-// vc_logo, vc_contact, vc_footer, vc_footer_links — এই সেটিংসগুলো এখন অ্যাডমিন
-// প্যানেল থেকে এডিট করার কোনো উপায় নেই (ফিচার সরানো হয়েছে), তাই Supabase-এ
-// বারবার খুঁজে দেখার দরকার নেই — সবসময় খালি অবজেক্ট রিটার্ন হবে, ফলে
-// Footer কম্পোনেন্ট উপরের DEFAULT_FOOTER-ই ব্যবহার করবে।
-export async function fetchFooterSettings(_supabase: SupabaseClient): Promise<FooterSettingsRaw> {
-  return {};
 }
