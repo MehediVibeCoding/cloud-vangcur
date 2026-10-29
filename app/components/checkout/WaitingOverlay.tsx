@@ -345,8 +345,10 @@ export default function WaitingOverlay() {
   }, [visible, status]);
 
   useEffect(() => {
-    if (visible && !minimized) lockBody();
-    else unlockBody();
+    // শুধু নিজে লক করলেই cleanup-এ আনলক — নইলে শেয়ার্ড কাউন্টার থেকে অন্য মডালের লক কমে যেত।
+    if (!visible || minimized) return undefined;
+    lockBody();
+    return () => unlockBody();
   }, [visible, minimized]);
 
   if (visible && (pathname?.startsWith('/checkout/status') || pathname?.startsWith('/checkout/invoice'))) return null;

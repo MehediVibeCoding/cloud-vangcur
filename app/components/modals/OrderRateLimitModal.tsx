@@ -10,7 +10,6 @@ import {
   DEFAULT_WA_LINK,
   computeWaLink,
   fetchContactSettings,
-  subscribeContactSettings,
 } from '@/lib/floatButtonsData';
 import useHistoryModal, { suppressHistoryCleanup } from '@/lib/useHistoryModal';
 import { useT } from '@/lib/i18n/useT';
@@ -100,12 +99,8 @@ export default function OrderRateLimitModal() {
       const contact = await fetchContactSettings(supabase);
       if (!cancelled && contact) setWaLink(computeWaLink(contact));
     })();
-    const channel = subscribeContactSettings(supabase, (contact) => {
-      setWaLink(computeWaLink(contact));
-    });
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
     };
   }, [supabase]);
 

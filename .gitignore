@@ -5,7 +5,7 @@ node_modules/
 .next/
 out/
 build/
-.vercel
 .open-next/
 *.log
 .DS_Store
+tsconfig.tsbuildinfo

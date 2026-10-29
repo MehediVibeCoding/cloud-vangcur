@@ -2,6 +2,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
+ * ⚠️ শুধু UI দেখানোর জন্য (বাটন show/hide) — এটা অথোরাইজেশন চেক না।
+ * আসল সুরক্ষা DB-তে: is_admin_user() RLS policy + trg_protect_profile_privilege trigger।
+ */
+/**
  * 🛡️ ক্লায়েন্ট-সাইড (ব্রাউজার) থেকে বর্তমান লগইন-করা ইউজার অ্যাডমিন/মডারেটর
  * কিনা যাচাই — শুধুমাত্র DB-ভিত্তিক (profiles.is_admin / role), কোনো
  * হার্ডকোডেড ইমেইল ব্যবহার করা হয় না। RLS-এ নিজের প্রোফাইল row নিজে

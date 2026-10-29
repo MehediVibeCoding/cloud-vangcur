@@ -37,7 +37,7 @@ export function getDeviceId(): string {
   if (!VALID.test(id)) id = generate();
   try { localStorage.setItem(KEY, id); } catch { /* ignore */ }
   try {
-    document.cookie = `vc_device_id=${encodeURIComponent(id)}; Max-Age=31536000; Path=/; SameSite=Lax`;
+    document.cookie = `vc_device_id=${encodeURIComponent(id)}; Max-Age=31536000; Path=/; SameSite=Lax; Secure`;
   } catch {
     // ignore
   }

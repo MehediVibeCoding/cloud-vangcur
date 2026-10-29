@@ -134,7 +134,8 @@ export function sanitizeAddressInput(value: string): string {
   const v = value
     .replace(/[<>`]/g, '')
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-    .replace(/^[=+\-@]+/, '')
-    .replace(/^\s+/, '');
+    // শুরুর স্পেস/ট্যাব ও ফর্মুলা-অক্ষর (=, +, -, @) একসাথে বাদ — আগে আলাদা ধাপে বাদ দেওয়ায়
+    // " =cmd" (শুরুতে স্পেস) থেকে `=cmd` রয়ে যেত (CSV ফর্মুলা ইনজেকশন)।
+    .replace(/^[\s=+\-@]+/, '');
   return v.slice(0, MAX_ADDR_LEN);
 }

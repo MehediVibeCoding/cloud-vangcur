@@ -3,6 +3,7 @@
 import { MAX_QTY_PER_PRODUCT } from '@/lib/cartLimits';
 import { after } from 'next/server';
 import { headers } from 'next/headers';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/serviceClient';
@@ -44,22 +45,19 @@ async function readClientIp(): Promise<string> {
   }
 }
 
-// ক্লায়েন্টের আইপি-লোকেশন — Vercel-এর নিজস্ব এজ-সেট হেডার (ক্লায়েন্ট বদলাতে পারে না)।
-// শুধু অর্ডার ট্রাস্ট স্কোরের জন্য; ব্যর্থ বা খালি হলে চেকআউটে কোনো প্রভাব নেই।
+// ক্লায়েন্টের আইপি-লোকেশন — Cloudflare এজ যে তথ্য বসায় (request.cf), ক্লায়েন্ট বদলাতে পারে না।
+// শুধু অর্ডার ট্রাস্ট স্কোরের জন্য; ব্যর্থ বা খালি হলে (যেমন লোকাল dev) চেকআউটে কোনো প্রভাব নেই।
 async function readClientGeo(): Promise<{ city: string; country: string; region: string }> {
   try {
-    const hdrs = await headers();
-    const dec = (v: string | null): string => {
-      try {
-        return decodeURIComponent(v || '');
-      } catch {
-        return v || '';
-      }
+    const cf = ((await getCloudflareContext({ async: true })).cf ?? {}) as {
+      city?: string;
+      country?: string;
+      region?: string;
     };
     return {
-      city: dec(hdrs.get('x-vercel-ip-city')).slice(0, 80),
-      country: (hdrs.get('x-vercel-ip-country') || '').slice(0, 2),
-      region: (hdrs.get('x-vercel-ip-country-region') || '').slice(0, 16),
+      city: String(cf.city || '').slice(0, 80),
+      country: String(cf.country || '').slice(0, 2),
+      region: String(cf.region || '').slice(0, 16),
     };
   } catch {
     return { city: '', country: '', region: '' };

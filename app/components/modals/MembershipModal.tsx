@@ -348,11 +348,7 @@ export default function MembershipModal({
 
     setIsSpinning(true);
 
-    // 🛡️ ফিক্স (audit P1-19): আগে এখানে computeWinningSlice() দিয়ে ক্লায়েন্ট
-    // নিজেই বিজয়ী ঠিক করত এবং saveTierSpinReward() একটা কোড বানাত যেটা
-    // coupons টেবিলে কখনো থাকত না। এখন সার্ভার (spin_tier_wheel RPC) আসল
-    // বিজয়ী স্লাইস ও একটা সত্যিকারের, checkout-এ কাজ করা কুপন ঠিক করে দেয়;
-    // ক্লায়েন্ট শুধু সেই ফলাফল অনুযায়ী চাকাটা ঘুরিয়ে দেখায়।
+    // বিজয়ী স্লাইস ও কুপন সার্ভার (spin_tier_wheel RPC) ঠিক করে; client শুধু ফেরত-আসা index অনুযায়ী চাকা ঘোরায়।
     const result = await spinTierWheel(supabase, selectedTier.key);
 
     if (!result.ok || result.index === undefined || !result.code) {

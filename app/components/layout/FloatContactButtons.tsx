@@ -6,7 +6,6 @@ import {
   computeMsgLink,
   computeWaLink,
   fetchContactSettings,
-  subscribeContactSettings,
   type ContactSettings,
 } from '@/lib/floatButtonsData';
 import { useT } from '@/lib/i18n/useT';
@@ -52,10 +51,8 @@ export default function FloatContactButtons() {
       const settings = await fetchContactSettings(supabase);
       if (!cancelled && settings) setContact(settings);
     })();
-    const channel = subscribeContactSettings(supabase, (updated) => setContact(updated));
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
     };
   }, [supabase]);
 

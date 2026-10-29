@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       const productName = sanitizeValue(payload.productName, 80);
       const customerName = sanitizeValue(payload.customerName, 30);
 
-      // 🚀 Next.js 15 Native Background Task (after)
+      // 🚀 Next.js 16 Native Background Task (after)
       // ক্লায়েন্টকে সাথে সাথে রেসপন্স দিয়ে ব্যাকগ্রাউন্ডে Recovery Hub-এ পুশ হবে
       after(async () => {
         await forwardStockRequestToRecoveryHub({

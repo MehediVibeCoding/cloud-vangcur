@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ৫. R2-তে আপলোড, 'reviews' prefix দিয়ে
-    const result = await uploadToR2(file, 'reviews', validated.ext!);
+    const result = await uploadToR2(file, 'reviews', validated.ext!, user.id);
     if (!result.ok) {
       logWarn('[upload-review-image] R2 upload failed:', result.message);
       return NextResponse.json({ ok: false, message: 'ছবি আপলোড ব্যর্থ হয়েছে' }, { status: 500 });

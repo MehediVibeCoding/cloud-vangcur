@@ -211,6 +211,7 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
     // ⚡ ব্যাচ ৫খ: লুপের ২য়–৩য় কপি তখনো খালি থাকলে, কোনো জাম্প/অ্যানিমেশনের আগেই সিঙ্ক্রোনাসলি আঁকি।
     if (!warmRef.current) {
       warmRef.current = true;
+      // INTENTIONAL: flushSync deprecated না; লুপের কপি আঁকার জন্য প্রথম সোয়াইপে একবারই চলে (warmRef)।
       flushSync(() => setWarm(true));
     }
 

@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 🔖 বিল্ড-আইডি: ডেপ্লয় বদলেছে কিনা ধরতে (StaleTabReload + /api/build-id)। Cloudflare Workers Builds-এ কমিট SHA থাকে;
+  // না পেলে খালি স্ট্রিং — তখন StaleTabReload আগের মতো সবসময় রিলোড করে (নিরাপদ ফলব্যাক)।
+  env: {
+    NEXT_PUBLIC_BUILD_ID:
+      process.env.WORKERS_CI_COMMIT_SHA || process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || '',
+  },
   experimental: {
     // 🐢 পারফরম্যান্স ফিক্স (audit): critical CSS ইনলাইন করে বাকিটা async করে —
     // PageSpeed-এ ২টা render-blocking CSS চাঙ্ক (~1050ms) ফ্ল্যাগ হয়েছিল এর কারণে।
@@ -12,21 +18,7 @@ const nextConfig = {
       static: 300,
     },
   },
-  // isomorphic-dompurify/jsdom are kept external: jsdom's
-  // html-encoding-sniffer dependency pulls in an ESM-only module
-  // (@exodus/bytes), which webpack's bundled require() can't load —
-  // "Error: require() of ES Module ... not supported" at runtime on any
-  // page that calls sanitizeSvgHtml() server-side (ERR_REQUIRE_ESM).
-  //
-  // 🗑️ Cloudflare মাইগ্রেশন নোট: @sparticuz/chromium ও puppeteer-core এখান
-  // থেকে সরানো হয়েছে — ইনভয়েস PNG রুট এখন satori + resvg-wasm ব্যবহার করে
-  // (দেখুন lib/invoice/renderInvoiceSvg.ts), কোনো Chromium বাইনারি আর লাগে
-  // না। সেই সাথে পুরনো outputFileTracingIncludes ব্লকও বাদ দেওয়া হলো, কারণ
-  // ওটা শুধু Chromium বাইনারির জন্যই ছিল।
-  serverExternalPackages: [
-    'isomorphic-dompurify',
-    'jsdom',
-  ],
+  // ইনভয়েস PNG: satori + resvg-wasm (lib/invoice/renderInvoiceSvg.ts), কোনো Chromium/jsdom লাগে না।
   async headers() {
     return [
       {

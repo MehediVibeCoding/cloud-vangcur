@@ -81,9 +81,16 @@ async function putViaS3(buffer: Buffer, path: string, contentType: string): Prom
  * ফাইল R2-তে আপলোড করে পাবলিক URL ফেরত দেয়।
  * prefix: path-এর ফোল্ডার অংশ (এই সাইটে এখন শুধু 'reviews' ব্যবহার হবে)।
  */
-export async function uploadToR2(file: File, prefix: string, ext: string): Promise<R2UploadResult> {
+export async function uploadToR2(
+  file: File,
+  prefix: string,
+  ext: string,
+  ownerId?: string,
+): Promise<R2UploadResult> {
   try {
-    const path = `${prefix}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    // ownerId থাকলে key-তে বসে যায় ('reviews/<uuid>_<ts>_<rand>.webp') — মোছার সময় মালিকানা যাচাইয়ের জন্য
+    const owner = ownerId && /^[A-Za-z0-9-]{8,64}$/.test(ownerId) ? `${ownerId}_` : '';
+    const path = `${prefix}/${owner}${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
     const arrayBuffer = await file.arrayBuffer();
 
     const bucket = getBucketBinding();
@@ -119,6 +126,14 @@ export function r2ReviewKeyFromUrl(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * key-টা এই ইউজারের আপলোড করা কিনা (key 'reviews/<userId>_...' দিয়ে শুরু হতে হবে)।
+ * পুরনো ফরম্যাটের key (owner ছাড়া) কারো নামে ধরা হয় না — তাই সেগুলো এই পথে মোছা যায় না।
+ */
+export function r2KeyOwnedBy(key: string, userId: string): boolean {
+  return !!userId && key.startsWith(`reviews/${userId}_`);
 }
 
 /** R2 থেকে একগুচ্ছ অবজেক্ট মোছে (key-গুলো r2ReviewKeyFromUrl দিয়ে যাচাই-করা হওয়া উচিত)। ব্যর্থ হলে false */

@@ -12,7 +12,7 @@ const AUTH_REFRESH_PATH_PREFIXES = ['/checkout', '/account', '/api/'];
 
 // 🔒 ফিক্স (H4): আগে প্রতিটা /api/* রিকোয়েস্টেই Upstash Redis-এ একটা sliding-window চেক
 // (রিড+রাইট) হতো — এমনকি এই নিচের রুটগুলোতেও, যেগুলো পাবলিক না, নিজস্ব সিক্রেট-কি/ওয়েবহুক-
-// সিগনেচার দিয়ে আগে থেকেই সুরক্ষিত (শুধু bKash, Vercel cron, Supabase DB webhook কল করে)।
+// সিগনেচার দিয়ে আগে থেকেই সুরক্ষিত (শুধু bKash, Cloudflare cron, Supabase DB webhook কল করে)।
 // এগুলোতে Redis-কল এখন স্কিপ — বাকি এজ-মেমোরি রেট-লিমিট (checkEdgeRateLimit) তবুও চলে,
 // তাই পুরোপুরি খোলা থাকছে না, শুধু প্রতি কলে Redis-খরচ বাদ যাচ্ছে।
 const INTERNAL_SECRET_PROTECTED_API_PATHS = [

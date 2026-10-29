@@ -99,27 +99,6 @@ export const GOLD_SPIN_SLICES: SpinSlice[] = [
   { id: 5, label: 'সারপ্রাইজ গিফট', labelEn: 'Mystery Gift', value: 0, type: 'free_shipping', minOrder: 0, weight: 0, color: '#0F172A', bg: '#FEF3C7' },
 ];
 
-/**
- * জিরো-লস প্রোবাবিলিটি ইঞ্জিন — চাকা ঘোরার আগেই পূর্বনির্ধারিত সুরক্ষিত স্লাইস নির্বাচন
- */
-export function computeWinningSlice(slices: SpinSlice[]): { slice: SpinSlice; index: number } {
-  const eligible = slices
-    .map((s, idx) => ({ slice: s, index: idx }))
-    .filter((x) => x.slice.weight > 0);
-
-  const totalWeight = eligible.reduce((acc, curr) => acc + curr.slice.weight, 0);
-  let random = Math.random() * totalWeight;
-
-  for (const item of eligible) {
-    if (random < item.slice.weight) {
-      return item;
-    }
-    random -= item.slice.weight;
-  }
-
-  return eligible[0] || { slice: slices[0], index: 0 };
-}
-
 export interface SpinServerResult {
   ok: boolean;
   error?: string;
@@ -134,9 +113,8 @@ export interface SpinServerResult {
 }
 
 /**
- * 🛡️ ফিক্স (audit P1-19): বিজয়ী স্লাইস ও কুপন এখন সার্ভার (spin_tier_wheel RPC)
- * ঠিক করে, ক্লায়েন্টের computeWinningSlice() আর ব্যবহার হয় না — client শুধু
- * ফেরত-আসা index অনুযায়ী চাকাটা ঘুরিয়ে দেখায়।
+ * বিজয়ী স্লাইস ও কুপন সার্ভার (spin_tier_wheel RPC) ঠিক করে — client শুধু ফেরত-আসা index অনুযায়ী
+ * চাকাটা ঘুরিয়ে দেখায়।
  */
 export async function spinTierWheel(supabase: SupabaseClient, tierKey: string): Promise<SpinServerResult> {
   try {

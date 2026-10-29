@@ -1,10 +1,9 @@
 // ফাইলের পাথ: lib/limiter.ts
 // [NEW] সব সার্ভার-সাইড রেট লিমিটের জন্য একটাই শেয়ার্ড মডিউল।
 //
-// কেন দরকার: আগে প্রতিটা রুটে আলাদা `new Map()` ছিল। Vercel-এ সাইট অনেকগুলো ছোট সার্ভার
-// ইনস্ট্যান্সে চলে — প্রতিটার মেমোরি আলাদা এবং ঠান্ডা হলে মুছে যায়, তাই সেই লিমিট সহজেই
-// এড়ানো যেত। এখন কাউন্টার থাকে Upstash Redis-এ (সব ইনস্ট্যান্সের জন্য এক), আর Upstash-এর
-// env না থাকলে বা সাময়িক ব্যর্থ হলে আগের মতো ইনস্ট্যান্স-মেমোরিতে নেমে যায় (কখনো সাইট আটকায় না)।
+// কেন দরকার: Cloudflare Workers-এ সাইট অনেকগুলো আইসোলেট-এ চলে — প্রতিটার মেমোরি আলাদা এবং
+// ঠান্ডা হলে মুছে যায়, তাই ইন-মেমোরি কাউন্টার দিয়ে লিমিট টেকে না। এখন কাউন্টার থাকে Upstash Redis-এ
+// (সবার জন্য এক), আর Upstash-এর env না থাকলে বা সাময়িক ব্যর্থ হলে ইনস্ট্যান্স-মেমোরিতে নেমে যায় (কখনো সাইট আটকায় না)।
 //
 // দুই ধরনের অ্যালগরিদম:
 //  • slidingWindowLimit — "গত N সেকেন্ডে সর্বোচ্চ M বার"। ফিক্সড-উইন্ডোর সেই সমস্যা নেই যেখানে
@@ -15,7 +14,7 @@
 // কোনো npm প্যাকেজ লাগে না (Upstash REST API সরাসরি fetch দিয়ে) — তাই package.json /
 // package-lock.json বদলাতে হয় না। Edge (middleware) ও Node দুই জায়গাতেই চলে।
 //
-// env (Vercel → Storage → Upstash Redis যুক্ত করলে নিজে থেকেই সেট হয়):
+// env (Cloudflare Workers-এর secret/var হিসেবে সেট করা হয়):
 //   UPSTASH_REDIS_REST_URL ও UPSTASH_REDIS_REST_TOKEN  (অথবা KV_REST_API_URL / KV_REST_API_TOKEN)
 
 export interface RateLimitOutcome {
@@ -37,23 +36,15 @@ function safeKey(key: string): string {
   return String(key).replace(/[\s\r\n]+/g, '_').slice(0, 160);
 }
 
-// 🔒 ফিক্স (C5): এই একটাই IP-এক্সট্র্যাক্ট ফাংশন — আগে middleware.ts, checkout.ts,
-// app/api/meta-capi/route.ts-এ হুবহু এই লজিকের আলাদা কপি ছিল (৪+ জায়গা), সবগুলোই
-// cf-connecting-ip উপেক্ষা করত। এখন cf-connecting-ip সবার আগে ট্রাই হয় (Cloudflare প্রক্সি
-// অন থাকলে Vercel-এ Cloudflare-এরই এজ IP পৌঁছাতে পারে — x-vercel-forwarded-for তখন ভুল
-// হতে পারে)। সতর্কতা: cf-connecting-ip তখনই নিরাপদ যখন অরিজিন (Vercel) শুধু Cloudflare-এর
-// IP-রেঞ্জ থেকে রিকোয়েস্ট নেয়, নইলে যেকেউ সরাসরি Vercel-কে কল করে এই হেডার জাল করতে
-// পারবে — সেই ফায়ারওয়াল-নিয়ম কোডের বাইরে, Vercel/Cloudflare ড্যাশবোর্ডে বসাতে হয় (V2/V13)।
-// Cloudflare প্রক্সি অফ থাকলে (এখনকার মতো) এই হেডার কখনো আসবে না, তাই বর্তমান আচরণ অপরিবর্তিত।
+// একটাই IP-এক্সট্র্যাক্ট ফাংশন (middleware, checkout, meta-capi সবাই এটাই ব্যবহার করে)।
+// Cloudflare Workers-এ অরিজিনে সরাসরি পৌঁছানো যায় না — সব রিকোয়েস্ট Cloudflare এজ দিয়ে আসে,
+// তাই cf-connecting-ip সবসময় থাকে এবং ক্লায়েন্ট জাল করতে পারে না। x-forwarded-for শুধু লোকাল
+// ডেভেলপমেন্টের (next dev) জন্য ফলব্যাক।
 export function getClientIp(headers: { get(name: string): string | null }): string {
   const cf = headers.get('cf-connecting-ip');
-  const vercel = headers.get('x-vercel-forwarded-for');
-  const real = headers.get('x-real-ip');
   const fwd = headers.get('x-forwarded-for');
   return (
     (cf ? cf.trim() : '') ||
-    (vercel ? vercel.split(',')[0].trim() : '') ||
-    (real ? real.trim() : '') ||
     (fwd ? fwd.split(',')[0].trim() : '') ||
     '127.0.0.1'
   );
@@ -245,7 +236,7 @@ export async function slidingWindowLimit(
       const frac = (now % windowMs) / windowMs;
       const [ok, remaining] = await redisEval(
         SLIDING_LUA,
-        [`${PREFIX}sw:${k}:${id}`, `${PREFIX}sw:${k}:${id - 1}`],
+        [`${PREFIX}sw:{${k}}:${id}`, `${PREFIX}sw:{${k}}:${id - 1}`],
         [limit, windowMs, frac.toFixed(6), cost],
       );
       breakerRecordSuccess();

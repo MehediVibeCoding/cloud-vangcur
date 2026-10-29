@@ -3,7 +3,9 @@ import DOMPurify from 'dompurify';
 export function sanitizeSvgHtml(html?: string | null): string {
   if (!html) return '';
 
-  // সার্ভার-সাইড (SSR) এ ভারী ও ত্রুটিপূর্ণ jsdom বাইপাস করে দ্রুত ও নিরাপদ স্যানিটাইজেশন
+  // সার্ভার-সাইড: শুধু regex-ভিত্তিক best-effort ফিল্টার (jsdom লাগে না, Workers-এ চলে না)।
+  // INTENTIONAL: ইনপুট শুধু অ্যাডমিন-লেখা কনটেন্ট (গেস্ট/কাস্টমার এখানে SVG দিতে পারে না);
+  // ব্রাউজারে হাইড্রেশনের সময় নিচের DOMPurify পুরো স্যানিটাইজ করে। কাস্টমার-ইনপুটে এটা ব্যবহার করবেন না।
   if (typeof window === 'undefined') {
     return html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')

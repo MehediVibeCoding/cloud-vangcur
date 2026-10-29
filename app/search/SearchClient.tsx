@@ -1,5 +1,6 @@
 'use client';
 
+import { canGoBackInApp } from '@/lib/navBack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -48,7 +49,7 @@ function SearchHeader({ query, onQueryChange, filterSlot }: { query: string; onQ
   const handleBackToHome = (e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault();
     rippleThen(e, () => {
-      if (typeof window !== 'undefined' && window.history.length > 1) {
+      if (canGoBackInApp()) {
         router.back();
       } else {
         router.replace('/');
@@ -386,6 +387,7 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
   }, [needIndex, index, initialResults]);
 
   // ── ফিল্টার ও সর্ট ──────────────────────────────────────────────────────────
+  // INTENTIONAL: query লোকাল স্টেটে থাকে; URL শুধু history.replaceState দিয়ে আপডেট হয় (নেভিগেশন ছাড়া)।
   // অবস্থা লোকাল স্টেটে (তাৎক্ষণিক), URL-এ লেখা হয় history.replaceState দিয়ে (সার্ভার রিকোয়েস্ট ছাড়া)।
   // শুরুর মান useSearchParams থেকে — শেয়ার করা লিংক খুললে সার্ভারের প্রথম HTML-ই ফিল্টার-করা আসে।
   const [filters, setFilters] = useState<SearchFilters>(() => parseFilters(searchParams));

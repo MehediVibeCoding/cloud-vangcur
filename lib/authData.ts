@@ -206,6 +206,13 @@ function getLocalGuestOrderIds(): string[] {
   return Array.from(ids);
 }
 
+/**
+ * গেস্ট অর্ডার ইউজারের অ্যাকাউন্টে যুক্ত করে।
+ * ⚠️ এটা "ফোন নম্বর দিয়ে সব অর্ডার তুলে আনা" না। claim_guest_orders RPC (DB) দুটো শর্ত বাধ্যতামূলক করে:
+ *   ১) অর্ডার UUID — শুধু এই ডিভাইসের localStorage থেকে আসে (getLocalGuestOrderIds)
+ *   ২) অর্ডারের ফোনের শেষ ১০ ডিজিট ইউজারের প্রোফাইল ফোনের সাথে মিলতে হবে (migration: s4_claim_guest_orders_require_phone_match)
+ * তাই অন্যের ফোন নম্বর দিয়ে রেজিস্টার করে অন্যের অর্ডার নেওয়া যায় না।
+ */
 export async function mergeGuestOrdersToUser(supabase: SupabaseClient, phone: string, userId: string): Promise<void> {
   if (!userId) return;
   const orderIds = getLocalGuestOrderIds();

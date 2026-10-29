@@ -274,6 +274,8 @@ export default function StatusClient() {
 
     const pending = readPendingOrder();
     if (!pending) {
+      // INTENTIONAL: রিফ্রেশে স্ট্যাটাস পেজ থেকে হোমে পাঠানো — অর্ডার হারায় না; softenPendingOrder() ট্র্যাকিং
+      // মার্কার রেখে দেয়, পরে কনফার্ম/রিজেক্টে সঠিক পপআপ দেখায়।
       router.replace('/');
       return;
     }

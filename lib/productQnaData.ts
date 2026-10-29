@@ -10,6 +10,10 @@ const MIN_ANSWER_LEN = 5;
 const MAX_ANSWER_LEN = 500;
 
 /**
+ * ⚠️ শুধু UI দেখানোর জন্য (বাটন show/hide) — এটা অথোরাইজেশন চেক না।
+ * আসল সুরক্ষা DB-তে: is_admin_user() RLS policy + trg_protect_profile_privilege trigger।
+ */
+/**
  * 🛡️ নিরাপদ সার্ভার সেশন-ভেরিফায়েড অ্যাডমিন ও মডারেটর রোল ভ্যালিডেটর
  * কোনো লোকালস্টোরেজ বা ক্লায়েন্ট ডাটায় বিশ্বাস করা হবে না।
  */
@@ -156,7 +160,7 @@ export interface SubmitAnswerPayload {
   answer: string;
   authorName: string;
   userId?: string | null;
-  isAdmin?: boolean;
+  // isAdmin: ক্লায়েন্ট থেকে নেওয়া হয় না (spoofing) — রোল সবসময় checkIsUserAdmin() দিয়ে সার্ভার-সেশন থেকে নির্ধারিত হয়।
 }
 
 export async function submitProductAnswer(

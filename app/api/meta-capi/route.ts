@@ -11,13 +11,13 @@ const ALLOWED = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Purcha
 const BOT_UA = /bot|crawl|spider|slurp|facebookexternalhit|headless|lighthouse|pagespeed/i;
 const MAX_BODY = 8 * 1024;
 
-// শুধু নিজের সাইট (প্রোডাকশন, Vercel প্রিভিউ, লোকাল) থেকে আসা কল গ্রহণ
+// শুধু নিজের সাইট (প্রোডাকশন, লোকাল) থেকে আসা কল গ্রহণ
 function originAllowed(req: NextRequest): boolean {
   const src = req.headers.get('origin') || req.headers.get('referer');
   if (!src) return false;
   try {
     const host = new URL(src).hostname;
-    return host === 'vangcur.com' || host === 'www.vangcur.com' || host.endsWith('.vercel.app') || host === 'localhost';
+    return host === 'vangcur.com' || host === 'www.vangcur.com' || host === 'localhost';
   } catch {
     return false;
   }

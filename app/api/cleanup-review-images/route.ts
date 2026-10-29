@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/serviceClient';
 import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
-import { r2ReviewKeyFromUrl, deleteFromR2 } from '@/lib/r2';
+import { r2ReviewKeyFromUrl, r2KeyOwnedBy, deleteFromR2 } from '@/lib/r2';
 import { logWarn } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
           .filter((u): u is string => typeof u === 'string')
           .slice(0, MAX_URLS)
           .map((u) => r2ReviewKeyFromUrl(u))
-          .filter((k): k is string => !!k),
+          .filter((k): k is string => !!k)
+          // 🛡️ শুধু নিজের আপলোড করা ছবিই মোছা যাবে (অন্যের ছবি/পুরনো ফরম্যাটের key এখানে স্কিপ হয়)
+          .filter((k) => r2KeyOwnedBy(k, user.id)),
       ),
     );
     if (!keys.length) return NextResponse.json({ ok: true, deleted: 0 });

@@ -1,6 +1,6 @@
 # 📐 Vangcur — Official Coding Conventions & Developer Standards
 **সর্বশেষ অডিট তারিখ:** সেপ্টেম্বর ২০২৬  
-**প্রযোজ্য পরিবেশ:** Next.js 15 (App Router), React 19, TypeScript (Strict), Tailwind CSS v3, Zustand v5, Supabase, Cloudinary  
+**প্রযোজ্য পরিবেশ:** Next.js 16 (App Router), React 19, TypeScript (Strict), Tailwind CSS v3, Zustand v5, Supabase, Cloudinary  
 **উদ্দেশ্য:** প্ল্যাটফর্মের ব্যবসায়িক স্থায়িত্ব, জিরো-বাগ ডিপ্লয়মেন্ট, কোড কনসিস্টেন্সি এবং জিরো-রিগ্রেশন নিশ্চিত করা।
 
 ---
@@ -78,7 +78,7 @@
 
 ---
 
-## ⚡ ৪. React 19 ও Next.js 15 রেন্ডারিং নীতি (RSC vs Client)
+## ⚡ ৪. React 19 ও Next.js 16 রেন্ডারিং নীতি (RSC vs Client)
 
 1. **সার্ভার বনাম ক্লায়েন্ট বাউন্ডারি:**
    - প্রতিটি রুট ডিরেক্টরির `page.tsx` ফাইলকে ডিফল্টভাবে Server Component (RSC) রাখতে হবে।
@@ -89,7 +89,7 @@
    - `useT()` থেকে রিটার্ন করা অনুবাদ ফাংশন `t` অবশ্যই `useCallback` দিয়ে মেমোইজড থাকতে হবে।
    - কোনো ক্লায়েন্ট ফাংশন যদি `useEffect` বা ইভেন্ট লিসেনারের ডিপেন্ডেন্সি হিসেবে পাস হয়, তবে তাকে অবশ্যই `useCallback` দিয়ে আবদ্ধ করতে হবে।
 
-3. **Next.js 15 `after()` প্রিমিটিভের ব্যবহার:**
+3. **Next.js 16 `after()` প্রিমিটিভের ব্যবহার:**
    - ক্লায়েন্টের রেসপন্স বিলম্বিত না করে ব্যাকগ্রাউন্ড টাস্ক (টেলিগ্রাম অ্যালার্ট, কুপন ব্যবহারের সংখ্যা বৃদ্ধি, গুগল শিট লিড পুশ) সম্পন্ন করতে অবশ্যই Server Action ও Route Handler-এ `after(async () => { ... })` ব্যবহার করতে হবে।
 
 4. **ডাইনামিক ক্লায়েন্ট হাইড্রেশন সেফটি:**
