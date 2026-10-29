@@ -152,8 +152,8 @@ const colLinkClass =
   'block bg-transparent border-0 p-0 text-left font-body text-[13.5px] font-medium text-slate-700 no-underline transition-colors hover:text-brand-light cursor-pointer leading-snug';
 
 // ⚡ ফুটারের ডেটা (যোগাযোগ, সোশ্যাল লিংক, বর্ণনা, কপিরাইট) এখন কোড থেকেই আসে (lib/footerData.ts-এর
-// DEFAULT_FOOTER) — আগের মতো Supabase fetch/Realtime চ্যানেল আসলে কিছুই আনত না (fetchFooterSettings
-// সবসময় {} দিত)। তাই এখানে আর Supabase ক্লায়েন্ট/ইফেক্ট নেই; কনটেন্ট বদলাতে হলে DEFAULT_FOOTER বদলান।
+// DEFAULT_FOOTER) — আগে Supabase fetch/Realtime চ্যানেল ছিল, কিন্তু সেটা আসলে কিছুই আনত না (সেই ফাংশন
+// সরানো হয়েছে)। তাই এখানে আর Supabase ক্লায়েন্ট/ইফেক্ট নেই; কনটেন্ট বদলাতে হলে DEFAULT_FOOTER বদলান।
 // মান আগের মতোই (computeX(null) = DEFAULT_FOOTER), তাই দেখতে কোনো পরিবর্তন নেই।
 const FOOTER_CONTACT: FooterContact = computeContact(null);
 const FOOTER_EXTRAS: FooterExtras = computeFooterExtras(null);
@@ -205,7 +205,6 @@ function FooterPhoto({
   return (
     <picture>
       <source media={hideMedia} srcSet={BLANK_GIF} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img {...props} alt={props.alt} />
     </picture>
   );

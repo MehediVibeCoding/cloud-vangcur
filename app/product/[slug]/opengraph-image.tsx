@@ -101,8 +101,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           fontFamily: fontData ? 'Bengali' : undefined,
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          alt=""
           src={imgUrl}
           width={1200}
           height={630}
@@ -155,8 +155,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
             boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            alt=""
             src={`${SITE_URL}/vangcur-logo.png`}
             width={30}
             height={30}

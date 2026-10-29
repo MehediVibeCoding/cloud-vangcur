@@ -25,6 +25,7 @@ AI Studio বা অন্য কোনো টুল দিয়ে কোড-�
 - সাইটে ডার্ক মোড `globals.css`-এর `.dark …` ওভাররাইড দিয়ে চলে, Tailwind `dark:` ভ্যারিয়েন্ট দিয়ে নয়।
 - ইনভয়েসের দুই ফাইল (`renderInvoiceHtml`/`renderInvoiceSvg`) Satori-র সীমাবদ্ধতায় আলাদা, হাতে মেলাতে হয়।
 - `getClientIp`-এর `x-forwarded-for` শুধু লোকাল `next dev`-এর ফলব্যাক।
+- আইপি-geo (`readClientGeo`) `x-vercel-ip-*` হেডার থেকে আসে। নাম Vercel-এর হলেও OpenNext (Cloudflare) `request.cf` থেকে বসায়, তাই সঠিক; "সবসময় ফাঁকা" দাবিটা ভুল ছিল। হেডার ফাঁকা হলে ফলব্যাক `cf.regionCode`। রিস্ক ইঞ্জিন শুধু `city`/`country` নেয়, `region` শুধু `order_risk.ip_region`-এ সংরক্ষণ হয়।
 
 ## কোডে `INTENTIONAL` মার্কার খুঁজুন
 `grep -rn INTENTIONAL app lib` — এই জায়গাগুলো ইচ্ছাকৃত, বাগ হিসেবে ধরবেন না।

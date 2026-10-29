@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { parseSupabaseVal } from './categoryData';
 import { logWarn } from './logger';
 import type { SettingsMap } from './storeSettingsBatch';
+import { optionalSignal } from '@/lib/abortSignal';
 
 export type HeroLinkType = 'category' | 'grid' | 'product';
 
@@ -68,7 +69,7 @@ export async function fetchHeroCards(
         .from('store_settings')
         .select('setting_value')
         .eq('setting_key', 'vc_cath_cards')
-        .abortSignal(abortSignal as any)
+        .abortSignal(optionalSignal(abortSignal))
         .maybeSingle();
       data = res.data;
       error = res.error;

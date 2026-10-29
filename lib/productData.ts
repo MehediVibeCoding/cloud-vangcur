@@ -8,18 +8,7 @@ import { MAX_QTY_PER_PRODUCT } from './cartLimits';
 import { suppressHistoryCleanup } from './useHistoryModal';
 import { guardPendingLock } from './pendingLock';
 import { createClient } from './supabase/client';
-
-function getTimeoutSignal(ms: number): AbortSignal | undefined {
-  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
-    return AbortSignal.timeout(ms);
-  }
-  if (typeof AbortController !== 'undefined') {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), ms);
-    return controller.signal;
-  }
-  return undefined;
-}
+import { getTimeoutSignal, optionalSignal } from './abortSignal';
 
 export function prodInCat(p: Pick<Product, 'cat' | 'cats'>, catId: string): boolean {
   const targetCat = String(catId || '').trim().toLowerCase();
@@ -176,7 +165,7 @@ export async function fetchCustomProducts(supabase: SupabaseClient): Promise<Pro
           .order('sort_order', { ascending: true })
           .order('id', { ascending: true })
           .range(from, from + SELECT_PAGE_SIZE - 1)
-          .abortSignal(signal as any);
+          .abortSignal(optionalSignal(signal));
 
         if (error) {
           logWarn('[Vangcur] custom_products fetch error (attempt ' + attempt + '):', error.message, '| code:', error.code);
@@ -285,7 +274,7 @@ export async function fetchOrderedRows(supabase: SupabaseClient): Promise<Ordere
       .order('sort_order', { ascending: true })
       .order('id', { ascending: true })
       .range(from, from + SELECT_PAGE_SIZE - 1)
-      .abortSignal(signal as any);
+      .abortSignal(optionalSignal(signal));
     if (error || !data) return null;
     rows.push(...(data as OrderedIdRow[]));
     if (data.length < SELECT_PAGE_SIZE) break; // শেষ পাতা
@@ -329,7 +318,7 @@ export async function fetchProductsPageFromIds(
     .from('custom_products')
     .select(GRID_COLS)
     .in('id', pageIds)
-    .abortSignal(signal as any);
+    .abortSignal(optionalSignal(signal));
 
   if (error || !sbProds) {
     logWarn('[Vangcur] fetchProductsPage fetch error:', error?.message);
@@ -389,7 +378,7 @@ export async function fetchRelatedProducts(
               .select(GRID_COLS)
               .eq('color_group_id', product.colorGroupId as string)
               .limit(40)
-              .abortSignal(signal as any);
+              .abortSignal(optionalSignal(signal));
             if (error || !data) return [] as Product[];
             return (data as unknown as RawCustomProduct[]).map(mapCustomProduct);
           })()
@@ -427,7 +416,7 @@ export async function fetchColorSiblings(supabase: SupabaseClient, groupId: stri
       .select(GRID_COLS)
       .eq('color_group_id', groupId)
       .limit(40)
-      .abortSignal(signal as any);
+      .abortSignal(optionalSignal(signal));
     if (error || !data) return [];
     return (data as unknown as RawCustomProduct[]).map(mapCustomProduct);
   } catch (e) {
@@ -447,7 +436,7 @@ export async function fetchProductsByIds(supabase: SupabaseClient, ids: (number 
       .from('custom_products')
       .select(GRID_COLS)
       .in('id', ids)
-      .abortSignal(signal as any);
+      .abortSignal(optionalSignal(signal));
     if (error || !data) return [];
     return (data as unknown as RawCustomProduct[]).map(mapCustomProduct);
   } catch (e) {

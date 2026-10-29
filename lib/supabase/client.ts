@@ -107,7 +107,6 @@ function makeNode(parentRun: () => Promise<Holder>, step: Step, eager: boolean):
       if (key === 'then' || key === 'catch' || key === 'finally') {
         const exec = () => run().then((h) => h.v);
         return (...a: unknown[]) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return (exec() as any)[key](...a);
         };
       }

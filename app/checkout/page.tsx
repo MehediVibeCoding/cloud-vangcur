@@ -50,6 +50,7 @@ import {
   checkIsPrivilegedClient,
   type ShipConfig,
 } from '@/lib/checkoutData';
+import { BKASH_NUMBER } from '@/lib/siteContact';
 import {
   sanitizePlainName, validateName, MAX_NAME_LEN,
   sanitizeEmailInput, sanitizeAddressInput, MAX_ADDR_LEN, sanitizePhoneInput, bnDigitsToEn, PHONE_INPUT_MAX_CHARS,
@@ -368,7 +369,7 @@ export default function CheckoutPage() {
   const [txn, setTxn] = useState('');
   const [last4, setLast4] = useState('');
   const [qrOpen, setQrOpen] = useState(false);
-  const [bkashNum, setBkashNum] = useState('01816365504');
+  const [bkashNum, setBkashNum] = useState(BKASH_NUMBER);
   const [copyLabel, setCopyLabel] = useState('Copy');
 
   const [termsChecked, setTermsChecked] = useState(false);

@@ -20,7 +20,7 @@ import { fetchProductDetail } from '@/lib/productDetailData';
 import { trackViewItem, trackAddToCart } from '@/lib/analytics';
 import { renderLinkedText } from '@/lib/linkedText';
 import {
-  DEFAULT_MSG_LINK, computeMsgLink, fetchContactSettings,
+  DEFAULT_MSG_LINK,
 } from '@/lib/floatButtonsData';
 import { showToast } from '@/lib/toast';
 import { useCartStore, cartCount } from '@/lib/store/cartStore';
@@ -725,7 +725,7 @@ export default function ProductDetailClient({
   const [cartButtonState, setCartButtonState] = useState<'idle' | 'animating' | 'added'>('idle');
   const [isStockNotified, setIsStockNotified] = useState(false);
 
-  const [msgLink, setMsgLink] = useState<string | null>(DEFAULT_MSG_LINK);
+  const msgLink: string | null = DEFAULT_MSG_LINK;
 
   const cartQty = useCartStore((s) => cartCount(s.cart));
   // এই পণ্যটি কার্টে আগে থেকে কতটি আছে — পরিমাণ-সিলেক্টরের সীমা হিসাবের জন্য
@@ -782,16 +782,6 @@ export default function ProductDetailClient({
       item_category: prod.cat,
     });
   }, [prod?.id]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const contact = await fetchContactSettings(supabase);
-      if (cancelled) return;
-      setMsgLink(computeMsgLink(contact));
-    })();
-    return () => { cancelled = true; };
-  }, [supabase]);
 
   useEffect(() => {
     let raf = 0;
@@ -1013,6 +1003,42 @@ export default function ProductDetailClient({
     onLoginClick: () => setLoginOpen(true),
   };
 
+  // ⚠️ নিচের ৩টা useMemo অবশ্যই `if (!prod)` early return-এর ওপরে থাকতে হবে (Rules of Hooks) —
+  // `prod` না থাকলে (প্রথম রেন্ডার/পোলিংয়ে হারিয়ে গেলে) খালি অ্যারে ফেরত দেয়।
+  const faqs: { q: string; a: string }[] = useMemo(() => {
+    if (!prod?.faqs) return [];
+    if (Array.isArray(prod.faqs)) return prod.faqs;
+    if (typeof prod.faqs === 'string') {
+      return parseJsonish<{ q: string; a: string }[]>(prod.faqs, []);
+    }
+    return [];
+  }, [prod?.faqs]);
+
+  const related = useMemo(() => {
+    if (!prod) return [];
+    const currentCat = String(prod.cat || '').trim().toLowerCase();
+    const currentIdStr = String(prod.id);
+    return prods
+      .filter((p) => {
+        if (String(p.id) === currentIdStr) return false;
+        if (!currentCat || currentCat === 'all') return true;
+        if (Array.isArray(p.cats) && p.cats.length) {
+          return p.cats.some((c) => String(c || '').trim().toLowerCase() === currentCat);
+        }
+        return String(p.cat || '').trim().toLowerCase() === currentCat;
+      })
+      .sort((a, b) => (a.stock <= 0 ? 1 : 0) - (b.stock <= 0 ? 1 : 0))
+      .slice(0, 4);
+  }, [prods, prod]);
+
+  const colorVariants = useMemo(() => {
+    if (!prod?.colorGroupId) return [];
+    const currentIdStr = String(prod.id);
+    return prods.filter((p) => (
+      p.colorGroupId === prod.colorGroupId && (String(p.id) === currentIdStr || p.stock > 0)
+    ));
+  }, [prods, prod?.colorGroupId, prod?.id]);
+
   if (!prod) {
     if (!prodsLoaded) {
       return (
@@ -1060,40 +1086,7 @@ export default function ProductDetailClient({
   const pkg = getPackagingContent(prod.packagingContent, prod.specs);
   const features = Array.isArray(prod.features) ? prod.features : [];
 
-  const faqs: { q: string; a: string }[] = useMemo(() => {
-    if (!prod?.faqs) return [];
-    if (Array.isArray(prod.faqs)) return prod.faqs;
-    if (typeof prod.faqs === 'string') {
-      return parseJsonish<{ q: string; a: string }[]>(prod.faqs, []);
-    }
-    return [];
-  }, [prod?.faqs]);
-
-  const related = useMemo(() => {
-    const currentCat = String(prod.cat || '').trim().toLowerCase();
-    const currentIdStr = String(prod.id);
-    return prods
-      .filter((p) => {
-        if (String(p.id) === currentIdStr) return false;
-        if (!currentCat || currentCat === 'all') return true;
-        if (Array.isArray(p.cats) && p.cats.length) {
-          return p.cats.some((c) => String(c || '').trim().toLowerCase() === currentCat);
-        }
-        return String(p.cat || '').trim().toLowerCase() === currentCat;
-      })
-      .sort((a, b) => (a.stock <= 0 ? 1 : 0) - (b.stock <= 0 ? 1 : 0))
-      .slice(0, 4);
-  }, [prods, prod.cat, prod.id]);
-
   const discountPct = prod.old && prod.old > prod.price ? Math.round((1 - prod.price / prod.old) * 100) : 0;
-
-  const colorVariants = useMemo(() => {
-    if (!prod.colorGroupId) return [];
-    const currentIdStr = String(prod.id);
-    return prods.filter((p) => (
-      p.colorGroupId === prod.colorGroupId && (String(p.id) === currentIdStr || p.stock > 0)
-    ));
-  }, [prods, prod.colorGroupId, prod.id]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-bg/25 via-white to-white overflow-x-hidden">

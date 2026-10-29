@@ -1,5 +1,6 @@
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import type { OrderStatus } from '@/types';
+import { getTimeoutSignal, optionalSignal } from './abortSignal';
 
 export const PENDING_ORDER_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 export const RESOLVED_ORDER_STATUSES: OrderStatus[] = ['confirmed', 'shipped', 'delivered', 'cancelled', 'rejected'];
@@ -10,18 +11,6 @@ export const ORDER_TRACK_STEPS: { key: OrderStatus; label: string; icon: string 
   { key: 'shipped', label: 'পাঠানো হয়েছে', icon: '🚚' },
   { key: 'delivered', label: 'ডেলিভারি সম্পন্ন', icon: '📦' },
 ];
-
-function getTimeoutSignal(ms: number): AbortSignal | undefined {
-  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
-    return AbortSignal.timeout(ms);
-  }
-  if (typeof AbortController !== 'undefined') {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), ms);
-    return controller.signal;
-  }
-  return undefined;
-}
 
 export const PENDING_QUIET_KEY = 'vc_pending_quiet';
 
@@ -134,7 +123,7 @@ export async function fetchFullOrder(
           // একই — তাই লগইন করা ও গেস্ট দুই পথে একই শেপ আসে।
           .select(ORDER_PUBLIC_COLUMNS)
           .eq('id', orderId)
-          .abortSignal(signal as any)
+          .abortSignal(optionalSignal(signal))
           .single();
         if (!error && data) return data as unknown as Record<string, unknown>;
       } catch {
@@ -151,7 +140,7 @@ export async function fetchFullOrder(
       const cleanPhone = String(fallbackPhone).trim();
       const { data, error } = await supabase
         .rpc('get_guest_order', { p_id: String(orderId), p_phone: cleanPhone })
-        .abortSignal(signal as any);
+        .abortSignal(optionalSignal(signal));
       if (!error && data && data.length) return data[0] as Record<string, unknown>;
     }
     return null;

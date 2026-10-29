@@ -1,5 +1,6 @@
 import { DEFAULT_FAQS } from '@/lib/faqData';
 import { DEFAULT_FOOTER } from '@/lib/footerData';
+import { SUPPORT_PHONE_INTL } from '@/lib/siteContact';
 
 const SITE_URL = 'https://vangcur.com';
 
@@ -27,7 +28,7 @@ export default function HomeJsonLd() {
           {
             '@type': 'ContactPoint',
             contactType: 'customer support',
-            telephone: '+8801897804055',
+            telephone: SUPPORT_PHONE_INTL,
             email: contact.email,
             areaServed: 'BD',
             availableLanguage: ['bn', 'en'],

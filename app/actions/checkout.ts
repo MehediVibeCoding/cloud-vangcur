@@ -45,23 +45,50 @@ async function readClientIp(): Promise<string> {
   }
 }
 
-// ক্লায়েন্টের আইপি-লোকেশন — Cloudflare এজ যে তথ্য বসায় (request.cf), ক্লায়েন্ট বদলাতে পারে না।
-// শুধু অর্ডার ট্রাস্ট স্কোরের জন্য; ব্যর্থ বা খালি হলে (যেমন লোকাল dev) চেকআউটে কোনো প্রভাব নেই।
+// ক্লায়েন্টের আইপি-লোকেশন — শুধু অর্ডার ট্রাস্ট স্কোরের জন্য; ব্যর্থ বা খালি হলে (যেমন লোকাল dev)
+// চেকআউটে কোনো প্রভাব নেই।
+// নামটা বিভ্রান্তিকর হলেও `x-vercel-ip-*` হেডারই সঠিক: OpenNext (Cloudflare) request.cf থেকে
+// city/country/regionCode নিয়ে `x-open-next-*` বসায়, আর routingHandler সেগুলো `x-vercel-ip-*`-এ কপি করে
+// (প্রোডাকশন `order_risk`-এ এই পথেই ip_city/ip_country/ip_region ভরা ছিল)। তাই হেডার আগে,
+// ফাঁকা হলে তবেই Cloudflare কনটেক্সটের `cf` ফলব্যাক — সেখানে `regionCode` (পুরো নাম `region` নয়)।
 async function readClientGeo(): Promise<{ city: string; country: string; region: string }> {
+  let city = '';
+  let country = '';
+  let region = '';
   try {
-    const cf = ((await getCloudflareContext({ async: true })).cf ?? {}) as {
-      city?: string;
-      country?: string;
-      region?: string;
+    const hdrs = await headers();
+    const dec = (v: string | null): string => {
+      try {
+        return decodeURIComponent(v || '');
+      } catch {
+        return v || '';
+      }
     };
-    return {
-      city: String(cf.city || '').slice(0, 80),
-      country: String(cf.country || '').slice(0, 2),
-      region: String(cf.region || '').slice(0, 16),
-    };
+    city = dec(hdrs.get('x-vercel-ip-city'));
+    country = hdrs.get('x-vercel-ip-country') || '';
+    region = hdrs.get('x-vercel-ip-country-region') || '';
   } catch {
-    return { city: '', country: '', region: '' };
+    // হেডার পড়া গেল না — নিচের ফলব্যাকে যাবে
   }
+  if (!city || !country) {
+    try {
+      const cf = ((await getCloudflareContext({ async: true })).cf ?? {}) as {
+        city?: string;
+        country?: string;
+        regionCode?: string;
+      };
+      city = city || String(cf.city || '');
+      country = country || String(cf.country || '');
+      region = region || String(cf.regionCode || '');
+    } catch {
+      // লোকাল dev বা কনটেক্সট নেই — খালি থাকবে
+    }
+  }
+  return {
+    city: city.slice(0, 80),
+    country: country.slice(0, 2),
+    region: region.slice(0, 16),
+  };
 }
 
 function parseJsonish<T>(val: unknown, fallback: T): T {
