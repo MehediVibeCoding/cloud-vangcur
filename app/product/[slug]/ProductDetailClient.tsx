@@ -258,6 +258,8 @@ function useSpecPillRows(pills: string[]) {
     recompute();
     window.addEventListener('resize', recompute);
     return () => window.removeEventListener('resize', recompute);
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [pillsKey]);
 
   return { containerRef, measureRef, rows };
@@ -674,6 +676,8 @@ export default function ProductDetailClient({
       clearTimeout(firstTick);
       document.removeEventListener('visibilitychange', onVisible);
     };
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [supabase]);
 
   const baseProd = useMemo(
@@ -688,6 +692,8 @@ export default function ProductDetailClient({
     let cancelled = false;
     fetchProductDetail(supabase, baseProd.id).then((d) => { if (!cancelled) setDetail(d); });
     return () => { cancelled = true; };
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [baseProd?.id, supabase]);
 
   const prod = useMemo(() => {
@@ -781,6 +787,8 @@ export default function ProductDetailClient({
       price: prod.price,
       item_category: prod.cat,
     });
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [prod?.id]);
 
   useEffect(() => {

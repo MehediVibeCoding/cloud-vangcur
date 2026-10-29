@@ -633,7 +633,6 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
                   >
                     <div className="relative h-full w-full overflow-hidden bg-[#0A0E1A]">
                       {imgUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           className="block h-full w-full object-cover select-none"
                           src={optimizeCloudinaryUrl(imgUrl, 720)}
@@ -769,7 +768,6 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
             onMouseUp={handleMouseUpPan}
             onMouseLeave={handleMouseUpPan}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={optimizeCloudinaryUrl(zoomImageUrl, 1600)}
               alt={zoomImageAlt || FALLBACK_REVIEW_ALT}

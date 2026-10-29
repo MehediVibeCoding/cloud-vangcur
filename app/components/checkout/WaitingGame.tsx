@@ -303,7 +303,6 @@ export default function WaitingGame({ variant, active }: Props) {
                     >
                       <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-brand-bg text-[22px]">
                         {g.thumb ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={g.thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
                         ) : g.icon}
                       </span>

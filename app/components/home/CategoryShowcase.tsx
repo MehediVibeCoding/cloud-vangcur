@@ -95,7 +95,6 @@ export default function CategoryShowcase({ heading, cards }: Props) {
                 aria-label={title}
                 className="group relative block aspect-[5/8] w-full overflow-hidden rounded-[22px] bg-slate-200 shadow-sh2 ring-1 ring-white/70 outline-none transition-[transform,box-shadow] duration-500 ease-brand focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 active:scale-[0.985] sm:rounded-[28px] [@media(hover:hover)]:hover:-translate-y-1 [@media(hover:hover)]:hover:shadow-sh3"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={optimizeCloudinaryUrl(c.img, 720)}
                   alt=""

@@ -64,7 +64,6 @@ function SpotlightRow({ s, reverse, first }: { s: ShowcaseSpotlight; reverse: bo
     <div className={`group relative min-h-[260px] overflow-hidden bg-slate-200 ${reverse ? 'md:order-2' : 'md:order-1'}`}>
       {/* মোবাইলে ৫:৪ ফ্রেম; md+ এ সারির পুরো উচ্চতা জুড়ে ছবি cover হয়ে ভরে যায় */}
       <div className="aspect-[5/4] w-full md:aspect-auto md:h-full" aria-hidden="true" />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={optimizeCloudinaryUrl(s.img, 1000)}
         alt={title}

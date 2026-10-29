@@ -32,7 +32,6 @@ export interface InvoiceSatoriContact {
 function ItemThumbSatori({ dataUri }: { dataUri: string | null }) {
   if (dataUri) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={dataUri}
         alt=""
@@ -126,7 +125,6 @@ export function InvoiceSatoriBody({
         >
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
             {logoDataUri ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={logoDataUri} alt="Vangcur" height={34} style={{ height: 34, display: 'block' }} />
             ) : (
               <div style={{ display: 'flex', fontSize: 20, fontWeight: 800, color: '#44A7FC' }}>Vangcur</div>
@@ -402,13 +400,9 @@ export function InvoiceSatoriBody({
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={SOCIAL_BADGE_ICONS.facebook} alt="" width={22} height={22} style={{ marginRight: 4, display: 'block' }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={SOCIAL_BADGE_ICONS.youtube} alt="" width={22} height={22} style={{ marginRight: 4, display: 'block' }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={SOCIAL_BADGE_ICONS.tiktok} alt="" width={22} height={22} style={{ marginRight: 4, display: 'block' }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={SOCIAL_BADGE_ICONS.instagram} alt="" width={22} height={22} style={{ marginRight: 8, display: 'block' }} />
             </div>
             <span style={{ display: 'flex', fontWeight: 800, fontSize: 11.5, color: '#0F172A', letterSpacing: -0.2 }}>

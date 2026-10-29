@@ -66,14 +66,11 @@ function BrandLogo({ b, decorative }: { b: Brand; decorative: boolean }) {
   if (b.white) {
     return (
       <>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/brands/${b.file}.webp`} className="vc-l-light" {...common} alt={common.alt} />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/brands/${b.file}-white.webp`} className="vc-l-dark" {...common} alt="" />
       </>
     );
   }
-  // eslint-disable-next-line @next/next/no-img-element
   return <img src={`/brands/${b.file}.webp`} {...common} alt={common.alt} />;
 }
 

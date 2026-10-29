@@ -342,6 +342,8 @@ export default function LoginModal({
         // ignore
       }
     })();
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [router, supabase, t]);
 
   useEffect(() => {

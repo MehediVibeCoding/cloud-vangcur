@@ -16,6 +16,9 @@ const eslintConfig = [
       'react-hooks/preserve-manual-memoization': 'warn',
       'react-hooks/immutability': 'warn',
       'react-hooks/purity': 'warn',
+      // INTENTIONAL: প্রজেক্টে `next/image` ইচ্ছা করে ব্যবহার হয় না — ছবি Cloudflare `/cdn-cgi/image/...` দিয়ে
+      // ছোট/WebP হয়ে আসে (lib/cloudinaryUrl.ts, বিস্তারিত IMAGE_SYSTEM.md)। তাই কাঁচা <img> ঠিক; নিয়মটা বন্ধ।
+      '@next/next/no-img-element': 'off',
     },
   },
   {

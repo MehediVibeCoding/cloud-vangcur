@@ -914,6 +914,8 @@ export default function CheckoutPage() {
     setErrors(nextErrors);
     
     if (Object.keys(nextErrors).length === 0) {
+      // INTENTIONAL: ক্লিক হ্যান্ডলারের ভেতরে ref বদল (রেন্ডারে নয়) — আসল বাগ নয়, React-Compiler-স্টাইল false-positive।
+      // eslint-disable-next-line react-hooks/immutability
       reachedStep2Ref.current = true;
       fireLeadSafe();
       updateStep(2);
@@ -987,6 +989,8 @@ export default function CheckoutPage() {
       setShowPreConfirm(true);
       return;
     }
+    // INTENTIONAL: এটা অর্ডার-কনফার্ম ক্লিক হ্যান্ডলার (রেন্ডার নয়), তাই Date.now() এখানে নিরাপদ — false-positive।
+    // eslint-disable-next-line react-hooks/purity
     confirmAnimStartRef.current = Date.now();
     setConfirmAnim('loading');
     router.prefetch('/checkout/status');
@@ -1140,6 +1144,8 @@ export default function CheckoutPage() {
       confirmLockRef.current = false;
       showToast(t('নেটওয়ার্ক সমস্যা হয়েছে। আবার চেষ্টা করুন।'));
     }
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [total, name, phone, dist, addr, email, selectedShip, cartItems, txn, last4, appliedCoupon, lang, effectiveShippingCost, router, supabase, t]);
 
   useEffect(() => { submitOrderNowRef.current = submitOrderNow; }, [submitOrderNow]);
@@ -1687,7 +1693,6 @@ export default function CheckoutPage() {
                   <div className="flex items-center justify-between gap-2 min-[400px]:gap-3">
                     <div className="flex items-center gap-2.5 min-[400px]:gap-3 min-w-0">
                       <div className="flex h-11 w-11 min-[400px]:h-[52px] min-[400px]:w-[52px] shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/80 p-1 shadow-xs">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="https://res.cloudinary.com/dkjzleczw/image/upload/v1785388318/bkash-logo-icon_beuxfl.png" alt="bKash" className="h-7 w-7 min-[400px]:h-9 min-[400px]:w-9 shrink-0 object-contain" />
                       </div>
                       <div className="min-w-0">
@@ -1718,7 +1723,6 @@ export default function CheckoutPage() {
 
                   <div className={`overflow-hidden transition-[max-height,opacity] duration-[400ms] ${qrOpen ? 'mt-2 max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="flex items-start gap-3.5 rounded-[14px] border border-white/80 bg-white/90 p-3.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src="https://res.cloudinary.com/dkjzleczw/image/upload/v1785388318/bkash-payment-qr_zmr6dz.jpg" alt="bKash QR" className="h-[130px] w-[130px] shrink-0 rounded-xl border border-border-base object-cover shadow-xs" />
                       <div className="pt-0.5">
                         <div className="mb-1.5 font-body text-[12.5px] font-bold text-brand-light">{t('বিকাশ অ্যাপ দিয়ে স্ক্যান করুন')}</div>

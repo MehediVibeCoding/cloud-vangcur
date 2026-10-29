@@ -79,6 +79,9 @@ interface LazyNode {
 const isNode = (x: unknown): x is LazyNode =>
   (typeof x === 'object' || typeof x === 'function') && x !== null && (x as Record<symbol, unknown>)[NODE] !== undefined;
 
+// INTENTIONAL: এই ফাইলের Proxy ও `as any` ইচ্ছাকৃত। আসল Supabase ক্লায়েন্ট দেরিতে (idle/load-এর পরে) লোড হয়,
+// কিন্তু কলাররা সাধারণ সিঙ্ক চেইন লেখে (`supabase.from(..).select(..)`) — Proxy ধাপগুলো রেকর্ড করে `await`/`.then`-এর
+// সময় চালায়। এটা টাইপ-নিরাপদ করতে বড় রিফ্যাক্টর লাগবে; না বুঝে ছোঁবেন না।
 // root: আসল ক্লায়েন্ট পাওয়ার প্রতিশ্রুতি; parent: আগের ধাপের ফল (memoized — প্রতিটা ধাপ ঠিক একবারই চলে)।
 function makeNode(parentRun: () => Promise<Holder>, step: Step, eager: boolean): unknown {
   let memo: Promise<Holder> | null = null;

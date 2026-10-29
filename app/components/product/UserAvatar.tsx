@@ -60,7 +60,6 @@ export default function UserAvatar({
         aria-label={name}
         className={`flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full shadow-sm ${sizeClasses} ${colorClass} ${className}`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/vangcur-team-avatar.png"
           alt="Vangcur Team"

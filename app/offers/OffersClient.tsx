@@ -268,7 +268,6 @@ export default function OffersClient({ initialOffer }: { initialOffer?: ActiveOf
                     onClick={() => handleNavigate(config.model2.url)}
                     className="cursor-pointer overflow-hidden"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={optimizeCloudinaryUrl(config.model2.img, 1000)}
                       alt="Promotional Campaign Banner"
@@ -291,7 +290,6 @@ export default function OffersClient({ initialOffer }: { initialOffer?: ActiveOf
                           {config.model3.badge_text}
                         </span>
                       )}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={optimizeCloudinaryUrl((model3Product.imgs || [])[0], 600)}
                         alt={model3Product.name}

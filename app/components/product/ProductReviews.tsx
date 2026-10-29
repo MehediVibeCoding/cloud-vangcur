@@ -250,11 +250,15 @@ export default function ProductReviews({
     try {
       if (currentUser?.id && sessionStorage.getItem('vc_auto_open_review') === '1') {
         sessionStorage.removeItem('vc_auto_open_review');
+        // INTENTIONAL: effect রেন্ডারের পরে চলে, তখন handleOpenWriteReview (নিচে ঘোষিত) তৈরি — রানটাইমে সমস্যা নেই, false-positive।
+        // eslint-disable-next-line react-hooks/immutability
         setTimeout(() => handleOpenWriteReview(), 400);
       }
     } catch {
       // ignore
     }
+  // NOTE (audit): এই react-hooks/exhaustive-deps warning ইচ্ছা করেই ঠিক করা হয়নি — dependency আন্দাজে যোগ করলে অসীম লুপ বা অপ্রত্যাশিত রি-রান হতে পারে।
+  // বদলানোর আগে আচরণ ভালো করে যাচাই করুন (এই hook-এর জন্য আলাদা করে ইচ্ছাকৃত কিনা যাচাই হয়নি)।
   }, [currentUser?.id]);
 
   useEffect(() => {
@@ -880,7 +884,6 @@ export default function ProductReviews({
                           }
                         }}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={optimizeCloudinaryUrl(item.imageUrl, 520)}
                           alt="Review Unboxing"
@@ -1174,7 +1177,6 @@ export default function ProductReviews({
                     <div className="flex flex-wrap gap-2.5">
                       {previews.map((url, i) => (
                         <div key={i} className="relative">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={url} alt="Preview" className="h-16 w-16 rounded-lg border border-border-base object-cover shadow-sm" />
                           <motion.button
                             type="button"
@@ -1338,7 +1340,6 @@ export default function ProductReviews({
             onMouseUp={handleMouseUpPan}
             onMouseLeave={handleMouseUpPan}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={optimizeCloudinaryUrl(zoomImageUrl, 1600)}
               alt="Full Resolution Unboxing"
