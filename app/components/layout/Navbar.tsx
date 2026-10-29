@@ -20,6 +20,7 @@ import { showToast } from '@/lib/toast';
 import { useT } from '@/lib/i18n/useT';
 import { RippleLayer, rippleThen } from '@/lib/ripple';
 import type { Product, Category, CurrentUser } from '@/types';
+import { canGoBackInApp } from '@/lib/navBack';
 
 const MAX_SEARCH_LEN = 60;
 const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -771,7 +772,7 @@ export default function Navbar({
   const handleBackToHome = (e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault();
     rippleThen(e, () => {
-      if (typeof window !== 'undefined' && window.history.length > 1) {
+      if (canGoBackInApp()) {
         router.back();
       } else {
         router.replace('/');

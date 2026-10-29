@@ -1,6 +1,6 @@
 # 🏛️ Vangcur — System Architecture & Technical Specifications
 **তারিখ:** সেপ্টেম্বর ২০২৬  
-**স্ট্যাক:** Next.js 15 (App Router, Server Actions) + React 19 + TypeScript (Strict) + Motion (v13) + Tailwind CSS + Supabase (PostgreSQL, RLS) + Cloudinary + Zustand
+**স্ট্যাক:** Next.js 16 (App Router, Server Actions) + React 19 + TypeScript (Strict) + Motion (v13) + Tailwind CSS + Supabase (PostgreSQL, RLS) + Cloudinary + Zustand
 
 ---
 
@@ -37,7 +37,7 @@ Vangcur একটি আধুনিক, উচ্চ-পারফরম্য�
 
 ## 🏗️ ২. সার্ভার বনাম ক্লায়েন্ট কম্পোনেন্ট আর্কিটেকচার (RSC Layering)
 
-Next.js 15 App Router আর্কিটেকচারে পারফরম্যান্স এবং এসইও (SEO) অপ্টিমাইজ করতে **সার্ভার-ফার্স্ট হাইব্রিড রেন্ডারিং প্যাটার্ন** অনুসরণ করা হয়:
+Next.js 16 App Router আর্কিটেকচারে পারফরম্যান্স এবং এসইও (SEO) অপ্টিমাইজ করতে **সার্ভার-ফার্স্ট হাইব্রিড রেন্ডারিং প্যাটার্ন** অনুসরণ করা হয়:
 
 ### ১. সার্ভার কম্পোনেন্টস (Server Components - RSC)
 - **রুট এন্ট্রি পয়েন্টসমূহ:** `app/page.tsx`, `app/product/[slug]/page.tsx`, `app/category/[slug]/page.tsx`, `app/search/page.tsx`, `app/offers/page.tsx`।
@@ -75,7 +75,7 @@ Next.js 15 App Router আর্কিটেকচারে পারফরম্
   ├── ৭. ২০,০০০ টাকার সীমা যাচাই (টায়ার ৩ WhatsApp গার্ড)
   ├── ৮. অটোমিক স্টক ডিক্রিমেন্ট RPC (decrement_product_stock)
   ├── ৯. সুপাবেস `orders` টেবিলে সুরক্ষিত ইনসার্ট (Service Role Client)
-  └── ১০. Next.js 15 `after()` ব্যাকগ্রাউন্ড টাস্ক
+  └── ১০. Next.js 16 `after()` ব্যাকগ্রাউন্ড টাস্ক
            ├── কুপন ব্যবহার কাউন্টার আপডেট (increment_coupon_usage)
            └── টেলিগ্রাম বটের মাধ্যমে এডমিনকে বিস্তারিত অর্ডার অ্যালার্ট প্রেরণ
 ```

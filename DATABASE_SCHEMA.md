@@ -213,7 +213,7 @@ Vangcur প্ল্যাটফর্মের ডাটাবেজ মডে�
 | `hard_limit` | `BOOLEAN DEFAULT false` | হার্ড লিমিট ছোঁয়ার কারণে সরাসরি লাল কিনা। |
 | `reasons` | `JSONB` | যে ফ্যাক্টরে পূর্ণ নম্বর মেলেনি, তার বাংলা কারণ। |
 | `breakdown` | `JSONB` | প্রতিটা ফ্যাক্টরের `{key,label,points,max,tone,note}`। |
-| `ip_city`, `ip_region`, `ip_country` | `TEXT` | অর্ডারের সময়ের Vercel আইপি-লোকেশন হেডার। |
+| `ip_city`, `ip_region`, `ip_country` | `TEXT` | অর্ডারের সময়ের Cloudflare আইপি-লোকেশন (request.cf)। |
 | `engine_version` | `INTEGER DEFAULT 1` | ভবিষ্যতে ফর্মুলা বদলালে রি-স্কোর চিনতে। |
 | `scored_at` | `TIMESTAMPTZ DEFAULT NOW()` | স্কোর হিসাবের সময়। |
 

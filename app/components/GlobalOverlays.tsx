@@ -5,7 +5,12 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import FloatCartBadge from './cart/FloatCartBadge';
 import ConfirmDialog from './ui/ConfirmDialog';
-import { OPEN_CART_EVENT, OPEN_WISHLIST_EVENT, OPEN_TRACK_ORDER_EVENT } from '@/lib/uiEvents';
+import {
+  OPEN_CART_EVENT, OPEN_WISHLIST_EVENT, OPEN_TRACK_ORDER_EVENT,
+  OPEN_WAIT_OVERLAY_EVENT, SHOW_BG_CONFIRM_EVENT, OPEN_MEMBERSHIP_EVENT, SHOW_POST_RECEIVE_INFO_EVENT,
+  OPEN_QUICK_CART_MODAL_EVENT, OPEN_ORDER_LIMIT_EVENT, OPEN_BULK_ORDER_EVENT,
+} from '@/lib/uiEvents';
+import { trackInAppNav } from '@/lib/navBack';
 import { useLanguageStore } from '@/lib/store/languageStore';
 import { useThemeStore } from '@/lib/store/themeStore';
 import { useCartStore } from '@/lib/store/cartStore';
@@ -105,6 +110,44 @@ export default function GlobalOverlays() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  // "ফিরে যান" বাটনের জন্য সাইটের ভেতরের নেভিগেশন গোনা (দেখুন lib/navBack.ts)
+  const popRef = useRef(false);
+  const firstPathRef = useRef(true);
+  useEffect(() => {
+    const onPop = () => { popRef.current = true; };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  useEffect(() => {
+    if (firstPathRef.current) { firstPathRef.current = false; return; }
+    trackInAppNav(popRef.current);
+    popRef.current = false;
+  }, [pathname]);
+
+  // RareOverlays দেরিতে লোড হয় (idle/Safari-তে ~২.৫ সেকেন্ড)। এর আগে "Order Now"/"Notify me" ইত্যাদির
+  // ইভেন্ট ডিসপ্যাচ হলে শোনার কেউ থাকে না। তাই ইভেন্টগুলো জমিয়ে রাখি, RareOverlays তৈরি (vc:rareReady)
+  // হলে আবার ডিসপ্যাচ করি; আর ইভেন্ট আসামাত্র লোড শুরু করি।
+  useEffect(() => {
+    const names = [
+      OPEN_WAIT_OVERLAY_EVENT, SHOW_BG_CONFIRM_EVENT, OPEN_MEMBERSHIP_EVENT, SHOW_POST_RECEIVE_INFO_EVENT,
+      OPEN_QUICK_CART_MODAL_EVENT, OPEN_ORDER_LIMIT_EVENT, OPEN_BULK_ORDER_EVENT,
+      'vc:stockNotify', // = STOCK_NOTIFY_EVENT (lib/productData.ts) — productData এখানে ইমপোর্ট না করে বান্ডল হালকা রাখা
+    ];
+    const pending: Event[] = [];
+    const onEarly = (e: Event) => { pending.push(e); setMounted(true); };
+    const onReady = () => {
+      names.forEach((n) => window.removeEventListener(n, onEarly));
+      const queued = pending.splice(0);
+      queued.forEach((e) => window.dispatchEvent(new CustomEvent(e.type, { detail: (e as CustomEvent).detail })));
+    };
+    names.forEach((n) => window.addEventListener(n, onEarly));
+    window.addEventListener('vc:rareReady', onReady, { once: true });
+    return () => {
+      names.forEach((n) => window.removeEventListener(n, onEarly));
+      window.removeEventListener('vc:rareReady', onReady);
+    };
+  }, []);
 
   useEffect(() => {
     useLanguageStore.getState().hydrateLanguage();

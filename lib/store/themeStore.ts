@@ -21,7 +21,7 @@ function applyThemeClass(theme: Theme): void {
   }
 }
 
-// 🔒 এখানে ইচ্ছাকৃতভাবে সিস্টেম/OS ডার্ক-মোড প্রেফারেন্স (prefers-color-scheme)
+// INTENTIONAL (বাগ না): এখানে ইচ্ছাকৃতভাবে সিস্টেম/OS ডার্ক-মোড প্রেফারেন্স (prefers-color-scheme)
 // চেক করা হয় না — ডার্ক মোড শুধু তখনই দেখা যাবে যখন একজন লগইন করা ইউজার
 // নিজের ইচ্ছায় টগল করেছেন। গেস্ট/লগআউট অবস্থায় সবসময় লাইট মোড থাকবে।
 function loadSavedTheme(): Theme {
@@ -42,7 +42,7 @@ function persistTheme(theme: Theme): void {
     // storage blocked/unavailable
   }
   try {
-    document.cookie = `${THEME_KEY}=${theme}; path=/; max-age=31536000; samesite=lax`;
+    document.cookie = `${THEME_KEY}=${theme}; path=/; max-age=31536000; samesite=lax; secure`;
   } catch {
     // cookies unavailable
   }

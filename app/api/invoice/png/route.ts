@@ -17,7 +17,6 @@ import { MAX_INVOICE_DOWNLOADS } from '@/lib/invoice/invoiceLimit';
 // রেট-লিমিট আগের মতোই রাখা হয়েছে, যদিও এই নতুন পাইপলাইন আগের চেয়ে
 // অনেক হালকা।
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

@@ -29,9 +29,26 @@ import { useEffect } from 'react';
  */
 export default function StaleTabReload() {
   useEffect(() => {
-    const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) {
+    const handlePageShow = async (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      const mine = process.env.NEXT_PUBLIC_BUILD_ID || '';
+      // build id জানা না থাকলে আগের নিরাপদ আচরণ: সবসময় রিলোড
+      if (!mine) {
         window.location.reload();
+        return;
+      }
+      // নতুন ডেপ্লয় হয়েছে কিনা দেখো — হয়ে থাকলেই কেবল রিলোড; একই ভার্সন হলে bfcache-এর দ্রুত Back রেখে দাও।
+      // নেটওয়ার্ক না থাকলে/এরর হলে কিছু করা হয় না (ক্যাশ-করা পেজই থাকে)।
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 4000);
+        const res = await fetch('/api/build-id', { cache: 'no-store', signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) return;
+        const data = (await res.json()) as { id?: string };
+        if (data.id && data.id !== mine) window.location.reload();
+      } catch {
+        // ignore
       }
     };
     window.addEventListener('pageshow', handlePageShow);

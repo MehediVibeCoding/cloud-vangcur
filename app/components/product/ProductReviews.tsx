@@ -376,6 +376,10 @@ export default function ProductReviews({
     }
   };
 
+  // NOTE (security): এই আপডেট ক্লায়েন্ট থেকে যায় ঠিকই, কিন্তু আসল অথোরাইজেশন DB-তে —
+  // product_reviews_admin_update policy শুধু is_admin_user() = true হলে পাস করে, আর
+  // profiles.is_admin ক্লায়েন্ট থেকে বদলানো যায় না (trg_protect_profile_privilege)।
+  // নন-অ্যাডমিন এখানে কল করলে RLS রিজেক্ট করবে; বাটনটা UI-তে শুধু অ্যাডমিনকে দেখানো হয়।
   const handleAdminApprove = async (e: React.MouseEvent, reviewId: number | string) => {
     e.stopPropagation();
     try {
@@ -392,6 +396,10 @@ export default function ProductReviews({
     }
   };
 
+  // NOTE (security): এই আপডেট ক্লায়েন্ট থেকে যায় ঠিকই, কিন্তু আসল অথোরাইজেশন DB-তে —
+  // product_reviews_admin_update policy শুধু is_admin_user() = true হলে পাস করে, আর
+  // profiles.is_admin ক্লায়েন্ট থেকে বদলানো যায় না (trg_protect_profile_privilege)।
+  // নন-অ্যাডমিন এখানে কল করলে RLS রিজেক্ট করবে; বাটনটা UI-তে শুধু অ্যাডমিনকে দেখানো হয়।
   const handleAdminReject = async (e: React.MouseEvent, reviewId: number | string) => {
     e.stopPropagation();
     const DEFAULT_REASON = 'কমিউনিটি গাইডলাইন বহির্ভূত';

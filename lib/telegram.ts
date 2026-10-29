@@ -19,10 +19,9 @@ interface TelegramOrderNotification {
   risk?: { level: 'green' | 'yellow' | 'red'; score: number; reasons: string[] } | null;
 }
 
-// 🛡️ ফিক্স (audit P1-12): parse_mode 'HTML'-এ পাঠানোর আগে সব ডাইনামিক
-// (কাস্টমার-সরবরাহিত) মান escape করা — নইলে নাম/ইমেইল/ঠিকানায় থাকা `<`/`>`/`&`
-// Telegram-এর HTML পার্সার ব্যর্থ করে দিতে পারে এবং পুরো নোটিফিকেশন
-// নিঃশব্দে হারিয়ে যায়।
+// parse_mode 'HTML'-এ পাঠানোর আগে সব ডাইনামিক (কাস্টমার-সরবরাহিত) স্ট্রিং এটা দিয়ে escape হয়
+// (নিচের `const e = escapeTelegramHtml` শুধু সংক্ষিপ্ত অ্যালিয়াস)। সংখ্যা মান (দাম/পরিমাণ) escape ছাড়াই
+// ঠিক — সেগুলো কাস্টমারের লেখা স্ট্রিং না।
 function escapeTelegramHtml(value: string): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')

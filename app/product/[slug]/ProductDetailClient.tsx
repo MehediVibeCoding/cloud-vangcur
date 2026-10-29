@@ -20,7 +20,7 @@ import { fetchProductDetail } from '@/lib/productDetailData';
 import { trackViewItem, trackAddToCart } from '@/lib/analytics';
 import { renderLinkedText } from '@/lib/linkedText';
 import {
-  DEFAULT_MSG_LINK, computeMsgLink, fetchContactSettings, subscribeContactSettings,
+  DEFAULT_MSG_LINK, computeMsgLink, fetchContactSettings,
 } from '@/lib/floatButtonsData';
 import { showToast } from '@/lib/toast';
 import { useCartStore, cartCount } from '@/lib/store/cartStore';
@@ -38,6 +38,11 @@ import ProductQnA from '@/app/components/product/ProductQnA';
 import ProductReviews from '@/app/components/product/ProductReviews';
 import { useT } from '@/lib/i18n/useT';
 import type { Product, ProductSpecs, ProductReview, ProductQuestion } from '@/types';
+
+// পোলিংয়ে কিছু না বদলালে আগের অ্যারেই ফেরত দিই, যাতে অকারণে রি-রেন্ডার না হয়।
+function keepIfSame<T>(prev: T[], next: T[]): T[] {
+  return next.length === prev.length && next.every((x, i) => x === prev[i]) ? prev : next;
+}
 
 function VangcurPandaIcon({ className = '' }: { className?: string }) {
   return (
@@ -585,12 +590,13 @@ export default function ProductDetailClient({
           if (cancelled) return;
           if (Array.isArray(json.items) && typeof json.total === 'number' && json.total > 0) {
             const liveById = new Map(json.items.map((i) => [String(i.id), i]));
-            setProds((prev) => prev
+            setProds((prev) => keepIfSame(prev, prev
               .filter((p) => liveById.has(String(p.id)))
               .map((p) => {
                 const live = liveById.get(String(p.id))!;
+                if (p.price === live.price && p.old === live.old && p.stock === live.stock && p.badge === live.badge) return p;
                 return { ...p, price: live.price, old: live.old, stock: live.stock, badge: live.badge };
-              }));
+              })));
             return;
           }
         }
@@ -618,10 +624,17 @@ export default function ProductDetailClient({
         }
       }
 
-      setProds((prev) => prev
+      setProds((prev) => keepIfSame(prev, prev
         .filter((p) => freshById.has(String(p.id)))
         .map((p) => {
           const freshItem = freshById.get(String(p.id))!;
+          const sameImgs = !(freshItem.imgs && freshItem.imgs.length) || (p.imgs || []).join('|') === freshItem.imgs.join('|');
+          if (
+            !freshItem._detailLoaded && sameImgs &&
+            p.price === freshItem.price && p.old === freshItem.old && p.stock === freshItem.stock &&
+            p.badge === freshItem.badge && p.colorGroupId === freshItem.colorGroupId &&
+            p.colorName === freshItem.colorName && p.colorSwatch === freshItem.colorSwatch
+          ) return p;
           return {
             ...p,
             price: freshItem.price,
@@ -646,7 +659,7 @@ export default function ProductDetailClient({
               _detailLoaded: true,
             } : {}),
           };
-        }));
+        })));
     };
 
     const timer = setInterval(tick, POLL_MS);
@@ -777,10 +790,7 @@ export default function ProductDetailClient({
       if (cancelled) return;
       setMsgLink(computeMsgLink(contact));
     })();
-    const channel = subscribeContactSettings(supabase, (contact) => {
-      setMsgLink(computeMsgLink(contact));
-    });
-    return () => { cancelled = true; supabase.removeChannel(channel); };
+    return () => { cancelled = true; };
   }, [supabase]);
 
   useEffect(() => {
@@ -1336,6 +1346,8 @@ export default function ProductDetailClient({
                       ? 'border-emerald-500 bg-emerald-50 text-emerald-600 shadow-xs'
                       : 'border-brand-light/40 bg-brand-bg/35 text-brand-light hover:bg-brand-bg/55 hover:border-brand-light'
                   }`}
+                  disabled={!sold && roomLeft === 0}
+                  aria-disabled={!sold && roomLeft === 0}
                   onClick={addCartFromPP}
                 >
                   <AnimatePresence>
@@ -1484,7 +1496,7 @@ export default function ProductDetailClient({
               <tbody>-এর বর্ডার/স্টাইল অবিকল আগের মতোই অক্ষত রাখা হয়েছে, কোনো পরিবর্তন
               হয়নি, তাই সেখানে নতুন কোনো রিগ্রেশনের ঝুঁকি নেই।
             */}
-            <div className="flex border-b border-brand-light/35 bg-gradient-to-br from-[#F0F7FF] via-white to-[#EFF6FE]/75">
+            <div aria-hidden="true" className="flex border-b border-brand-light/35 bg-gradient-to-br from-[#F0F7FF] via-white to-[#EFF6FE]/75">
               <div className="w-[38%] px-4 py-3 text-left font-body text-[13.5px] font-bold text-ink">{t('বিবরণ')}</div>
               <div className="flex-1 px-4 py-3 text-left font-body text-[13.5px] font-bold text-ink">{lang === 'en' ? 'Details' : 'তথ্য'}</div>
             </div>
@@ -1495,6 +1507,12 @@ export default function ProductDetailClient({
                 <col className="w-[38%]" />
                 <col />
               </colgroup>
+              <thead className="sr-only">
+                <tr>
+                  <th scope="col">{lang === 'en' ? 'Specification' : 'স্পেসিফিকেশন'}</th>
+                  <th scope="col">{lang === 'en' ? 'Details' : 'বিবরণ'}</th>
+                </tr>
+              </thead>
               <tbody>
                 {techRows.length === 0 ? (
                   <tr><td colSpan={2} className="p-4 text-center text-muted font-body text-xs">{t('স্পেসিফিকেশন শীঘ্রই যোগ করা হবে।')}</td></tr>
@@ -1686,6 +1704,8 @@ export default function ProductDetailClient({
                       ? 'border-emerald-500 bg-emerald-50 text-emerald-600'
                       : 'border-brand-light/40 bg-brand-bg/35 text-brand-light hover:bg-brand-bg/55'
                   }`}
+                  disabled={!sold && roomLeft === 0}
+                  aria-disabled={!sold && roomLeft === 0}
                   onClick={addCartFromPP}
                 >
                   {cartButtonState === 'added' ? (

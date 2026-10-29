@@ -91,6 +91,7 @@ export async function validateCouponAction(
         discountAmount: Number(data.discount_amount),
         freeShipping: !!data.free_shipping,
         minOrderAmount: Number(data.min_order_amount) || 0,
+        maxDiscountAmount: data.max_discount_amount == null ? null : Number(data.max_discount_amount),
       },
     };
   } catch (e) {

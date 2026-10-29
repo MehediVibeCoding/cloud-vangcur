@@ -1,4 +1,4 @@
-import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { FooterContact, FooterLogo, ServiceLink } from '@/types';
 import { sanitizeHref } from './security';
 
@@ -59,19 +59,4 @@ export interface FooterSettingsRaw {
 // Footer কম্পোনেন্ট উপরের DEFAULT_FOOTER-ই ব্যবহার করবে।
 export async function fetchFooterSettings(_supabase: SupabaseClient): Promise<FooterSettingsRaw> {
   return {};
-}
-
-// আসল ডাটা কখনো বদলাবে না (এডিট করার পথ নেই), তাই postgres_changes লিসেনার
-// লাগানো হয়নি। 🛡️ ফিক্স (audit P1-15): আগে এখানে .subscribe() কল করে একটা
-// আসল Realtime WebSocket খোলা হতো — অথচ কোনো ইভেন্ট কখনোই আসত না (fetch সবসময়
-// {} রিটার্ন করে)। Footer প্রায় সব পেজে থাকায় এতে প্রতিটি ভিজিটর অকারণে একটা
-// সকেট ধরে রাখত। এখন .subscribe() না করে শুধু একটা খালি চ্যানেল-হ্যান্ডেল
-// রিটার্ন করা হচ্ছে — কলারের supabase.removeChannel(channel) ক্লিনআপ কোড
-// অপরিবর্তিত/নিরাপদ থাকে, কিন্তু কোনো নেটওয়ার্ক সংযোগ খোলে না।
-export function subscribeFooterSettings(
-  supabase: SupabaseClient,
-  _onChange: (key: 'vc_logo' | 'vc_contact', val: unknown) => void,
-): RealtimeChannel {
-  const uniqueName = `footer-settings-watch-${Math.random().toString(36).slice(2, 9)}`;
-  return supabase.channel(uniqueName);
 }

@@ -47,6 +47,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// INTENTIONAL: স্কোর-ক্যাপ ও প্রতি-অর্ডার সীমা এই রুটে না, DB-তে — `submit_game_score` RPC স্কোর ক্যাপ করে
+// (ক্যাপ: ১০০০) এবং ফাংশনটা anon/authenticated চালাতে পারে না, শুধু service-role। রুট শুধু ফোন দিয়ে
+// অর্ডারের মালিকানা যাচাই করে। তাই এখানে আলাদা স্কোর-সীমা বসানো হয়নি।
 export async function POST(req: NextRequest) {
   const rl = await slidingWindowLimit(`game-score:${getClientIp(req.headers)}`, 12, 60);
   if (!rl.allowed) {

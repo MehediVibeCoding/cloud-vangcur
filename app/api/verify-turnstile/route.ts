@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const data = await cfRes.json();
     if (!data.success) {
-      // কেন ব্যর্থ — Vercel Logs-এ দেখার জন্য (যেমন timeout-or-duplicate, invalid-input-response)
+      // কেন ব্যর্থ — Cloudflare Workers Logs-এ দেখার জন্য (যেমন timeout-or-duplicate, invalid-input-response)
       logWarn('[Turnstile] যাচাই প্রত্যাখ্যাত:', JSON.stringify(data['error-codes'] || []), data.hostname || '');
     }
     return NextResponse.json({ success: !!data.success });

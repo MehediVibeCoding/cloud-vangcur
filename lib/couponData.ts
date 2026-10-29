@@ -11,6 +11,8 @@ export interface AppliedCoupon {
   discountAmount: number;
   freeShipping: boolean;
   minOrderAmount: number;
+  /** শতাংশ-কুপনের সর্বোচ্চ ছাড় (DB-র max_discount_amount); null = ক্যাপ নেই। পুরনো সেশনে এই ফিল্ড না-ও থাকতে পারে। */
+  maxDiscountAmount?: number | null;
 }
 
 export interface CouponValidationResult {
@@ -111,9 +113,11 @@ export function recalculateDiscount(
     discount = Math.min(coupon.discountValue, currentSubtotal);
   } else if (coupon.discountType === 'percent') {
     discount = Math.round(currentSubtotal * (coupon.discountValue / 100));
-    // শতাংশের ক্যাপ হিসাব
-    if (coupon.discountAmount && discount > coupon.discountAmount) {
-      discount = coupon.discountAmount;
+    // সর্বোচ্চ ছাড়ের ক্যাপ (DB-র max_discount_amount)। ফিল্ডটা undefined হলে (এই ফিল্ড আসার আগের সেভ-করা
+    // কুপন) প্রয়োগের সময়ের ছাড়কেই ক্যাপ ধরা হয়; চূড়ান্ত হিসাব সবসময় সার্ভার চেকআউটে হয়।
+    const cap = coupon.maxDiscountAmount === undefined ? coupon.discountAmount : coupon.maxDiscountAmount;
+    if (cap && discount > cap) {
+      discount = cap;
     }
     discount = Math.min(discount, currentSubtotal);
   } else if (coupon.discountType === 'free_shipping') {

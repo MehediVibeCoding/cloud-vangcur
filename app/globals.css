@@ -813,6 +813,9 @@ body,
 .dark .to-white\/95 {
   --tw-gradient-to: #0B111E var(--tw-gradient-to-position);
 }
+.dark .to-\[\#EFF6FE\]\/75 {
+  --tw-gradient-to: rgba(12, 74, 110, 0.30) var(--tw-gradient-to-position);
+}
 .dark .to-\[\#DCEBFD\]\/80 {
   --tw-gradient-to: #182339 var(--tw-gradient-to-position);
 }

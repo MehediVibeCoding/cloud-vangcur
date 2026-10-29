@@ -263,7 +263,9 @@ export default function ProductQnA({ productId, productName, initialData }: Prod
       answer: replyText,
       authorName,
       userId: currentUser?.id || null,
-      isAdmin,
+      // NOTE: isAdmin ইচ্ছাকৃতভাবে পাঠানো হয় না — submitProductAnswer সার্ভার-সেশন থেকে নিজেই রোল যাচাই করে,
+      // আর DB-তে product_question_answers INSERT policy (is_admin_user()) ও আসল গার্ড।
+      // এই কম্পোনেন্টের `isAdmin` state শুধু UI (নাম/বাটন দেখানো) এর জন্য।
     });
 
     setSubmittingR(false);

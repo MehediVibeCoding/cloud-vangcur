@@ -44,6 +44,10 @@ export function validateAndCleanCloudinaryUrls(rawUrls?: string | null): string 
 }
 
 /**
+ * ⚠️ শুধু UI দেখানোর জন্য (বাটন show/hide) — এটা অথোরাইজেশন চেক না।
+ * আসল সুরক্ষা DB-তে: is_admin_user() RLS policy + trg_protect_profile_privilege trigger।
+ */
+/**
  * 🛡️ নিরাপদ সার্ভার সেশন-ভেরিফায়েড অ্যাডমিন ও মডারেটর রোল ভ্যালিডেটর
  * কোনো লোকালস্টোরেজ বা ক্লায়েন্ট ডাটায় বিশ্বাস করা হবে না।
  */

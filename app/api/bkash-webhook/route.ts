@@ -23,6 +23,9 @@ function secretOk(provided: string | null): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+// INTENTIONAL: পেমেন্ট ম্যাচিংয়ের আসল সুরক্ষা DB-তে — `match_bkash_payment` ফাংশন (TrxID ইউনিক, শেষ-৪-ডিজিট
+// পথে একই last4-এর অন্য পেন্ডিং অর্ডার বা TrxID-সংঘর্ষ থাকলে স্বয়ংক্রিয় ম্যাচ হয় না, অ্যাডমিন দেখে)।
+// এই রুট শুধু সিক্রেট যাচাই করে inbox-এ লেখে ও ফাংশন ডাকে।
 export async function POST(req: NextRequest) {
   if (!secretOk(req.headers.get('x-bkash-secret'))) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });

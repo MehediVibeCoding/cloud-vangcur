@@ -30,7 +30,7 @@ function persist(lang: Language): void {
     // storage unavailable, ignore
   }
   try {
-    document.cookie = `${LANG_KEY}=${lang}; path=/; max-age=31536000; samesite=lax`;
+    document.cookie = `${LANG_KEY}=${lang}; path=/; max-age=31536000; samesite=lax; secure`;
   } catch {
     // cookies unavailable, ignore — client-side language switching still works
   }

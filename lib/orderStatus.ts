@@ -220,35 +220,41 @@ export function watchOrderStatus(
     timer = setTimeout(checkStatus, delayMs);
   }
 
-  try {
-    const uniqueChannelName = `order-status-${orderId}-${Math.random().toString(36).slice(2, 7)}`;
-    channel = supabase
-      .channel(uniqueChannelName)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
-        (payload) => {
-          if (stopped) return;
-          const updatedRow = payload.new as { status?: OrderStatus };
-          if (updatedRow?.status) {
-            onUpdate(updatedRow.status);
-            if (RESOLVED_ORDER_STATUSES.includes(updatedRow.status)) {
-              stop();
+  // Realtime শুধু লগইন-করা ইউজারের জন্য: orders টেবিলে anon-এর SELECT নেই, তাই গেস্টের সকেটে কখনো
+  // ইভেন্ট আসত না — গেস্ট শুধু নিচের পোলিং (get_guest_order) দিয়ে স্ট্যাটাস পায়।
+  void (async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (stopped || !data?.session) return;
+      const uniqueChannelName = `order-status-${orderId}-${Math.random().toString(36).slice(2, 7)}`;
+      channel = supabase
+        .channel(uniqueChannelName)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
+          (payload) => {
+            if (stopped) return;
+            const updatedRow = payload.new as { status?: OrderStatus };
+            if (updatedRow?.status) {
+              onUpdate(updatedRow.status);
+              if (RESOLVED_ORDER_STATUSES.includes(updatedRow.status)) {
+                stop();
+              }
             }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
 
-    realtimeCloseTimer = setTimeout(() => {
-      if (channel) {
-        supabase.removeChannel(channel);
-        channel = null;
-      }
-    }, REALTIME_WINDOW_MS);
-  } catch {
-    // fallback to polling
-  }
+      realtimeCloseTimer = setTimeout(() => {
+        if (channel) {
+          supabase.removeChannel(channel);
+          channel = null;
+        }
+      }, REALTIME_WINDOW_MS);
+    } catch {
+      // পোলিংই ফলব্যাক
+    }
+  })();
 
   const onVisibilityChange = () => {
     if (stopped) return;

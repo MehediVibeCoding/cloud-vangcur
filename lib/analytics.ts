@@ -74,7 +74,7 @@ function clarityEvent(name: string): void {
   }
 }
 
-// Meta Pixel (ব্রাউজার) + CAPI (সার্ভার, same-origin রুট, /api/meta-capi -> Vercel ফাংশন ইনভোকেশন)।
+// Meta Pixel (ব্রাউজার) + CAPI (সার্ভার, same-origin রুট, /api/meta-capi -> Cloudflare Worker ইনভোকেশন)।
 // Purchase-এর CAPI সার্ভারে অর্ডার DB থেকে যাচাই হয়, তাই ওটা সবসময় সার্ভারে পাঠানো জরুরি।
 // ViewContent-এর জন্য আগে প্রতিটা প্রোডাক্ট-ভিউতেও CAPI কল হতো — কিন্তু ব্রাউজার Pixel (fbq)
 // আগে থেকেই ViewContent পাঠায়, তাই সার্ভার-সাইড ডুপ্লিকেট অপ্রয়োজনীয় ফাংশন-ইনভোকেশন
