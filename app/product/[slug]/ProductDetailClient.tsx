@@ -329,7 +329,9 @@ const GALLERY_SRCSET_WIDTHS = [720, 1600] as const;
 const GALLERY_SIZES = '(min-width: 768px) calc((min(100vw, 1100px) - 98px) / 2), calc(100vw - 34px)';
 const GALLERY_SIZES_ZOOMED = '(min-width: 768px) calc(min(100vw, 1100px) - 98px), calc((100vw - 34px) * 2)';
 
-function GalleryImg({ val, alt, isThumb, baseSrc, zoomed = false }: { val?: string; alt: string; isThumb: boolean; baseSrc?: string | null; zoomed?: boolean }) {
+function GalleryImg({ val, alt, isThumb, baseSrc, zoomed = false, contain = false }: { val?: string; alt: string; isThumb: boolean; baseSrc?: string | null; zoomed?: boolean; contain?: boolean }) {
+  // contain=true (৩:৪ ফ্রেমের প্রোডাক্ট): ছবি কখনো কাটে না। অন্য সব প্রোডাক্টে আগের মতোই cover + উপর থেকে ক্রপ।
+  const fitCls = contain ? 'object-contain object-center' : 'object-cover object-top';
   const { attempt, waiting, failed, onError } = useImageRetry(1);
   const [pending, setPending] = useState(false);
   const [baseReady, setBaseReady] = useState(false);
@@ -379,7 +381,7 @@ function GalleryImg({ val, alt, isThumb, baseSrc, zoomed = false }: { val?: stri
             aria-hidden
             draggable={false}
             decoding="sync"
-            className="absolute inset-0 block h-full w-full select-none object-cover object-top"
+            className={`absolute inset-0 block h-full w-full select-none ${fitCls}`}
             onLoad={() => setBaseReady(true)}
           />
         )}
@@ -393,7 +395,7 @@ function GalleryImg({ val, alt, isThumb, baseSrc, zoomed = false }: { val?: stri
           loading="eager"
           fetchPriority="high"
           decoding="async"
-          className={`absolute inset-0 block h-full w-full select-none object-cover object-top ${
+          className={`absolute inset-0 block h-full w-full select-none ${fitCls} ${
             pending || waiting ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'
           }`}
           onLoad={() => setPending(false)}
@@ -408,6 +410,101 @@ function GalleryImg({ val, alt, isThumb, baseSrc, zoomed = false }: { val?: stri
     );
   }
   return <span className={isThumb ? 'text-2xl' : 'text-[90px]'}>{val || '📦'}</span>;
+}
+
+// 📐 যেসব প্রোডাক্টের গ্যালারি ফ্রেম ৩:৪ (পোর্ট্রেট) — ছবি কাটা ছাড়া পুরোটা দেখায়।
+// বাকি সব প্রোডাক্ট আগের মতো ১:১ ফ্রেম। নতুন প্রোডাক্ট যোগ করতে শুধু তার id এখানে বসান। (১ = GearUP NRGB50 নিয়ন লাইট)
+const PORTRAIT_FRAME_IDS: ReadonlyArray<string> = ['1'];
+
+const bnNum = (n: number) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);
+
+function GalleryArrowIcon({ dir }: { dir: 'left' | 'right' }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={dir === 'left' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+    </svg>
+  );
+}
+
+// থাম্বনেইল স্ট্রিপ: ডেস্কটপে দুই মাথায় তীর (যখন আরও ছবি লুকানো), সক্রিয় ছবি নিজে মাঝে আসে।
+function ThumbStrip({ imgs, cur, onSelect, altFor, lang, portrait }: {
+  imgs: string[];
+  cur: number;
+  onSelect: (i: number) => void;
+  altFor: (i: number) => string;
+  lang: string;
+  portrait: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const next = { left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 };
+    setEdge((prev) => (prev.left === next.left && prev.right === next.right ? prev : next));
+  }, []);
+
+  useEffect(() => {
+    update();
+    const el = ref.current;
+    if (!el) return;
+    el.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      el.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [update, imgs.length]);
+
+  useEffect(() => {
+    const el = ref.current;
+    const btn = el?.children[cur] as HTMLElement | undefined;
+    if (!el || !btn) return;
+    const target = btn.offsetLeft - (el.clientWidth - btn.offsetWidth) / 2;
+    el.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }, [cur]);
+
+  const scrollByDir = (dir: number) => {
+    const el = ref.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: 'smooth' });
+  };
+
+  const arrowCls = 'absolute top-0 bottom-0 z-[2] hidden w-9 items-center md:flex';
+  const btnCls = 'flex h-8 w-8 items-center justify-center rounded-full border border-border-base bg-white text-ink shadow-sh1 transition-brand duration-brand hover:border-brand-light/60';
+
+  return (
+    <div className="relative mt-3">
+      <div ref={ref} className="no-scrollbar relative flex gap-2.5 overflow-x-auto px-1 py-1">
+        {imgs.map((im, i) => (
+          <button
+            type="button"
+            key={i}
+            aria-label={lang === 'en' ? `View image ${i + 1}` : `ছবি ${i + 1} দেখুন`}
+            aria-current={i === cur ? 'true' : undefined}
+            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-[10px] border-[1.5px] transition-brand duration-brand ${portrait ? 'h-[76px] w-[57px]' : 'h-16 w-16'} ${i === cur ? 'border-brand-light shadow-[0_0_0_3px_rgba(68,167,252,.12)]' : 'border-border-base hover:border-brand-light/40'}`}
+            onClick={() => onSelect(i)}
+          >
+            <GalleryImg val={im} alt={altFor(i)} isThumb />
+          </button>
+        ))}
+      </div>
+      {edge.left && (
+        <div className={`${arrowCls} left-0 justify-start bg-gradient-to-r from-white via-white/80 to-transparent`}>
+          <button type="button" className={btnCls} aria-label={lang === 'en' ? 'Scroll thumbnails left' : 'থাম্বনেইল বামে'} onClick={() => scrollByDir(-1)}>
+            <GalleryArrowIcon dir="left" />
+          </button>
+        </div>
+      )}
+      {edge.right && (
+        <div className={`${arrowCls} right-0 justify-end bg-gradient-to-l from-white via-white/80 to-transparent`}>
+          <button type="button" className={btnCls} aria-label={lang === 'en' ? 'Scroll thumbnails right' : 'থাম্বনেইল ডানে'} onClick={() => scrollByDir(1)}>
+            <GalleryArrowIcon dir="right" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // 🏷️ পিউর মিনিমাল টেক্সট ট্যাবলেট (কোনো কাঁচা ইমোজি বা আইকন ছাড়া)
@@ -760,6 +857,7 @@ export default function ProductDetailClient({
   }, [prod?.id]);
 
   const touchRef = useRef({ x: 0, y: 0 });
+  const zoomRafRef = useRef<number | null>(null);
   const tabsWrapRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [wishBurst, setWishBurst] = useState<{ id: number; particles: HeartParticle[] } | null>(null);
@@ -988,6 +1086,24 @@ export default function ProductDetailClient({
     }
   };
 
+  // ডেস্কটপে জুম অবস্থায় মাউস সরালে ছবিও সেদিকে সরে (rAF দিয়ে হালকা রাখা)
+  const handleZoomMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!zoomed || zoomRafRef.current !== null) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+    zoomRafRef.current = requestAnimationFrame(() => {
+      zoomRafRef.current = null;
+      setTransformOrigin(`${x.toFixed(1)}% ${y.toFixed(1)}%`);
+    });
+  };
+  // গ্যালারির ভেতরে ফোকাস থাকলে ← → ছবি বদলায়, Esc জুম বন্ধ করে
+  const handleGalleryKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); galleryArrow(-1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); galleryArrow(1); }
+    else if (e.key === 'Escape' && zoomed) { setZoomed(false); }
+  };
+
   const scrollToSection = (id: string) => {
     setActiveTab(id);
     const section = sectionRefs.current[id];
@@ -1086,6 +1202,7 @@ export default function ProductDetailClient({
   }
 
   const imgs = prod.imgs && prod.imgs.length ? prod.imgs : ['📦'];
+  const portraitFrame = PORTRAIT_FRAME_IDS.includes(String(prod.id));
   // 🆕 প্রতিটা ছবির নিজস্ব alt text (img_alts) — খালি/না-থাকা ইনডেক্সে প্রোডাক্টের
   // নামে ফলব্যাক করে, যাতে পুরনো প্রোডাক্ট (যেগুলোর alt এখনো লেখা হয়নি) ভেঙে না যায়
   const imgAlts = prod.imgAlts || [];
@@ -1103,47 +1220,73 @@ export default function ProductDetailClient({
       <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-8 px-4 pb-6 pt-3.5 md:grid-cols-2 md:px-8 md:pb-10">
         <div>
           <div
-            className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-[14px] border border-border-base bg-white shadow-sh1 ${zoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
-            onClick={toggleZoom}
-            onTouchStart={handleGalleryTouchStart}
-            onTouchEnd={handleGalleryTouchEnd}
+            className="mx-auto w-full rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-brand-light/40"
+            style={portraitFrame ? { maxWidth: 'min(100%, calc(78vh * 0.75))' } : undefined}
+            tabIndex={0}
+            role="group"
+            aria-roledescription="carousel"
+            aria-label={lang === 'en' ? 'Product images. Use left and right arrow keys to change image.' : 'প্রোডাক্টের ছবি। ছবি বদলাতে বাম-ডান তীর চাপুন।'}
+            onKeyDown={handleGalleryKeyDown}
           >
-            <GalleryBadge sold={sold} badge={prod.badge} />
             <div
-              className="flex h-full w-full items-center justify-center transition-transform duration-300"
-              style={{ transformOrigin, transform: zoomed ? 'scale(2)' : 'scale(1)' }}
+              className={`group/gallery relative flex ${portraitFrame ? 'aspect-[3/4]' : 'aspect-square'} items-center justify-center overflow-hidden rounded-[14px] border border-border-base bg-white shadow-sh1 ${zoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+              onClick={toggleZoom}
+              onMouseMove={handleZoomMove}
+              onTouchStart={handleGalleryTouchStart}
+              onTouchEnd={handleGalleryTouchEnd}
             >
-              <GalleryImg key={imgs[curImgIdx] || curImgIdx} val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} baseSrc={curImgIdx === 0 ? cardImgRef : null} zoomed={zoomed} />
-            </div>
-          </div>
-
-          {imgs.length > 1 && (
-            <>
-              <div className="mt-4 flex justify-center gap-1.5">
-                {imgs.map((_, i) => (
-                  <button
-                    key={i}
-                    aria-label={lang === 'en' ? `Image ${i + 1}` : `ছবি ${i + 1}`}
-                    className={`h-1.5 rounded-full transition-brand duration-brand ${i === curImgIdx ? 'w-6 bg-brand-light' : 'w-1.5 bg-border-base hover:bg-brand-light/40'}`}
-                    onClick={() => goImg(i)}
-                  />
-                ))}
+              <GalleryBadge sold={sold} badge={prod.badge} />
+              <div
+                className="flex h-full w-full items-center justify-center transition-transform duration-300"
+                style={{ transformOrigin, transform: zoomed ? 'scale(2)' : 'scale(1)' }}
+              >
+                <GalleryImg key={imgs[curImgIdx] || curImgIdx} val={imgs[curImgIdx]} alt={altFor(curImgIdx)} isThumb={false} baseSrc={curImgIdx === 0 ? cardImgRef : null} zoomed={zoomed} contain={portraitFrame} />
               </div>
-              <div className="no-scrollbar mt-3 flex gap-2.5 overflow-x-auto pb-1">
-                {imgs.map((im, i) => (
+
+              {imgs.length > 1 && !zoomed && (
+                <>
                   <button
                     type="button"
-                    key={i}
-                    aria-label={lang === 'en' ? `View image ${i + 1}` : `ছবি ${i + 1} দেখুন`}
-                    className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border-[1.5px] transition-brand duration-brand ${i === curImgIdx ? 'border-brand-light shadow-[0_0_0_3px_rgba(68,167,252,.12)]' : 'border-border-base hover:border-brand-light/40'}`}
-                    onClick={() => goImg(i)}
+                    aria-label={lang === 'en' ? 'Previous image' : 'আগের ছবি'}
+                    onClick={(e) => { e.stopPropagation(); galleryArrow(-1); }}
+                    className="absolute left-2.5 top-1/2 z-[5] hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border-base bg-white/90 text-ink opacity-0 shadow-sh1 backdrop-blur transition-opacity duration-200 hover:bg-white focus-visible:opacity-100 group-hover/gallery:opacity-100 md:flex"
                   >
-                    <GalleryImg val={im} alt={altFor(i)} isThumb />
+                    <GalleryArrowIcon dir="left" />
                   </button>
-                ))}
-              </div>
-            </>
-          )}
+                  <button
+                    type="button"
+                    aria-label={lang === 'en' ? 'Next image' : 'পরের ছবি'}
+                    onClick={(e) => { e.stopPropagation(); galleryArrow(1); }}
+                    className="absolute right-2.5 top-1/2 z-[5] hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border-base bg-white/90 text-ink opacity-0 shadow-sh1 backdrop-blur transition-opacity duration-200 hover:bg-white focus-visible:opacity-100 group-hover/gallery:opacity-100 md:flex"
+                  >
+                    <GalleryArrowIcon dir="right" />
+                  </button>
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute bottom-2.5 right-2.5 z-[5] rounded-full bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm"
+                  >
+                    {lang === 'en' ? `${curImgIdx + 1} / ${imgs.length}` : `${bnNum(curImgIdx + 1)} / ${bnNum(imgs.length)}`}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {imgs.length > 1 && (
+              <>
+                <div className="mt-4 flex justify-center gap-1.5 md:hidden">
+                  {imgs.map((_, i) => (
+                    <button
+                      key={i}
+                      aria-label={lang === 'en' ? `Image ${i + 1}` : `ছবি ${i + 1}`}
+                      className={`h-1.5 rounded-full transition-brand duration-brand ${i === curImgIdx ? 'w-6 bg-brand-light' : 'w-1.5 bg-border-base hover:bg-brand-light/40'}`}
+                      onClick={() => goImg(i)}
+                    />
+                  ))}
+                </div>
+                <ThumbStrip imgs={imgs} cur={curImgIdx} onSelect={goImg} altFor={altFor} lang={lang} portrait={portraitFrame} />
+              </>
+            )}
+          </div>
         </div>
 
         <div>
