@@ -413,8 +413,8 @@ function GalleryImg({ val, alt, isThumb, baseSrc, zoomed = false, contain = fals
 }
 
 // 📐 যেসব প্রোডাক্টের গ্যালারি ফ্রেম ৩:৪ (পোর্ট্রেট) — ছবি কাটা ছাড়া পুরোটা দেখায়।
-// বাকি সব প্রোডাক্ট আগের মতো ১:১ ফ্রেম। নতুন প্রোডাক্ট যোগ করতে শুধু তার id এখানে বসান। (১ = GearUP NRGB50 নিয়ন লাইট)
-const PORTRAIT_FRAME_IDS: ReadonlyArray<string> = ['1'];
+// এখন তালিকা খালি, তাই সব প্রোডাক্টেই আগের মতো ১:১ ফ্রেম। ভবিষ্যতে কোনো প্রোডাক্টে ৩:৪ লাগলে শুধু তার id এখানে বসান, যেমন ['1']।
+const PORTRAIT_FRAME_IDS: ReadonlyArray<string> = [];
 
 const bnNum = (n: number) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);
 

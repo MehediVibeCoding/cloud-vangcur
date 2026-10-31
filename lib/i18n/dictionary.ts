@@ -507,6 +507,7 @@ export const staticDictionary: Record<string, string> = {
   'অ্যাকাউন্ট': 'Account',
   'একটি সমস্যা হয়েছে, আবার চেষ্টা করুন': 'Something went wrong, please try again',
   'Wishlist থেকে সরানো হয়েছে': 'Removed from wishlist',
+  'Wishlist-এ সর্বোচ্চ ৪০টি পণ্য রাখা যায়। নতুন যোগ করতে আগে কিছু সরান।': 'Your wishlist is full (max 40 items). Remove something to add a new one.',
   'রিভিউটি লাইভ করা হয়েছে!': 'The review is now live!',
   'এরর: অনুমোদন করা যায়নি': 'Error: Could not approve',
   'রিভিউটি রিজেক্ট করা হয়েছে': 'The review has been rejected',
