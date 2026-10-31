@@ -4,6 +4,9 @@ import { showToast } from '@/lib/toast';
 import { translate } from '@/lib/i18n/translate';
 import { subscribeTabSync, notifyTabSync } from '@/lib/crossTabSync';
 
+// ❤️ উইশলিস্টে সর্বোচ্চ কতটি পণ্য রাখা যাবে
+export const WISHLIST_MAX = 40;
+
 const WISH_KEY = 'vc_wish';
 const WISH_CHANNEL = 'vc-wish-sync';
 
@@ -68,6 +71,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       persist(w);
       set({ wishlist: w });
     } else {
+      if (w.length >= WISHLIST_MAX) {
+        showToast(translate('Wishlist-এ সর্বোচ্চ ৪০টি পণ্য রাখা যায়। নতুন যোগ করতে আগে কিছু সরান।'), 'warning');
+        return false;
+      }
       w = [...w, { id: prod.id, name: prod.name, emoji: prod.imgs[0], price: prod.price, cat: prod.cat }];
       showToast(translate('❤️ Wishlist এ যোগ হয়েছে!'));
       persist(w);

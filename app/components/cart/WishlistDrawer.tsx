@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
   productHref,
   startQuickOrder,
@@ -17,6 +17,17 @@ import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
 import { useT } from '@/lib/i18n/useT';
 import useHistoryModal, { suppressHistoryCleanup } from '@/lib/useHistoryModal';
 import type { WishlistItem, Product } from '@/types';
+
+// প্রতি পৃষ্ঠায় কয়টি পণ্য দেখাবে (২০টির বেশি হলেই পরের পৃষ্ঠার তীর আসবে)
+const WISHLIST_PAGE_SIZE = 20;
+
+function ChevronIcon({ dir }: { dir: 'left' | 'right' }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={dir === 'left' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+    </svg>
+  );
+}
 
 function WishImg({ emoji }: { emoji?: string }) {
   const isUrl = typeof emoji === 'string' && (emoji.startsWith('http://') || emoji.startsWith('https://'));
@@ -92,6 +103,38 @@ export default function WishlistDrawer({ isOpen, onClose }: WishlistDrawerProps)
   const { t, lang } = useT();
   const router = useRouter();
   const items = useWishlistStore((s) => s.wishlist);
+
+  // 📄 পেজিনেশন: ২০টি পর্যন্ত আগের মতোই, বেশি হলে নিচে ছোট তীর বাটন
+  const [page, setPage] = useState(0);
+  const [slideDir, setSlideDir] = useState(1);
+  const reducedMotion = useReducedMotion();
+  const listRef = useRef<HTMLDivElement>(null);
+  const pageCount = Math.max(1, Math.ceil(items.length / WISHLIST_PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageItems = items.slice(safePage * WISHLIST_PAGE_SIZE, (safePage + 1) * WISHLIST_PAGE_SIZE);
+  const shift = reducedMotion ? 0 : 48;
+  const pageVariants = {
+    enter: (d: number) => ({ x: d * shift, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (d: number) => ({ x: -d * shift, opacity: 0 }),
+  };
+
+  const goPage = (next: number) => {
+    if (next < 0 || next >= pageCount || next === safePage) return;
+    setSlideDir(next > safePage ? 1 : -1);
+    setPage(next);
+    listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ড্রয়ার খুললে সবসময় প্রথম পৃষ্ঠা থেকে শুরু (রেন্ডারের সময়েই রিসেট, effect ছাড়া)
+  const [prevOpen, setPrevOpen] = useState(isOpen);
+  if (isOpen !== prevOpen) {
+    setPrevOpen(isOpen);
+    if (isOpen) {
+      setPage(0);
+      setSlideDir(1);
+    }
+  }
 
   useHistoryModal(isOpen, onClose, 'wishlist-drawer');
 
@@ -214,7 +257,7 @@ export default function WishlistDrawer({ isOpen, onClose }: WishlistDrawerProps)
               </div>
             </div>
 
-            <div className="sleek-scrollbar flex-1 overflow-y-auto px-6 py-4">
+            <div ref={listRef} className="sleek-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-6 py-4">
               {items.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center py-12 text-center">
                   <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-white/80 bg-white/80 text-brand-light shadow-sm">
@@ -235,9 +278,19 @@ export default function WishlistDrawer({ isOpen, onClose }: WishlistDrawerProps)
                   </motion.button>
                 </div>
               ) : (
+                <AnimatePresence mode="wait" initial={false} custom={slideDir}>
+                  <motion.div
+                    key={safePage}
+                    custom={slideDir}
+                    variants={pageVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                  >
                 <div className="space-y-4">
                   <AnimatePresence mode="popLayout" initial={false}>
-                    {items.map((item, idx) => (
+                    {pageItems.map((item, idx) => (
                       <motion.div
                         key={item.id}
                         layout
@@ -245,7 +298,7 @@ export default function WishlistDrawer({ isOpen, onClose }: WishlistDrawerProps)
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}
                         transition={{ delay: Math.min(idx, 6) * 0.03, duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
-                        className={`pb-4 ${idx !== items.length - 1 ? 'border-b border-ink/10' : ''}`}
+                        className={`pb-4 ${idx !== pageItems.length - 1 ? 'border-b border-ink/10' : ''}`}
                       >
                         <div className="flex items-start gap-3">
                           <div
@@ -310,6 +363,44 @@ export default function WishlistDrawer({ isOpen, onClose }: WishlistDrawerProps)
                     ))}
                   </AnimatePresence>
                 </div>
+
+                {pageCount > 1 && (
+                  <div className="mt-1 flex items-center justify-between pb-1 pt-3">
+                    {safePage > 0 ? (
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 24 }}
+                        onClick={() => goPage(safePage - 1)}
+                        aria-label={lang === 'en' ? 'Previous page' : 'আগের পৃষ্ঠা'}
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-brand-light/40 bg-white/80 text-brand-light shadow-xs transition-colors hover:border-brand-light hover:bg-brand-light hover:text-white"
+                      >
+                        <ChevronIcon dir="left" />
+                      </motion.button>
+                    ) : (
+                      <span className="h-9 w-9" aria-hidden="true" />
+                    )}
+                    <span className="font-body text-[11px] font-bold text-muted/70" aria-live="polite">
+                      {safePage + 1} / {pageCount}
+                    </span>
+                    {safePage < pageCount - 1 ? (
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 24 }}
+                        onClick={() => goPage(safePage + 1)}
+                        aria-label={lang === 'en' ? 'Next page' : 'পরের পৃষ্ঠা'}
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-brand-light/40 bg-white/80 text-brand-light shadow-xs transition-colors hover:border-brand-light hover:bg-brand-light hover:text-white"
+                      >
+                        <ChevronIcon dir="right" />
+                      </motion.button>
+                    ) : (
+                      <span className="h-9 w-9" aria-hidden="true" />
+                    )}
+                  </div>
+                )}
+                  </motion.div>
+                </AnimatePresence>
               )}
             </div>
           </motion.div>
