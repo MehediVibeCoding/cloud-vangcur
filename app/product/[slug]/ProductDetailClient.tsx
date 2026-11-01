@@ -507,7 +507,7 @@ function ThumbStrip({ imgs, cur, onSelect, altFor, lang, portrait }: {
   );
 }
 
-// 🏷️ পিউর মিনিমাল টেক্সট ট্যাবলেট (কোনো কাঁচা ইমোজি বা আইকন ছাড়া)
+// 🏷️ পিউর মিনিমাল টেক্সট ট্যাবলেট (কোনো কাঁচা ইমোজি বা আইকন ছাড়া)
 const TABS = [
   { id: 'ppSecDesc', label: 'বিবরণ' },
   { id: 'ppSecFeatures', label: 'ফিচারস' },
@@ -650,7 +650,7 @@ export default function ProductDetailClient({
     };
   }, [supabase, initialProducts]);
 
-  // 🔒 স্মার্ট মার্জ পোলিং: প্রতি ৩০ সেকেন্ডে দাম/স্টক রিকোয়েস্ট হলেও বিবরণ/ফিচারস কখনো মুছবে না
+  // 🔒 স্মার্ট মার্জ পোলিং: প্রতি ৩০ সেকেন্ডে দাম/স্টক রিকোয়েস্ট হলেও বিবরণ/ফিচারস কখনো মুছবে না
   const prodsRef = useRef(prods);
   useEffect(() => { prodsRef.current = prods; }, [prods]);
 
@@ -745,7 +745,7 @@ export default function ProductDetailClient({
             colorName: freshItem.colorName,
             colorSwatch: freshItem.colorSwatch,
             imgs: freshItem.imgs && freshItem.imgs.length ? freshItem.imgs : p.imgs,
-            // 🛡️ স্মার্ট মার্জ: যদি নতুন অবজেক্টে বিস্তারিত বিবরণ থাকে তবেই আপডেট হবে, অন্যথায় বিদ্যমান সমৃদ্ধ বিবরণ বজায় থাকবে
+            // 🛡️ স্মার্ট মার্জ: যদি নতুন অবজেক্টে বিস্তারিত বিবরণ থাকে তবেই আপডেট হবে, অন্যথায় বিদ্যমান সমৃদ্ধ বিবরণ বজায় থাকবে
             ...(freshItem._detailLoaded ? {
               longDesc: freshItem.longDesc || p.longDesc,
               desc: freshItem.desc || p.desc,
@@ -982,7 +982,7 @@ export default function ProductDetailClient({
     if (!prod) return;
     
     if (isStockNotified) {
-      showToast(lang === 'en' ? 'You have already requested notification for this product.' : 'আপনি ইতিমধ্যে এই প্রোডাক্টের নোটিফিকেশন রিকোয়েস্ট জমা দিয়েছেন।');
+      showToast(lang === 'en' ? 'You have already requested notification for this product.' : 'আপনি ইতিমধ্যে এই প্রোডাক্টের নোটিফিকেশন রিকোয়েস্ট জমা দিয়েছেন।');
       return;
     }
 
@@ -1290,7 +1290,7 @@ export default function ProductDetailClient({
         </div>
 
         <div>
-          <h1 className="mb-3 font-body text-[21px] font-bold leading-snug text-ink sm:text-2xl">{prod.seoH1 || prod.name}</h1>
+          <h1 className="mb-3 font-body text-[21px] font-bold leading-snug text-ink sm:text-2xl">{prod.name}</h1>
 
           <PriceRow price={prod.price} old={prod.old} />
 
@@ -1549,7 +1549,7 @@ export default function ProductDetailClient({
 
                   <span className="transition-all duration-200">
                     {cartButtonState === 'added'
-                      ? (lang === 'en' ? 'Added to Cart!' : 'কার্টে যোগ হয়েছে!')
+                      ? (lang === 'en' ? 'Added to Cart!' : 'কার্টে যোগ হয়েছে!')
                       : t('কার্টে যোগ করুন')}
                   </span>
                 </motion.button>
@@ -1859,7 +1859,7 @@ export default function ProductDetailClient({
                   ) : (
                     <CartIcon />
                   )}
-                  <span>{cartButtonState === 'added' ? (lang === 'en' ? 'Added!' : 'যোগ হয়েছে!') : t('কার্ট')}</span>
+                  <span>{cartButtonState === 'added' ? (lang === 'en' ? 'Added!' : 'যোগ হয়েছে!') : t('কার্ট')}</span>
                 </motion.button>
               </>
             )}
