@@ -52,13 +52,10 @@ interface RawCustomProduct {
   specs?: unknown;
   desc_text?: string;
   desc?: string;
-  long_desc?: string;
   features?: string[];
   faqs?: { q: string; a: string }[];
-  closing?: string;
   power_info?: string | null;
   info_boxes?: unknown;
-  seo_h1?: string | null;
   brand?: string | null;
   meta_title?: string | null;
   meta_description?: string | null;
@@ -110,13 +107,11 @@ export function mapCustomProduct(p: RawCustomProduct): Product {
     imgAlts: imgAlts as string[],
     specs,
     desc: p.desc_text || p.desc || '',
-    longDesc: p.long_desc || p.desc_text || p.desc || '',
+    longDesc: p.desc_text || p.desc || '',
     features: Array.isArray(p.features) ? p.features : [],
     faqs: Array.isArray(p.faqs) ? p.faqs : [],
-    closing: p.closing || '',
     powerInfo: p.power_info || '',
     infoBoxes: Array.isArray(p.info_boxes) ? (p.info_boxes as { title: string; body: string }[]) : parseJsonish(p.info_boxes, []),
-    seoH1: p.seo_h1 || '',
     brand: p.brand || '',
     metaTitle: p.meta_title || '',
     metaDescription: p.meta_description || '',
@@ -126,12 +121,12 @@ export function mapCustomProduct(p: RawCustomProduct): Product {
     colorGroupId: p.color_group_id || null,
     colorName: p.color_name || null,
     colorSwatch: p.color_swatch || null,
-    _detailLoaded: !!(p.long_desc || p.features || p.faqs),
+    _detailLoaded: !!(p.desc_text || p.features || p.faqs),
   };
 }
 
-const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch,seo_h1,brand';
-const DETAIL_COLS = `${GRID_COLS},img_alts,desc_text,long_desc,features,faqs,closing,power_info,info_boxes,seo_h1,meta_title,meta_description,og_description,quick_specs_text,packaging_content`;
+const GRID_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,imgs,specs,color_group_id,color_name,color_swatch,brand';
+const DETAIL_COLS = `${GRID_COLS},img_alts,desc_text,features,faqs,power_info,info_boxes,meta_title,meta_description,og_description,quick_specs_text,packaging_content`;
 
 const QUERY_TIMEOUT_MS = 4000;
 const RETRY_DELAY_MS = 400;
@@ -461,8 +456,8 @@ export async function fetchProductById(supabase: SupabaseClient, id: number | st
 }
 
 const DETAIL_ONLY_FIELDS = [
-  'desc', 'longDesc', 'features', 'faqs', 'closing', 'powerInfo', 'infoBoxes',
-  'seoH1', 'metaTitle', 'metaDescription', 'ogDescription', 'quickSpecsText', 'packagingContent',
+  'desc', 'longDesc', 'features', 'faqs', 'powerInfo', 'infoBoxes',
+  'metaTitle', 'metaDescription', 'ogDescription', 'quickSpecsText', 'packagingContent',
 ] as const;
 
 export function mergeCustomProducts(defaults: Product[], customRows: Product[]): Product[] {
@@ -566,7 +561,7 @@ function runQuickOrder(
   const safeQty = Math.max(1, Math.min(qty, prod.stock, MAX_QTY_PER_PRODUCT));
   const currentCart = useCartStore.getState().cart;
 
-  // ১. যদি কার্টে আগে থেকে কোনো পণ্য না থাকে (০ আইটেম) — একক পণ্যের কুইক অর্ডার সরাসরি /checkout-এ নিয়ে যাবে
+  // ১. যদি কার্টে আগে থেকে কোনো পণ্য না থাকে (০ আইটেম) — একক পণ্যের কুইক অর্ডার সরাসরি /checkout-এ নিয়ে যাবে
   if (!currentCart || currentCart.length === 0) {
     const singleProductTotal = prod.price * safeQty;
     if (singleProductTotal > MAX_ONLINE_ORDER_TOTAL) {
@@ -621,7 +616,7 @@ function runQuickOrder(
     // ignore
   }
 
-  // মাল্টিপল প্রোডাক্ট থাকায় সরাসরি চেকআউটে না নিয়ে শপিং কার্ট (কুইক অর্ডার মডাল) প্রদর্শন
+  // মাল্টিপল প্রোডাক্ট থাকায় সরাসরি চেকআউটে না নিয়ে শপিং কার্ট (কুইক অর্ডার মডাল) প্রদর্শন
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(OPEN_QUICK_CART_MODAL_EVENT));
   }
