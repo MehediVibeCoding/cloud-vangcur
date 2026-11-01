@@ -21,7 +21,7 @@ export interface NavPreviewProduct {
   warranty: string;
   /** কালার-ভ্যারিয়েন্ট থাকলে (স্কেলেটনে এক সারি জায়গা রাখতে) */
   hasColorGroup: boolean;
-  /** আসল পেজের h1 যা দেখাবে: `seoH1 || name` — কার্ডের নাম থেকে আলাদা (কার্ডে " Vangcur" যোগ থাকে) */
+  /** আসল পেজের h1 যা দেখাবে: সরাসরি `name` (SEO Product Name) */
   title: string;
   /** প্রোডাক্ট id — স্কেলেটনে wishlist-হার্ট লাল/সাদা দেখাতে (wishlist store ব্রাউজারেই আছে, নেটওয়ার্ক লাগে না) */
   id: string;

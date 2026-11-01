@@ -31,7 +31,7 @@ export const getCachedCatalogIndex = unstable_cache(
 //  • নেভবার ড্রপডাউন: id, name, price, stock, cat, imgs[0]
 //  • কার্ট/কুইক-অর্ডার (stock চেক): id, stock, price, name, cat, imgs[0]
 // বাদ যায়: প্রথম ছবির পরের সব ছবি (কেউ [0]-এর বেশি পড়ে না), এবং সব খালি/অব্যবহৃত ফিল্ড
-// (features, faqs, closing, powerInfo, infoBoxes, seo*, meta*, packagingContent, color*, longDesc…)।
+// (features, faqs, powerInfo, infoBoxes, meta*, packagingContent, color*, longDesc…)।
 // 🛡️ নতুন কোনো ফিল্ড এই ইনডেক্সের ব্যবহারকারীরা পড়তে শুরু করলে এখানে যোগ করতে হবে।
 // ছোট কিন্তু Product টাইপে বাধ্যতামূলক ফিল্ডগুলো (cats, warranty, discountColor, _detailLoaded) রাখা হলো।
 function toIndexProduct(p: Product): Product {
