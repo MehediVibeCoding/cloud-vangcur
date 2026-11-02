@@ -1,0 +1,294 @@
+import type { Metadata } from 'next';
+import { cache } from 'react';
+import { notFound } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+import { idFromSlug, makeSlug, fetchProductById, fetchRelatedProducts } from '@/lib/productData';
+import { DEFAULT_CATEGORIES, makeCatSlug } from '@/lib/categoryData';
+import { DEFAULT_SHIP_CFG } from '@/lib/checkoutData';
+import { getServerLang } from '@/lib/i18n/getServerLang';
+import { brandedTitle } from '@/lib/seoTitle';
+import { fetchProductReviews } from '@/lib/productReviewData';
+import { fetchProductQuestions } from '@/lib/productQnaData';
+import type { Product, ProductReview, ProductQuestion } from '@/types';
+import ProductDetailClient from './ProductDetailClient';
+
+const SITE_URL = 'https://vangcur.com';
+
+// 🛡️ রিকোয়েস্ট/KV-লেখা সেভিং (২০২৬-১০): ৩০০ (৫ মিনিট) → ৭২০০ (২ ঘণ্টা)। ফ্রি প্ল্যানে KV লেখার সীমা কম;
+// প্রতিটা নবায়নে Supabase কোয়েরি + CPU + KV লেখা খরচ হয়। দাম/স্টক তাজা রাখে /api/live-products (৩ মিনিট পর পর),
+// আর অ্যাডমিন বদলালে অন-ডিমান্ড পার্জ। জরুরি বদল সর্বোচ্চ ২ ঘণ্টায় সব পেজে পৌঁছাবে।
+// ⚠️ Next.js এর সেগমেন্ট কনফিগ — অবশ্যই সরাসরি সংখ্যা (৭২০০) লিখতে হবে, গাণিতিক এক্সপ্রেশন নয়।
+export const revalidate = 7200;
+
+// ⚡ খালি generateStaticParams: বিল্ডের সময় কিছু প্রি-রেন্ডার হয় না, কিন্তু প্রথম ভিজিটে পেজ
+// বানিয়ে CDN-এ ক্যাশ হয় এবং `revalidate` অনুযায়ী ব্যাকগ্রাউন্ডে নবায়ন হয় (on-demand ISR)।
+export async function generateStaticParams() {
+  return [];
+}
+
+
+const getProduct = cache(async (id: string) => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return null;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  return fetchProductById(supabase, id);
+});
+
+// পুরো ক্যাটালগ নয় — শুধু এই প্রোডাক্টের রিলেটেড + কালার-সিবলিং (৫০০+ প্রোডাক্টেও পেজ হালকা থাকে)
+const getRelatedProducts = cache(async (product: Product) => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return [];
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  return fetchRelatedProducts(supabase, product);
+});
+
+const getProductReviewsSummary = cache(async (id: string) => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return null;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  try {
+    const { data, error } = await supabase
+      .from('product_reviews')
+      .select('rating')
+      .eq('product_id', id)
+      .eq('is_approved', true);
+
+    if (error || !data || !data.length) return null;
+    const count = data.length;
+    const total = data.reduce((s, r) => s + (Number(r.rating) || 5), 0);
+    return {
+      ratingValue: Number((total / count).toFixed(1)),
+      reviewCount: count,
+    };
+  } catch {
+    return null;
+  }
+});
+
+// 🆕 অনুমোদিত রিভিউ ও প্রশ্নোত্তর — সার্ভারে (ISR, ৫ মিনিট ক্যাশ) একবার এনে পেজের সাথে পাঠানো হয়,
+// যাতে প্রতিটি গেস্ট-ভিজিটরের ব্রাউজার থেকে আলাদা করে Supabase-এ কল না যায়।
+// anon ক্লায়েন্টে RLS শুধু অনুমোদিত রিভিউ দেখায় (নিজের/অ্যাডমিনের পেন্ডিং নয়), আর প্রশ্নোত্তর সবার জন্য
+// খোলা — ব্রাউজারের গেস্ট-কোয়েরির সাথে হুবহু একই ফলাফল। লগইন-করা ইউজার ও অ্যাডমিন আগের মতোই
+// ব্রাউজার থেকে সরাসরি ফ্রেশ ডেটা আনে (নিজের পেন্ডিং রিভিউ, উত্তর-দেওয়ার যোগ্যতা ইত্যাদির জন্য)।
+// কোনো কারণে ব্যর্থ হলে বা সীমায় (৩০০/১৫০) পৌঁছালে null — তখন ক্লায়েন্ট আগের পথেই নিজে আনে।
+const REVIEWS_CAP = 300;
+const QUESTIONS_CAP = 150;
+
+const getInitialReviews = cache(async (id: string): Promise<{ productId: string; reviews: ProductReview[] } | null> => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return null;
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const reviews = await fetchProductReviews(supabase, id, null);
+    if (reviews.length >= REVIEWS_CAP) return null;
+    return { productId: id, reviews };
+  } catch {
+    return null;
+  }
+});
+
+const getInitialQuestions = cache(async (id: string): Promise<{ productId: string; questions: ProductQuestion[] } | null> => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return null;
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const questions = await fetchProductQuestions(supabase, id);
+    if (questions.length >= QUESTIONS_CAP) return null;
+    return { productId: id, questions };
+  } catch {
+    return null;
+  }
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const id = idFromSlug(slug);
+  if (!id) {
+    return {
+      title: 'Product Not Found - Vangcur',
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const [p, lang] = await Promise.all([getProduct(id), getServerLang()]);
+
+  if (!p) {
+    return {
+      title: lang === 'en' ? 'Product Not Found - Vangcur' : 'প্রোডাক্ট পাওয়া যায়নি - Vangcur',
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const autoTitle = `${p.name} - ৳${Number(p.price).toLocaleString('en-US')} | Vangcur`;
+  const title = p.metaTitle || autoTitle;
+
+  const rawDesc = p.desc || '';
+  const autoDescription = rawDesc
+    ? (rawDesc.length > 160 ? rawDesc.slice(0, 157) + '...' : rawDesc)
+    : (lang === 'en'
+      ? `${p.name} for just ৳${Number(p.price).toLocaleString('en-US')} at Vangcur. Fast delivery, best price.`
+      : `${p.name} মাত্র ৳${Number(p.price).toLocaleString('en-US')} টাকায়, Vangcur-এ। দ্রুত ডেলিভারি, সেরা দাম।`);
+  const description = p.metaDescription || autoDescription;
+  const ogDescription = p.ogDescription || description;
+
+  const canonicalSlug = `${makeSlug(p.name)}-${p.id}`;
+
+  return {
+    // F3: meta_title/autoTitle-এ ব্র্যান্ড আগে থেকেই আছে — layout-এর টেমপ্লেট যেন আবার না জোড়ে
+    title: brandedTitle(title),
+    description,
+    alternates: { canonical: `/product/${canonicalSlug}` },
+    openGraph: {
+      type: 'website',
+      url: `${SITE_URL}/product/${canonicalSlug}`,
+      title,
+      description: ogDescription,
+      locale: lang === 'en' ? 'en_US' : 'bn_BD',
+      siteName: 'Vangcur',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: ogDescription,
+    },
+  };
+}
+
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const id = idFromSlug(slug);
+
+  if (!id) notFound();
+
+  const initialProduct = await getProduct(id);
+  if (!initialProduct) notFound();
+
+  const [liveReviewsSummary, relatedProducts, initialReviews, initialQuestions] = await Promise.all([
+    getProductReviewsSummary(id),
+    getRelatedProducts(initialProduct),
+    getInitialReviews(id),
+    getInitialQuestions(id),
+  ]);
+  // ক্লায়েন্টের `prods` তালিকায় বর্তমান প্রোডাক্ট নিজেও থাকতে হয় (baseProd এখান থেকেই খোঁজা হয়)
+  const initialProducts = [initialProduct, ...relatedProducts];
+
+  const canonicalSlug = `${makeSlug(initialProduct.name)}-${initialProduct.id}`;
+  const validImgs = (initialProduct.imgs || []).filter(
+    (img) => typeof img === 'string' && img.startsWith('http')
+  );
+
+  // F1: aggregateRating শুধু আসল অনুমোদিত রিভিউ (≥১) থাকলেই — আগে রিভিউ না থাকলে ডিফল্ট রেটিং
+  // ও বানানো রিভিউ-সংখ্যা Google-কে পাঠানো হতো, যা structured-data নীতির পরিপন্থী।
+  // 🆕 ব্যাচ ৮: শুধু যে ফিল্ডগুলোর আসল ডেটা আছে সেগুলোই যোগ করা হয়েছে (sku/mpn বাদ, ডেটা নেই)।
+  const category = DEFAULT_CATEGORIES.find((c) => c.id === initialProduct.cat);
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: initialProduct.name,
+    image: validImgs.length ? validImgs : undefined,
+    description: initialProduct.desc || initialProduct.metaDescription || initialProduct.name,
+    ...(initialProduct.brand
+      ? { brand: { '@type': 'Brand', name: initialProduct.brand } }
+      : {}),
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'BDT',
+      price: initialProduct.price,
+      availability: initialProduct.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url: `${SITE_URL}/product/${canonicalSlug}`,
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: {
+        '@type': 'Organization',
+        name: 'Vangcur',
+      },
+      // 🆕 সাইটের বর্তমান ডেলিভারি চার্জ (checkoutData.ts-এর DEFAULT_SHIP_CFG) থেকে — ঢাকা/বাইরে দুই রেট
+      shippingDetails: [
+        {
+          '@type': 'OfferShippingDetails',
+          shippingRate: { '@type': 'MonetaryAmount', value: DEFAULT_SHIP_CFG.dhaka, currency: 'BDT' },
+          shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'BD', addressRegion: 'Dhaka' },
+        },
+        {
+          '@type': 'OfferShippingDetails',
+          shippingRate: { '@type': 'MonetaryAmount', value: DEFAULT_SHIP_CFG.out, currency: 'BDT' },
+          shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'BD' },
+        },
+      ],
+      // 🆕 /refund-policy পেজ অনুযায়ী
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'BD',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnLink: `${SITE_URL}/refund-policy`,
+      },
+    },
+    ...(liveReviewsSummary && liveReviewsSummary.reviewCount > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: liveReviewsSummary.ratingValue,
+            reviewCount: liveReviewsSummary.reviewCount,
+          },
+        }
+      : {}),
+  };
+
+  // 🆕 ব্যাচ ৮: BreadcrumbList — হোম → ক্যাটাগরি (থাকলে) → প্রোডাক্ট
+  const breadcrumbItems = [
+    { '@type': 'ListItem', position: 1, name: 'Vangcur', item: SITE_URL },
+    ...(category
+      ? [{ '@type': 'ListItem', position: 2, name: category.name, item: `${SITE_URL}/category/${makeCatSlug(category.id)}` }]
+      : []),
+    { '@type': 'ListItem', position: category ? 3 : 2, name: initialProduct.name, item: `${SITE_URL}/product/${canonicalSlug}` },
+  ];
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbItems,
+  };
+
+  // 🆕 ব্যাচ ৮: FAQPage — প্রোডাক্টের ডাটাবেজ-ভিত্তিক FAQ থাকলেই শুধু যোগ হবে
+  const faqJsonLd = initialProduct.faqs && initialProduct.faqs.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: initialProduct.faqs.map((f) => ({
+          '@type': 'Question',
+          name: f.q,
+          acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+      }
+    : null;
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
+      <ProductDetailClient
+        slug={slug}
+        initialId={id}
+        initialProduct={initialProduct}
+        initialProducts={initialProducts || []}
+        initialReviews={initialReviews}
+        initialQuestions={initialQuestions}
+      />
+    </>
+  );
+}

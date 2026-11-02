@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # শুধু error হলে ফেল করে; React-Compiler-স্টাইলের নিয়মগুলো eslint.config.mjs-এ warning।
+      - name: Lint
+        run: npm run lint
+
+      # আসল Supabase কী লাগে না: প্লেসহোল্ডার URL-এ ডাটা-ফেচ ব্যর্থ হয়, কোড তা সামলে
+      # ফাঁকা ডাটা নিয়ে বিল্ড শেষ করে। এখানে লক্ষ্য শুধু "বিল্ড দাঁড়ায় কিনা" যাচাই।
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.invalid
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          NEXT_TELEMETRY_DISABLED: '1'

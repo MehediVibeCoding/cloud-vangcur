@@ -1,0 +1,58 @@
+{
+  "name": "cloud-vangcur",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-12",
+  "compatibility_flags": ["nodejs_compat"],
+  // 📊 Worker এর CPU সময়, এরর ও রিকোয়েস্ট লগ Cloudflare ড্যাশবোর্ডে (Workers → Logs/Metrics) দেখার জন্য।
+  // ফ্রি প্ল্যানে ১০ms CPU সীমা আছে, তাই কোনো পেজ সীমা ছুঁচ্ছে কিনা এখান থেকেই ধরা পড়বে।
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // 🪣 রিভিউ ছবি আপলোডের জন্য R2 native binding — S3 API/access key লাগে না,
+  // Workers-এর ভেতর সরাসরি bucket-এ লেখে (lib/r2.ts এটাই আগে ব্যবহার করে)।
+  "r2_buckets": [
+    {
+      "binding": "REVIEWS_BUCKET",
+      "bucket_name": "vangcur-img"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "61a2a76be19045868b53e10b0cf2444f"
+    }
+  ],
+  // 🗂️ ক্যাশ-পার্জের ট্যাগ-খাতা (D1) — open-next.config.ts-এর tagCache এটা ব্যবহার করে।
+  // টেবিল `revalidations` Cloudflare ড্যাশবোর্ড কনসোল থেকে আগেই বানানো হয়েছে।
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "vangcur-tags",
+      "database_id": "f18d04c1-9ca5-4f46-a0f3-f9a028bf3c20"
+    }
+  ],
+  // 🔁 ISR রিফ্রেশের জন্য Worker-এর নিজেকে ডাকার অনুমতি (open-next.config.ts-এর memory-queue
+  // এটা ছাড়া কাজ করে না)। "service" অবশ্যই এই Worker-এর নাম (উপরের "name") হতে হবে।
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "cloud-vangcur"
+    }
+  ],
+  // 🛠️ এই vars গুলো শুধুই রানটাইমে (সার্ভার সাইড: middleware.ts, server.ts,
+  // serviceClient.ts ইত্যাদি) Worker-এর env অবজেক্টে পাওয়া যায়। প্রতিটা
+  // `wrangler deploy`-তে এই ফাইলটাই সোর্স অফ ট্রুথ হিসেবে কাজ করে, তাই
+  // Cloudflare Dashboard-এ ম্যানুয়ালি বসানো non-secret ভ্যারিয়েবল পরের ডিপ্লয়ে
+  // (CLI হোক বা Workers Builds/CI) মুছে যেতে পারে — এখানে কমিট করে রাখলে সেটা
+  // আর হবে না। এই দুটো পাবলিক anon key/URL, কমিট করা নিরাপদ।
+  //
+  // ⚠️ এগুলো দিয়ে ব্রাউজার বান্ডলের ক্র্যাশ ঠিক হবে না — সেটা `next build`
+  // সময়ে বেক হয়, যা Cloudflare Dashboard → Settings → Builds-এর "Build
+  // variables"-এ সেট করতে হয় (আলাদা জায়গা)।
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://dlzgfgcqabsawhmekcbg.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsemdmZ2NxYWJzYXdobWVrY2JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3MTE5MDgsImV4cCI6MjEwMTI4NzkwOH0.KkiQ_6EJuHntEMtVZvaYW1P6JL3DLyBC2zi4Fbgwe0g"
+  }
+}

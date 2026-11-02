@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="bn"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vangcur Stack Tower</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;800&family=Hind+Siliguri:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EAF3FE;--muted:#6B7280;--bs:42px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);font-family:'DM Sans','Hind Siliguri',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#app{position:relative;width:min(380px,calc(100% - 16px));height:clamp(480px,calc(100svh - 90px),520px);border-radius:24px;overflow:hidden;background:linear-gradient(180deg,#C3DEFC 0%,#DCEBFD 55%,#fff 100%);box-shadow:0 8px 36px rgba(0,0,0,.13);touch-action:none;cursor:pointer}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+#gl,#fx,#cf{pointer-events:none}#gl{position:absolute;inset:0}
+#cf{z-index:9}
+/* ── HUD: [fullscreen][sound] ·· [score | best] ·· [close] — এক সারিতে, মাঝের প্যাড সবসময় ঠিক মাঝখানে ── */
+#hud{position:absolute;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;z-index:7;pointer-events:none}
+#hud>*{pointer-events:auto}
+.hg{display:flex;gap:8px;align-items:center}.hg.r{justify-content:flex-end}
+.hb,#scorePill{box-sizing:border-box;background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(234,243,254,.9));border:1px solid #fff;box-shadow:0 6px 18px rgba(0,88,199,.16),0 1px 0 #fff inset;color:#1A1A1A}
+.hb{width:var(--bs);height:var(--bs);border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#44A7FC;transition:transform .15s,box-shadow .2s}
+.hb svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.hb:hover{box-shadow:0 8px 22px rgba(68,167,252,.38),0 1px 0 #fff inset}
+.hb:active{transform:scale(.92)}
+.hb:focus-visible{outline:2px solid #44A7FC;outline-offset:2px}
+#cl{color:#475569}
+#scorePill{height:var(--bs);border-radius:999px;display:flex;align-items:center;gap:9px;padding:0 5px 0 16px}
+#score{font-weight:800;font-size:22px;min-width:20px;text-align:center;line-height:1;font-variant-numeric:tabular-nums}
+.dv{width:1px;height:18px;background:rgba(68,167,252,.45)}
+#best{display:flex;align-items:center;gap:5px;height:calc(var(--bs) - 10px);padding:0 11px 0 8px;border-radius:999px;background:linear-gradient(135deg,#FFF3C4,#FFD968);color:#7A4B00;font-weight:800;font-size:13px;box-shadow:0 1px 0 rgba(255,255,255,.75) inset,0 2px 6px rgba(214,150,0,.28)}
+.tr{width:15px;height:15px;fill:rgba(255,255,255,.55);stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+#hint{position:absolute;left:50%;top:calc(66px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:7px 15px;border-radius:999px;background:rgba(15,40,80,.55);color:#fff;font-weight:700;font-size:12.5px;white-space:nowrap;pointer-events:none;transition:opacity .4s;z-index:4}
+#hint.off{opacity:0}
+#pop{position:absolute;left:50%;top:20%;font-weight:800;font-size:24px;color:#fff;text-shadow:0 2px 12px rgba(0,88,199,.7);white-space:nowrap;pointer-events:none;opacity:0;transform:translateX(-50%)}
+#pop.go{animation:pop .9s ease-out}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,10px) scale(.6)}20%{opacity:1;transform:translate(-50%,0) scale(1.15)}100%{opacity:0;transform:translate(-50%,-36px) scale(1)}}
+#glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(68,167,252,0) 55%,rgba(68,167,252,.45) 100%);opacity:0;transition:opacity .5s}
+#glow.on{opacity:1;transition:none}
+/* গেম-ওভার ওভারলে: ইচ্ছে করেই backdrop-filter (ব্লার) নেই — চলমান ক্যানভাসের ওপর ব্লার ল্যাপটপে ল্যাগের বড় কারণ */
+.ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:radial-gradient(ellipse at 50% 45%,rgba(195,222,252,.30),rgba(11,30,60,.42));z-index:6;animation:ovIn .35s ease-out}
+.ov.hide{display:none}
+@keyframes ovIn{from{opacity:0}to{opacity:1}}
+.card{position:relative;overflow:hidden;width:100%;max-width:340px;text-align:center;padding:24px 20px 14px;border-radius:26px;background:linear-gradient(180deg,#F1F7FF 0%,#DCEBFD 48%,#fff 100%);border:1px solid #fff;box-shadow:0 18px 50px rgba(0,40,100,.30),0 1px 0 #fff inset;color:#1A1A1A;animation:cardIn .5s cubic-bezier(.2,1.2,.3,1)}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(.92)}to{opacity:1;transform:none}}
+.ttl{margin:0 0 6px;font-size:24px;font-weight:800}
+.lbl{font-size:13px;font-weight:700;color:#64748B}
+.big{font-size:68px;font-weight:800;color:#0058C7;line-height:1.05;margin:2px 0 12px;font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:999px;background:#fff;border:1px solid rgba(68,167,252,.38);font-weight:800;font-size:13px;color:#334155;box-shadow:0 2px 8px rgba(0,88,199,.08)}
+.chip .tr{width:16px;height:16px;color:#D69A00;fill:rgba(255,200,61,.55)}
+.btn{position:relative;overflow:hidden;display:block;width:100%;margin-top:16px;background:linear-gradient(90deg,#3B82F6,#44A7FC);color:#fff;border:0;border-radius:999px;padding:13.5px 24px;font:800 15px 'DM Sans','Hind Siliguri',sans-serif;cursor:pointer;box-shadow:0 8px 20px rgba(68,167,252,.45);transition:filter .2s,transform .15s}
+.btn::after{content:'';position:absolute;top:0;bottom:0;left:0;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:translateX(-160%) skewX(-18deg);animation:sweep 3.4s ease-in-out 1s infinite;pointer-events:none}
+.btn:hover{filter:brightness(1.04)}
+.btn:active{transform:scale(.97)}
+.lnk{display:inline-block;margin-top:8px;padding:8px 12px;background:none;border:0;font:700 12.5px 'DM Sans','Hind Siliguri',sans-serif;color:#44A7FC;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.lnk:hover{color:#3C93DE}
+@keyframes sweep{0%{transform:translateX(-160%) skewX(-18deg)}55%,100%{transform:translateX(330%) skewX(-18deg)}}
+/* ── নতুন রেকর্ড: সোনালি সেলিব্রেশন ── */
+.rbadge,.rtxt{display:none}
+.card.rec{background:linear-gradient(180deg,#FFFBEA 0%,#FFF0B8 42%,#fff 100%);box-shadow:0 0 0 2px rgba(255,200,61,.95),0 0 0 7px rgba(255,200,61,.22),0 22px 60px rgba(214,150,0,.40),0 1px 0 #fff inset}
+.card.rec::after{content:'';position:absolute;top:0;bottom:0;left:0;width:55%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);transform:translateX(-160%) skewX(-18deg);animation:sweep 3.2s ease-in-out .7s infinite;pointer-events:none}
+.card.rec .rbadge{display:block;position:relative;width:92px;height:92px;margin:0 auto 4px;animation:badgeIn .7s cubic-bezier(.2,1.4,.3,1) .1s both}
+@keyframes badgeIn{from{opacity:0;transform:scale(.3) rotate(-25deg)}to{opacity:1;transform:none}}
+.rays{position:absolute;inset:-70px;border-radius:50%;background:repeating-conic-gradient(rgba(255,206,80,.6) 0 9deg,rgba(255,206,80,0) 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 14%,transparent 60%);mask:radial-gradient(circle,#000 14%,transparent 60%);animation:spin 16s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.disc{position:absolute;inset:8px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#FFF6BE,#FFC83D 55%,#E59A00);box-shadow:0 8px 24px rgba(229,154,0,.55),0 2px 0 rgba(255,255,255,.75) inset;display:flex;align-items:center;justify-content:center;animation:float 2.6s ease-in-out infinite}
+.disc svg{width:40px;height:40px;fill:rgba(255,255,255,.55);stroke:#8A5A00;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+@keyframes float{50%{transform:translateY(-4px)}}
+.sp{position:absolute;width:14px;height:14px;background:#FFC83D;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:tw 1.6s ease-in-out infinite}
+.sp:nth-of-type(1){left:-6px;top:10px}.sp:nth-of-type(2){right:-10px;top:2px;animation-delay:.5s;width:18px;height:18px}.sp:nth-of-type(3){right:-2px;bottom:6px;animation-delay:1s}.sp:nth-of-type(4){left:-14px;bottom:0;animation-delay:.3s;width:10px;height:10px}
+@keyframes tw{0%,100%{opacity:.15;transform:scale(.4)}50%{opacity:1;transform:scale(1.15)}}
+.card.rec .ttl{font-size:26px;background:linear-gradient(90deg,#B7791F,#F5B301 35%,#FFE27A 50%,#F5B301 65%,#B7791F);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:gshine 2.4s linear infinite}
+@keyframes gshine{to{background-position:-200% 0}}
+.card.rec .big{background:linear-gradient(180deg,#F8BE1A 10%,#B7791F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.card.rec .rtxt{display:block;margin:-4px 0 12px;font-size:13px;font-weight:700;color:#7A4B00}
+.card.rec .chip{border-color:rgba(214,154,0,.45)}
+/* ── লিডারবোর্ড (টপ ৩) ── */
+#lbReady{position:absolute;left:50%;top:calc(112px + env(safe-area-inset-top,0px));transform:translateX(-50%);display:flex;gap:6px;z-index:4;pointer-events:none;max-width:calc(100% - 16px)}
+#lbReady.hide{display:none}
+#lbReady .it{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.88);border:1px solid rgba(68,167,252,.3);font-weight:800;font-size:11.5px;color:#334155;white-space:nowrap;box-shadow:0 2px 8px rgba(0,88,199,.08)}
+.lb{display:none;flex-direction:column;gap:5px;margin-top:10px;text-align:left}
+.lb.on{display:flex}
+.lb .row{display:flex;align-items:center;gap:9px;padding:6px 12px;border-radius:14px;background:#fff;border:1px solid rgba(68,167,252,.3);font-weight:800;font-size:13px;color:#334155}
+.lb .row.me{border-color:#F5B301;background:#FFF8DC}
+.lb .mk{width:22px;text-align:center;font-size:16px;line-height:1}
+.lb .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb .sc{font-variant-numeric:tabular-nums;color:#0058C7}
+.lbme{display:none;margin-top:10px;font-weight:800;font-size:13px;color:#0058C7}
+.lbme.on{display:block}.lbme.wr{color:#B7791F}
+.card.hasLb .big{font-size:52px;margin-bottom:6px}
+.card.hasLb .btn{margin-top:12px}
+@media (prefers-reduced-motion:reduce){.card,.card *,.btn::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+/* গেম সবসময় ফোনের মতো একটা লম্বা কলাম। ফোনে পুরো স্ক্রিন; ল্যাপটপ/ডেস্কটপের চওড়া স্ক্রিনে কলামটা মাঝখানে (উপর-নিচ পুরো উচ্চতা),
+   আর দুই পাশে শুধু একটা সিঙ্গেল আইস-ব্লু রং — সেখানে কোনো রেন্ডারিং/অ্যানিমেশন নেই। তাই CPU/GPU শুধু মাঝের কলামের পিক্সেলই আঁকে। */
+html,body{overflow:hidden;background:var(--bg)}body{display:block}
+#app{position:fixed;top:0;bottom:0;left:0;right:0;width:auto;height:auto;border-radius:0;box-shadow:none}
+@media (min-aspect-ratio:7/10){
+  :root{--gw:min(100vw,clamp(340px,calc(100vh*.68),640px))}
+  #app{left:50%;right:auto;width:var(--gw);margin-left:calc(var(--gw)/-2);box-shadow:0 0 0 1px rgba(68,167,252,.22)}
+}
+@media (max-width:360px){:root{--bs:38px}#hud{left:10px;right:10px;gap:6px}.hg{gap:6px}}
+</style></head>
+<body>
+<div id="app">
+  <canvas id="cv"></canvas><div id="gl"></div><canvas id="fx"></canvas>
+  <div id="glow"></div>
+  <div id="hud">
+    <div class="hg"><button class="hb" id="fs" aria-label="ফুল স্ক্রিন"></button><button class="hb" id="mute" aria-label="সাউন্ড"></button></div>
+    <div id="scorePill"><span id="score">0</span><i class="dv"></i><span id="best"><svg class="tr" viewBox="0 0 24 24"><use href="#i-trophy"/></svg><b id="bestN">0</b></span></div>
+    <div class="hg r"><button class="hb" id="cl" aria-label="বন্ধ করুন"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  </div>
+  <div id="hint">ব্লক ফেলতে স্ক্রিনে ট্যাপ করুন</div>
+  <div id="lbReady" class="hide"></div>
+  <div id="pop"></div>
+  <div class="ov hide" id="ovOver"><div class="card" id="card">
+    <div class="rbadge"><div class="rays"></div><div class="disc"><svg viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div><i class="sp"></i><i class="sp"></i><i class="sp"></i><i class="sp"></i></div>
+    <h1 class="ttl" id="oTitle">খেলা শেষ</h1>
+    <div class="rtxt" id="fRec"></div>
+    <div class="lbl" id="oLbl">আপনার স্কোর</div>
+    <div class="big" id="fScore">0</div>
+    <div class="chip"><svg class="tr" viewBox="0 0 24 24"><use href="#i-trophy"/></svg><span id="fBest"></span></div>
+    <div class="lbme" id="lbMe"></div>
+    <div class="lb" id="lbBox"></div>
+    <button class="btn" id="bAgain">আবার খেলুন</button>
+    <button class="lnk" id="bBack">ওয়েটিং পেজে ফিরে যান</button>
+  </div></div>
+  <canvas id="cf"></canvas>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol></svg>
+</div>
+<script src="../vendor/three.r128.min.js"></script>
+<script>
+(()=>{
+const $=i=>document.getElementById(i);
+const app=$('app'),cv=$('cv'),ctx=cv.getContext('2d'),fx=$('fx'),fctx=fx.getContext('2d'),gl=$('gl'),cf=$('cf'),cctx=cf.getContext('2d');
+const KEY='vc_stack_hs',BASE=3,BH=1.5,PH=.45,RANGE=3,TOL=.08,S=1;
+let best=0;try{best=+localStorage.getItem(KEY)||0}catch(e){}
+let W=0,HT=0,T=0,cam=0,camY=1.9,camT=1.9,AC,MG,PY=30,GO=59,muted=false,renderer,SC=null,LITE=false;
+try{renderer=new THREE.WebGLRenderer({antialias:(devicePixelRatio||1)<2,alpha:true,powerPreference:'high-performance'})}catch(e){app.insertAdjacentHTML('beforeend','<div class="ov"><div class="card"><p style="margin:0 0 4px;font-weight:700">এই ডিভাইসে WebGL সাপোর্ট করছে না।</p><button class="btn" onclick="try{parent.postMessage({type:\'vc-game-close\'},location.origin)}catch(e){}">ওয়েটিং পেজে ফিরে যান</button></div></div>');return}
+renderer.setClearColor(0,0);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+gl.appendChild(renderer.domElement);renderer.domElement.addEventListener('webglcontextlost',e=>e.preventDefault());
+// ধীর ডিভাইস শনাক্ত: সফটওয়্যার রেন্ডারার (GPU নেই) / কম মেমোরি / কম কোর — হলে শুরুতেই হালকা কোয়ালিটি (নিচে setQuality)
+let LOW=false;try{const gx=renderer.getContext(),ex=gx.getExtension('WEBGL_debug_renderer_info'),rn=ex?String(gx.getParameter(ex.UNMASKED_RENDERER_WEBGL)):'';
+  LOW=/swiftshader|llvmpipe|software|basic render|softpipe/i.test(rn)||(navigator.hardwareConcurrency||8)<=4||(navigator.deviceMemory||8)<=2}catch(e){}
+const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-4.75,4.75,5,-5,.1,200);
+let DPRCAP=1.5; // কোয়ালিটি গভর্নর ধীর ডিভাইসে এটা কমিয়ে দেয়
+function resize(){const r=app.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,DPRCAP);W=r.width;HT=r.height;
+  for(const c of [cv,fx,cf]){c.width=W*d;c.height=HT*d}ctx.setTransform(d,0,0,d,0,0);fctx.setTransform(d,0,0,d,0,0);cctx.setTransform(d,0,0,d,0,0);
+  renderer.setPixelRatio(d);renderer.setSize(W,HT);const a=W/HT,hh=Math.max(4.75/a,6.5);camera.top=hh;camera.bottom=-hh;camera.left=-hh*a;camera.right=hh*a;camera.updateProjectionMatrix();PY=HT/(2*hh)*.8165;SC=null}
+new ResizeObserver(resize).observe(app);resize();
+// lighting: key sun (casts shadows) + sky/ground bounce + cool fill on the +z face
+scene.add(new THREE.HemisphereLight(0xeaf4ff,0xa9bfdc,.55));
+const sun=new THREE.DirectionalLight(0xfff1de,.85);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:1,far:80});sun.shadow.bias=-.0004;sun.shadow.normalBias=.03;
+scene.add(sun,sun.target);
+const fill=new THREE.DirectionalLight(0xb9d8ff,.32);fill.position.set(-4,5,9);scene.add(fill);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.ShadowMaterial({opacity:.28}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+function ctex(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t}
+const cardTex=ctex(256,256,(g,w,h)=>{g.fillStyle='#c79a66';g.fillRect(0,0,w,h);
+  for(let y=0;y<h;y+=4){g.fillStyle=y%8?'rgba(255,230,190,.07)':'rgba(90,50,10,.07)';g.fillRect(0,y,w,2)}
+  for(let i=0;i<2500;i++){g.fillStyle=Math.random()<.5?'rgba(90,55,20,.08)':'rgba(255,235,200,.08)';g.fillRect(Math.random()*w,Math.random()*h,1+Math.random()*2,1+Math.random()*2)}
+  const v=g.createRadialGradient(w/2,h/2,w*.3,w/2,h/2,w*.75);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(60,30,0,.24)');g.fillStyle=v;g.fillRect(0,0,w,h)});
+const labTex=ctex(256,160,(g,w,h)=>{g.fillStyle='#fff';g.fillRect(0,0,w,h);g.fillStyle='#0058C7';g.fillRect(0,0,w,36);g.fillStyle='#fff';g.font='800 22px DM Sans,sans-serif';g.fillText('VANGCUR',12,26);
+  g.fillStyle='#1A1A1A';for(let x=14;x<150;x+=3+Math.random()*4)g.fillRect(x,56,1+Math.random()*2.5,46);g.fillRect(14,114,120,5);g.fillRect(14,126,80,5);
+  g.font='700 14px sans-serif';g.fillText('⇧⇧ FRAGILE',150,146);g.fillStyle='#44A7FC';g.fillRect(168,56,68,46)});
+const hueD=i=>225+50*Math.sin(i*.14-.37);
+const lin=c=>new THREE.Color(c).convertSRGBToLinear();
+// শেয়ার করা ম্যাটেরিয়াল/জিওমেট্রি (userData.shared) কখনো dispose হয় না — শুধু প্রতি-ব্লকের নিজস্ব জিওমেট্রি ছাড়া হয়।
+const matCache={};
+function shareMat(key,make){let m=matCache[key];if(!m){m=make();m.userData.shared=true;matCache[key]=m}return m}
+let labGeo=null;
+function disp(g){g.traverse(m=>{if(m.geometry&&!m.geometry.userData.shared)m.geometry.dispose();if(m.material&&!m.material.userData.shared)m.material.dispose()})}
+function mk(w,d,i,lab){ // a delivery parcel: kraft cardboard + brand tape (+ shipping label)
+  const g=new THREE.Group(),alongX=i%2===1;
+  const ib=i%16,body=new THREE.Mesh(new THREE.BoxGeometry(w,BH,d),shareMat('b'+ib,()=>new THREE.MeshStandardMaterial({map:cardTex,color:new THREE.Color().setHSL(.085+.012*Math.sin(ib*.9),.14,.9+.08*Math.sin(ib*.6+1)),roughness:.88})));
+  const tapeW=alongX?Math.min(.34,Math.max(.12,d*.26)):Math.min(.34,Math.max(.12,w*.26));
+  const tg=alongX?new THREE.BoxGeometry(w+.012,BH+.014,tapeW):new THREE.BoxGeometry(tapeW,BH+.014,d+.012);
+  const tapeMat=shareMat('t'+(i%45),()=>new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(hueD(i%45)/360,.68,.58).convertSRGBToLinear(),roughness:.48,metalness:.015}));
+  const tape=new THREE.Mesh(tg,tapeMat); tape.castShadow=true; tape.receiveShadow=true;
+  for(const m of [body,tape]){m.castShadow=m.receiveShadow=true;g.add(m)}
+  if(lab&&w>1.3&&d>1.3){if(!labGeo){labGeo=new THREE.PlaneGeometry(1.15,.75);labGeo.userData.shared=true}const L=new THREE.Mesh(labGeo,shareMat('lab',()=>new THREE.MeshStandardMaterial({map:labTex,roughness:.6})));
+    if(alongX)L.position.set(-w*.2,.02,d/2+.004);else{L.position.set(w/2+.004,.02,-d*.2);L.rotation.y=Math.PI/2}g.add(L)}
+  scene.add(g);return g}
+(function(){const g=new THREE.Group(),add=(w,h,d,x,y,z,c)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:lin(c),roughness:.92}));b.position.set(x,y,z);b.castShadow=b.receiveShadow=true;g.add(b)};
+  for(let k=0;k<5;k++)add(3.5,.08,.56,0,PH-.04,-1.5+k*.75,k%2?'#c9a06a':'#bf9459');
+  for(let k=0;k<3;k++){add(.42,.3,3.5,-1.5+k*1.5,.22,0,'#a97d46');add(3.5,.07,.5,0,.035,-1.5+k*1.5,'#b08550')}
+  scene.add(g)})();
+const mix=(c1,c2,t)=>c1.map((v,i)=>Math.round(v+(c2[i]-v)*t));
+const SK=[[[96,165,240],[236,246,255]],[[63,140,232],[168,210,250]],[[27,58,140],[94,154,224]]]; // [top,bottom] at altitude 0 / .5 / 1
+function cloudSpr(k){const c=document.createElement('canvas');c.width=240;c.height=110;const g=c.getContext('2d');
+  const P=k?[[50,72,30],[90,56,44],[140,60,40],[190,76,30],[115,80,34]]:[[60,70,34],[105,52,42],[150,64,38],[185,76,26],[125,80,36],[85,80,28]];
+  for(const [x,y,r] of P){const q=g.createRadialGradient(x,y-r*.35,r*.1,x,y,r);q.addColorStop(0,'rgba(255,255,255,.98)');q.addColorStop(.7,'rgba(245,250,255,.9)');q.addColorStop(1,'rgba(212,227,246,0)');g.fillStyle=q;g.beginPath();g.arc(x,y,r,0,7);g.fill()}return c}
+const CS=[cloudSpr(0),cloudSpr(1)];
+const clouds=Array.from({length:14},(_,i)=>({s:CS[i%2],x:(i*67%100)/100,cy:(i*2.57)%36,p:.45+(i*29%55)/100,sc:.6+(i*13%70)/100,dr:.4+i%5*.25}));
+let birds=[],nextBird=3;
+function birdsUpdate(dt){nextBird-=dt;
+  if(nextBird<=0&&camY<55){nextBird=7+Math.random()*9;const dir=Math.random()<.5?1:-1,n=2+(Math.random()*3|0),y=HT*(.05+Math.random()*.16),s=.8+Math.random()*.5,v=dir*(38+Math.random()*14)*s;
+    for(let i=0;i<n;i++)birds.push({x:dir>0?-30-i*26:W+30+i*26,y0:y+(i%2?1:-1)*i*7,c0:camY,v,s,ph:Math.random()*6})}
+  for(const b of birds)b.x+=b.v*dt;birds=birds.filter(b=>b.x>-80&&b.x<W+80)}
+/* ── ছোট সহায়ক ফাংশন ── */
+const sm=(a,b,x)=>{x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x)}; // smoothstep: ঘনত্ব ধাপে নয়, মসৃণভাবে বাড়ে/কমে
+const ps=y=>.3+.7*Math.min(1.3,Math.max(0,y)/330); // গভীরতার মাপ: দিগন্তের কাছে (y ছোট) ছোট, সামনে (y বড়) বড়
+function cvs(w,h,d){const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w*d));c.height=Math.max(1,Math.ceil(h*d));const g=c.getContext('2d');g.scale(d,d);return{c,g}}
+function rngMk(s){return()=>(s=(s*16807)%2147483647)/2147483647}
+/* ── দূরের দৃশ্য: পাহাড়, টিলা, গাছ — সবই এখন "g" কনটেক্সটে আঁকা হয় (একবার অফস্ক্রিনে, প্রতি ফ্রেমে নয়) ── */
+function hills(g,base,amp,f,ph,col){g.fillStyle=col;g.beginPath();g.moveTo(0,HT);for(let x=0;x<=W+12;x+=12)g.lineTo(x,base-amp*Math.sin(x*f+ph)-amp*.5*Math.sin(x*f*2.3+ph*2));g.lineTo(W,HT);g.closePath();g.fill()}
+function mount(g,b){const L=[{o:0,a:46,c:['#9db8da','#c9dbee'],s:.007,p:.7,sn:1},{o:20,a:32,c:['#8eb0d2','#bcd6e8'],s:.011,p:2.4,sn:0}];
+  for(const m of L){const pts=[];for(let x=0;x<=W+8;x+=8)pts.push([x,b+m.o-14-Math.abs(Math.sin(x*m.s+m.p))*m.a-Math.abs(Math.sin(x*m.s*2.7+m.p*2))*m.a*.35]);
+    const gg=g.createLinearGradient(0,b-m.a-30,0,b+m.o+10);gg.addColorStop(0,m.c[0]);gg.addColorStop(1,m.c[1]);g.fillStyle=gg;g.beginPath();g.moveTo(0,HT);pts.forEach(p=>g.lineTo(p[0],p[1]));g.lineTo(W,HT);g.closePath();g.fill();
+    if(m.sn){g.fillStyle='rgba(255,255,255,.78)';for(let i=1;i<pts.length-1;i++)if(pts[i][1]<pts[i-1][1]&&pts[i][1]<pts[i+1][1]&&pts[i][1]<b-14-m.a*.7){const [x,y]=pts[i];g.beginPath();g.moveTo(x-12,y+10);g.lineTo(x,y);g.lineTo(x+12,y+10);g.lineTo(x+4,y+7);g.lineTo(x,y+12);g.lineTo(x-5,y+8);g.closePath();g.fill()}}}
+  const hz=g.createLinearGradient(0,b-20,0,b+30);hz.addColorStop(0,'rgba(235,245,250,0)');hz.addColorStop(1,'rgba(235,245,250,.7)');g.fillStyle=hz;g.fillRect(0,b-20,W,60)}
+function trees(g,b){for(let i=0;i<6;i++){const x=(i*61+20)%100/100*W,y=b-16*Math.sin(x*.015+2)-8*Math.sin(x*.0345+4)+3,s=.55+(i*7%5)/10;
+  g.fillStyle='#7a5a3c';g.fillRect(x-2*s,y-22*s,4*s,24*s);
+  for(const [dx,dy,r,c] of [[0,-34,17,'#5FAF55'],[-11,-26,12,'#6BBE5E'],[11,-26,12,'#4F9F48'],[3,-40,11,'#7CCB6C']]){g.fillStyle=c;g.beginPath();g.arc(x+dx*s,y+dy*s,r*s,0,7);g.fill()}}}
+/* ── ঘাসের গুচ্ছ ও ফুল ── */
+const FL=['#ffffff','#FF8FB1','#FFD54A','#B28DFF','#44A7FC','#FF8A5B'];
+function flower(g,x,y,r,c){g.fillStyle=c;for(let k=0;k<5;k++){const a=k*1.2566;g.beginPath();g.arc(x+Math.cos(a)*r,y+Math.sin(a)*r*.8,r*.85,0,7);g.fill()}
+  if(r>=2.6){g.strokeStyle='rgba(60,40,70,.16)';g.lineWidth=.6;for(let k=0;k<5;k++){const a=k*1.2566;g.beginPath();g.arc(x+Math.cos(a)*r,y+Math.sin(a)*r*.8,r*.85,0,7);g.stroke()}} // বড় ফুলে হালকা কিনারা
+  g.fillStyle=c==='#FFD54A'?'#F08A24':'#FFC83D';g.beginPath();g.arc(x,y,r*.7,0,7);g.fill()}
+function bloom(g,x,y,r,c,stemH,lean){ // ডাঁটাসহ ফুল (সামান্য বাঁকা ডাঁটা)
+  const tx=x+lean*stemH,ty=y-stemH;
+  g.strokeStyle='#3F8F3A';g.lineWidth=Math.max(.7,r*.34);g.lineCap='round';g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+lean*stemH*.2,y-stemH*.6,tx,ty);g.stroke();
+  flower(g,tx,ty,r,c)}
+function tuft(g,x,y,H,w,n,cols,lean,rnd,shade){ // একটা গুচ্ছ = n টা সরু-হয়ে-যাওয়া ফলক (গোড়া গাঢ় → ডগা হালকা)
+  if(shade){g.fillStyle='rgba(15,70,25,'+shade+')';g.beginPath();g.ellipse(x,y+.5,w*n*.55,w*1.1,0,0,7);g.fill()} // মাটির সাথে ছোট্ট ছায়া
+  if(H<8)g.fillStyle=cols[1];else{const gr=g.createLinearGradient(0,y,0,y-H);gr.addColorStop(0,cols[0]);gr.addColorStop(1,cols[1]);g.fillStyle=gr}
+  for(let k=0;k<n;k++){const f=(k-(n-1)/2)/Math.max(1,(n-1)/2),h=H*(1-.22*Math.abs(f))*(.85+rnd()*.3),l=lean+f*.22+(rnd()-.5)*.12,bx=x+f*w*n*.35,
+      tx=bx+l*h,ty=y-h,cx=bx+l*h*.3+(rnd()-.5)*w,cy=y-h*.58;
+    g.beginPath();g.moveTo(bx-w/2,y);g.quadraticCurveTo(cx-w*.3,cy,tx,ty);g.quadraticCurveTo(cx+w*.3,cy,bx+w/2,y);g.closePath();g.fill()}}
+/* একটা গভীরতা-স্তরে গুচ্ছ+ফুল ছড়ানো: সারি-সারি "জিটারড গ্রিড" (কোথাও জমাট বাঁধে না), সারির উচ্চতা/ফাঁক গভীরতা অনুযায়ী বাড়ে,
+   o.dens(y) ঘনত্ব ঠিক করে (ওপরে/বক্সের কাছে কম → নিচে বেশি), ফুলের মাঝে ন্যূনতম দূরত্ব, o.minTip-এর ওপরে কোনো ডগা যায় না। */
+function scatter(g,o,rnd){
+  const placed=[];let fi=(rnd()*6)|0;
+  for(let y=o.y0;y<o.y1;){const s=ps(y),rh=Math.max(4,o.cellH*s),cw=Math.max(7,o.cellW*s);
+    for(let x=-cw*.5+rnd()*cw;x<W+cw;x+=cw){
+      const yy=y+rh*(.15+rnd()*.7),xx=x+(rnd()-.5)*cw*.7;
+      if(yy>o.y1||yy<o.y0||rnd()>o.dens(yy))continue;
+      const sc=ps(yy),H=Math.min((o.H[0]+rnd()*(o.H[1]-o.H[0]))*sc,yy-o.minTip),w=o.w*sc*(.8+rnd()*.4),n=o.n[0]+((rnd()*(o.n[1]-o.n[0]+1))|0);
+      if(H<3)continue;
+      tuft(g,xx,yy,H,w,n,o.cols,(rnd()-.5)*.35,rnd,o.shade);
+      if(o.fl&&rnd()<o.fl.p){const r=o.fl.r*sc,fx=xx+(rnd()-.5)*cw*.5,fh=(o.fl.stem[0]+rnd()*(o.fl.stem[1]-o.fl.stem[0]))*sc;
+        if(yy-fh>=o.minTip&&placed.every(b=>Math.hypot(b[0]-fx,(b[1]-yy)*1.6)>o.fl.gap*sc)){placed.push([fx,yy]);fi=(fi+1+((rnd()*3)|0))%6;bloom(g,fx,yy,r,FL[fi],fh,(rnd()-.5)*.3)}}}
+    y+=rh}}
+let leaves=[],nextLeaf=2;
+function leavesUpdate(dt){nextLeaf-=dt;
+  if(nextLeaf<=0&&camY<60){nextLeaf=3+Math.random()*4;leaves.push({x:W+20,y:HT*(.1+Math.random()*.3),c0:camY,vx:-(30+Math.random()*25),vy:14+Math.random()*10,r:Math.random()*6,s:.7+Math.random()*.6,col:Math.random()<.7?'#6BBE4E':'#E0A030',ph:Math.random()*6})}
+  for(const l of leaves){l.x+=l.vx*dt;l.y+=l.vy*dt+Math.sin(T*2+l.ph)*.6;l.r+=dt*(1.5+Math.sin(T+l.ph))}leaves=leaves.filter(l=>l.x>-30&&l.y<HT+30)}
+/* ── দৃশ্যপট ক্যাশ + ঘাসের ৪-স্তর সিস্টেম ───────────────────────────────────────────────────────────
+   আগে প্রতি ফ্রেমে পাহাড়/গাছ/মাটির টেক্সচার/৬০টা ফুল নতুন করে আঁকা হতো, আর সামনে ঘন ঝাপসা ঘাসের টেক্সচার ছিল —
+   তাই কম দামি ফোন ও ল্যাপটপে CPU গরম হয়ে ল্যাগ করত। এখন সবকিছু একবারই অফস্ক্রিন ক্যানভাসে আঁকা হয়
+   (সাইজ বা কোয়ালিটি বদলালে আবার); প্রতি ফ্রেমে শুধু কয়েকটা drawImage।
+
+   মাঠ = ৪টা গভীরতার স্তর (পেছন থেকে সামনে)। yq = প্যালেটের সামনের কিনারা, Zf = তার নিচ থেকে স্ক্রিনের তল পর্যন্ত উচ্চতা:
+     A  দূরে      : খুব ছোট, হালকা, ফাঁকা-ফাঁকা গুচ্ছ + ছোট ফুল          (মাটির সাথে বেক করা)
+     B  মাঝ-দূর   : একটু মোটা, ছোট ফলক, মাঝারি ফুল                        (মাটির সাথে বেক করা)
+     C  মাঝ-কাছে  : মোটা-মাঝারি, গাঢ় ফলক, হালকা দোলে                     (সামনের ক্যানভাস)
+     D  সবচেয়ে কাছে: লম্বা-চিকন ফলক, কম সংখ্যক বড় ফুল, একটু বেশি দোলে      (সামনের ক্যানভাস)
+   • ঘনত্ব নিচে বেশি, বক্সের দিকে ওপরে উঠতে উঠতে ক্রমে কমে ফেড হয়ে যায়। দূরের জিনিস ছোট/হালকা, কাছের বড়/গাঢ়।
+   • A, B বক্সের পেছনের ক্যানভাসে আঁকা — বক্স/প্যালেট ওদের স্বাভাবিকভাবেই ঢেকে দেয়, কখনো ওপরে পড়ে না।
+   • C, D বক্সের সামনে আঁকা, কিন্তু কোনো ফলক/ডাঁটা yq-এর ওপরে যায় না; ক্যামেরা ওঠার সাথে সাথে এরা প্যালেটের চেয়ে
+     একটু দ্রুত নিচে নেমে যায় (কাছের জিনিস আগে সরে) — তাই বক্সের গায়ে কিছু লাগার সুযোগই নেই। */
+function curD(){return Math.min(devicePixelRatio||1,DPRCAP)}
+function boxBottom(){let m=0;for(const sx of [-1.75,1.75])for(const sz of [-1.75,1.75])m=Math.max(m,pr(sx,0,sz)[1]);return m}
+function mkScenery(){
+  const d=curD(),hb0=HT/2,gy0=hb0-28,GOref=GO-(camY-1.9)*PY,Z={W,HT,d};
+  const layer=(top,draw)=>{const h=Math.max(1,Math.ceil(HT-top)),o=cvs(W,h,d);o.g.translate(0,-top);draw(o.g);return{c:o.c,top,h}};
+  // ① দূরের পাহাড় + প্রথম টিলা (প্যারালাক্স ০.৫৫), ② দ্বিতীয় টিলা + গাছ (০.৮)
+  Z.m1=layer(Math.max(0,Math.floor(hb0-150)),g=>{mount(g,hb0-26);hills(g,hb0-10,24,.011,1,'#B4D8BC')});
+  Z.m2=layer(Math.max(0,Math.floor(hb0-90)),g=>{hills(g,hb0+8,16,.015,2,'#93C784');trees(g,hb0+8)});
+  // ③ মাটি — মাপগুলো দিগন্ত-রেখা (মাটির ওপরের কিনারা) থেকে নিচের দিকে গণনা
+  const yq=Math.max(30,boxBottom()-pr(0,0,0)[1]+28+10),Hvis=Math.max(yq+80,HT/2+28-GOref),Zf=Hvis-yq,Hg=Math.ceil(Hvis+14),rnd=rngMk(7);
+  Z.yq=yq;Z.Zf=Zf;
+  {const o=cvs(W,Hg,d),g=o.g;
+    // বেস: দূরে ধোঁয়াটে হালকা সবুজ → সামনে গাঢ় ও সম্পৃক্ত (বায়ুমণ্ডলীয় পারস্পেকটিভ)
+    let gr=g.createLinearGradient(0,0,0,Hg);gr.addColorStop(0,'#9CCB8B');gr.addColorStop(.28,'#82C468');gr.addColorStop(.65,'#68AE52');gr.addColorStop(1,'#4C9040');g.fillStyle=gr;g.fillRect(0,0,W,Hg);
+    // সূর্যের আলো-ছায়ার ছোপ: লম্বাটে উপবৃত্ত, গভীরতা অনুযায়ী বড়
+    for(let i=0;i<34;i++){const y=Math.pow(rnd(),.8)*Hg,s=ps(y),rx=(50+rnd()*110)*s,ry=rx*(.22+rnd()*.12),x=rnd()*W,lt=rnd()<.5;
+      const q=g.createRadialGradient(x,y,0,x,y,rx);q.addColorStop(0,lt?'rgba(176,222,120,.26)':'rgba(30,95,40,.2)');q.addColorStop(1,'rgba(0,0,0,0)');
+      g.save();g.translate(x,y);g.scale(1,ry/rx);g.translate(-x,-y);g.fillStyle=q;g.fillRect(x-rx,y-rx,rx*2,rx*2);g.restore()}
+    // মাটির সূক্ষ্ম টেক্সচার (ছোট ছোট দাগ)
+    g.lineCap='round';for(let i=0,n=Math.round(W*Hg/260);i<n;i++){const y=Math.pow(rnd(),.9)*Hg,s=ps(y),x=rnd()*W;g.strokeStyle=rnd()<.5?'rgba(40,110,45,.35)':'rgba(170,224,120,.35)';g.lineWidth=.7+s*.5;g.beginPath();g.moveTo(x,y);g.lineTo(x+(rnd()-.5)*2*s,y-(2+rnd()*4)*s);g.stroke()}
+    // দিগন্তের কুয়াশা + সামনের কিনারায় হালকা গাঢ় ভিনিয়েট (গভীরতা বোঝাতে)
+    const hh=Math.min(Hg,200);gr=g.createLinearGradient(0,0,0,hh);gr.addColorStop(0,'rgba(222,240,232,.55)');gr.addColorStop(1,'rgba(222,240,232,0)');g.fillStyle=gr;g.fillRect(0,0,W,hh);
+    gr=g.createLinearGradient(0,Hg*.6,0,Hg);gr.addColorStop(0,'rgba(14,64,28,0)');gr.addColorStop(1,'rgba(14,64,28,.26)');g.fillStyle=gr;g.fillRect(0,Hg*.6,W,Hg*.4);
+    // ওপরের কিনারা নরম করে পেছনের টিলার সাথে মেশানো
+    g.globalCompositeOperation='destination-in';gr=g.createLinearGradient(0,0,0,14);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,1)');g.fillStyle=gr;g.fillRect(0,0,W,Hg);g.globalCompositeOperation='source-over';
+    // স্তর A (দূরে) ও B (মাঝ-দূর) — মাটির সাথেই বেক
+    scatter(g,{y0:8,y1:yq+Zf*.8,cellW:14,cellH:9,H:[8,13],w:1.3,n:[3,5],cols:['#74B85A','#B1E08C'],shade:0,minTip:0,
+      dens:y=>{const u=(y-yq)/Zf;return y<yq?.1+.1*sm(8,yq,y):(.2+.35*sm(0,.25,u))*(1-sm(.45,.78,u))},fl:{p:.12,r:1.7,stem:[8,13],gap:28}},rnd);
+    scatter(g,{y0:yq+Zf*.08,y1:yq+Zf*.78,cellW:19,cellH:12,H:[16,24],w:2,n:[3,5],cols:['#4F9F45','#8CCF6A'],shade:.12,minTip:0,
+      dens:y=>{const u=(y-yq)/Zf;return sm(.08,.36,u)*(1-sm(.6,.88,u))*.8},fl:{p:.15,r:2.9,stem:[15,22],gap:34}},rnd);
+    Z.gr={c:o.c,top:gy0,h:Hg}}
+  // ④ সামনের দুই স্তর C, D — আলাদা ক্যানভাস, যাতে হালকা দোলানো যায়
+  Z.fr=[
+    {y0:yq+Zf*.3,y1:yq+Zf*.92,cellW:24,cellH:15,H:[26,40],w:2.6,n:[4,6],cols:['#2F7F33','#6DBA55'],shade:.14,minTip:yq+3,seed:31,r:1.06,amp:.02,ph:1.3,
+      dens:y=>{const u=(y-yq)/Zf;return sm(.3,.58,u)*(1-.4*sm(.78,1,u))*.8},fl:{p:.15,r:3.8,stem:[24,34],gap:40}},
+    {y0:yq+Zf*.52,y1:Hg+10,cellW:30,cellH:17,H:[46,72],w:1.5,n:[5,8],cols:['#34853A','#8AD06A'],shade:.1,minTip:yq+3,seed:57,r:1.14,amp:.032,ph:3.1,
+      dens:y=>{const u=(y-yq)/Zf;return sm(.52,.82,u)*.75},fl:{p:.1,r:5,stem:[40,60],gap:52}}
+  ].map(L=>{const topL=Math.floor(Math.max(yq+2,L.y0-L.H[1]*1.3-2)),h=Math.max(1,Math.ceil(Hg-topL)),P=14,o=cvs(W+P*2,h,d);o.g.translate(P,-topL);scatter(o.g,L,rngMk(L.seed));return{c:o.c,topL,h,P,r:L.r,amp:L.amp,ph:L.ph}});
+  SC=Z}
+function drawLeaves(g){ // পড়ন্ত পাতা — bg() থেকে আঁকা হয় (বক্সের পেছনে), তাই কখনো বক্সের ওপর দিয়ে দেখা যায় না
+  g.save();g.globalAlpha=Math.max(0,1-camY/60);
+  for(const l of leaves){g.save();g.translate(l.x,l.y+(camY-l.c0)*PY);g.rotate(l.r);g.fillStyle=l.col;g.beginPath();g.ellipse(0,0,7*l.s,3.2*l.s,0,0,7);g.fill();g.strokeStyle='rgba(0,60,0,.35)';g.lineWidth=.8;g.beginPath();g.moveTo(-7*l.s,0);g.lineTo(7*l.s,0);g.stroke();g.restore()}
+  g.restore()}
+function front(){ // সামনের ঘাস (C, D) + প্রজাপতি — প্রতি ফ্রেমে শুধু ২টা drawImage + সামান্য দোলুনি
+  const Z=SC;if(!Z)return;
+  const gy=HT/2+GO-28,xt=(camY-1.9)*PY,gust=.65+.35*Math.sin(T*.42);
+  for(let i=0;i<Z.fr.length;i++){const L=Z.fr[i],y0=gy+L.topL+(L.r-1)*xt;if(y0>HT+2)continue;
+    const sk=L.amp*gust*(Math.sin(T*(.9+i*.25)+L.ph)*.75+Math.sin(T*2.1+L.ph*1.7)*.25); // স্তরের মাঝখানকে কেন্দ্র করে দোলে
+    fctx.save();fctx.translate(0,y0+L.h/2);fctx.transform(1,0,sk,1,0,0);fctx.drawImage(L.c,0,0,L.c.width,L.c.height,-L.P,-L.h/2,W+L.P*2,L.h);fctx.restore()}
+  if(LITE)return;
+  for(const [cx,ph,c] of [[.28,0,'#FF8A5B'],[.74,2,'#B28DFF']]){const x=W*cx+Math.sin(T*.6+ph)*50,y=gy+Z.yq+Z.Zf*.3+Math.sin(T*1.1+ph)*12,w=Math.abs(Math.sin(T*13+ph))*5+1;if(y>HT-10)continue;fctx.fillStyle=c;
+    fctx.beginPath();fctx.ellipse(x-3,y,w,5,.4,0,7);fctx.fill();fctx.beginPath();fctx.ellipse(x+3,y,w,5,-.4,0,7);fctx.fill();fctx.fillStyle='#2a2a2a';fctx.fillRect(x-.6,y-4,1.2,8)}
+}
+function bg(){
+  const al=Math.min(1,camY/70),k=al*2,i=Math.min(1,Math.floor(k)),t=k-i,k2=sm(70,200,camY),top=mix(mix(SK[i][0],SK[i+1][0],t),[5,9,30],k2),bot=mix(mix(SK[i][1],SK[i+1][1],t),[24,44,108],k2); // k2: স্কোর ~৪৬ থেকে ধীরে ধীরে গভীর মহাকাশ
+  const g=ctx.createLinearGradient(0,0,0,HT);g.addColorStop(0,`rgb(${top})`);g.addColorStop(1,`rgb(${bot})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,HT);
+  const hy=HT/2+GO-28,hg=ctx.createLinearGradient(0,hy-260,0,hy+10);hg.addColorStop(0,'rgba(255,238,210,0)');hg.addColorStop(1,`rgba(255,238,210,${.34*(1-al)})`);ctx.fillStyle=hg;ctx.fillRect(0,hy-260,W,270);
+  const sy=HT*.14+camY*2, sx=W*.8;
+  ctx.globalAlpha=Math.max(0,(.96-al*.55)*(1-k2));const R0=Math.max(8,15-al*4),sgl=ctx.createRadialGradient(sx,sy,R0*.8,sx,sy,R0*3.2);sgl.addColorStop(0,'rgba(255,214,102,.45)');sgl.addColorStop(1,'rgba(255,214,102,0)');ctx.fillStyle=sgl;ctx.beginPath();ctx.arc(sx,sy,R0*3.2,0,7);ctx.fill();
+  const sd=ctx.createRadialGradient(sx-R0*.25,sy-R0*.25,0,sx,sy,R0);sd.addColorStop(0,'#FFFBE0');sd.addColorStop(.55,'#FFE27A');sd.addColorStop(1,'#FFB938');ctx.fillStyle=sd;ctx.beginPath();ctx.arc(sx,sy,R0,0,7);ctx.fill();ctx.globalAlpha=1;
+  if(al>.7){const ns=LITE?32:40+Math.round(70*k2),aa=Math.min(1,(al-.7)*2.4),sh=HT*(.7+.22*k2);ctx.fillStyle='#fff';
+    for(let n=0;n<ns;n++){ctx.globalAlpha=aa*(n%4?.9:.55+.45*Math.sin(T*2+n));ctx.beginPath();ctx.arc(W*((n*.6180339)%1),sh*((n*.7548776)%1),n%3?.7:1.2,0,7);ctx.fill()}ctx.globalAlpha=1;
+    const k3=sm(130,200,camY);
+    if(k3>0){ctx.globalAlpha=k3;const mx=W*.2,my=HT*.2,mg=ctx.createRadialGradient(mx,my,10,mx,my,48);mg.addColorStop(0,'rgba(220,232,255,.35)');mg.addColorStop(1,'rgba(220,232,255,0)');ctx.fillStyle=mg;ctx.beginPath();ctx.arc(mx,my,48,0,7);ctx.fill();
+      const md=ctx.createRadialGradient(mx-6,my-6,2,mx,my,19);md.addColorStop(0,'#FFFFFF');md.addColorStop(1,'#C9D4E8');ctx.fillStyle=md;ctx.beginPath();ctx.arc(mx,my,19,0,7);ctx.fill();
+      ctx.fillStyle='rgba(140,156,184,.4)';for(const [cx,cy,cr] of [[-6,-3,4],[5,6,3],[6,-7,2.4]]){ctx.beginPath();ctx.arc(mx+cx,my+cy,cr,0,7);ctx.fill()}ctx.globalAlpha=1}
+    const k4=sm(190,260,camY);
+    if(k4>0){ctx.globalAlpha=k4;const px=W*.78,py=HT*.42,pg=ctx.createRadialGradient(px-8,py-8,2,px,py,26);pg.addColorStop(0,'#FFB48A');pg.addColorStop(1,'#B5482B');ctx.fillStyle=pg;ctx.beginPath();ctx.arc(px,py,26,0,7);ctx.fill();
+      ctx.strokeStyle='rgba(255,226,190,.55)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(px,py,42,10,-.35,0,7);ctx.stroke();ctx.globalAlpha=1}
+    if(!LITE&&k2>.3){const sn=Math.floor(T/6),ph=(T%6)/.7;if(ph<1){const x0=W*(.15+.7*((sn*.37)%1))+ph*130,y0=HT*(.06+.28*((sn*.61)%1))+ph*65;ctx.strokeStyle=`rgba(255,255,255,${(1-ph)*.9})`;ctx.lineWidth=1.6;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0-46,y0-23);ctx.stroke()}}}
+    const m=36,nc=k2>=1?0:LITE?Math.min(8,clouds.length):clouds.length;
+  for(let q=0;q<nc;q++){const c=clouds[q],x=((c.x*(W+300)+T*c.dr*(.9+c.p*1.2))%(W+300))-150,w=(((c.cy-camY*c.p)%m)+m)%m,y=HT+60-w*(HT+160)/m,sc=c.sc*(.7+.5*c.p);
+    ctx.globalAlpha=(.28+.34*c.p)*(1-al*.45)*(1-k2);ctx.drawImage(c.s,x-120*sc,y-55*sc,240*sc,110*sc)}
+  ctx.globalAlpha=1;
+  const f=GO;
+  const haze=ctx.createLinearGradient(0,HT*.42,0,HT*.82);haze.addColorStop(0,'rgba(255,255,255,0)');haze.addColorStop(1,`rgba(245,250,255,${.10+al*.14})`);ctx.fillStyle=haze;ctx.fillRect(0,0,W,HT);
+  if(!SC||SC.W!==W||SC.HT!==HT||SC.d!==curD())mkScenery();
+  const blit=(L,rate)=>{const y=L.top+rate*f;if(y<HT)ctx.drawImage(L.c,0,0,L.c.width,L.c.height,0,y,W,L.h)}; // ক্যাশ করা স্তর শুধু উল্লম্বে সরানো (প্যারালাক্স)
+  blit(SC.m1,.55);blit(SC.m2,.8);
+  ctx.globalAlpha=Math.max(0,1-camY/50);ctx.strokeStyle='rgba(40,60,90,.65)';ctx.lineWidth=1.6;ctx.lineCap='round';
+  for(const b of birds){const y=b.y0+(camY-b.c0)*PY,fl=Math.sin(T*9+b.ph)*5*b.s,w=11*b.s;ctx.beginPath();ctx.moveTo(b.x-w,y+fl);ctx.quadraticCurveTo(b.x-w*.4,y-4*b.s-fl*.3,b.x,y);ctx.quadraticCurveTo(b.x+w*.4,y-4*b.s-fl*.3,b.x+w,y+fl);ctx.stroke()}
+  ctx.globalAlpha=1;
+  blit(SC.gr,1);
+  drawLeaves(ctx);
+}
+const VOL=3.5;
+function out(){if(!MG){MG=AC.createGain();MG.gain.value=muted?0:VOL;const cp=AC.createDynamicsCompressor();cp.threshold.value=-10;cp.knee.value=10;cp.ratio.value=10;cp.attack.value=.003;cp.release.value=.15;MG.connect(cp);cp.connect(AC.destination)}return MG}
+let amb=0;
+function ambient(){if(amb)return;try{AC=AC||new(window.AudioContext||webkitAudioContext)();if(AC.state==='suspended')AC.resume();const o=out();amb=1;
+  const nb=AC.createBuffer(1,AC.sampleRate*3,AC.sampleRate),d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const N=(ty,f,q,v)=>{const s=AC.createBufferSource();s.buffer=nb;s.loop=true;const fl=AC.createBiquadFilter();fl.type=ty;fl.frequency.value=f;fl.Q.value=q;const g=AC.createGain();g.gain.value=v;s.connect(fl);fl.connect(g);g.connect(o);s.start();return{fl,g}};
+  const L=(hz,amt,tgt)=>{const l=AC.createOscillator(),g=AC.createGain();l.frequency.value=hz;g.gain.value=amt;l.connect(g);g.connect(tgt);l.start()};
+  const w=N('lowpass',520,.7,.05);L(.13,.03,w.g.gain);L(.07,180,w.fl.frequency);
+  const st=N('bandpass',3000,.7,.013);L(.8,700,st.fl.frequency);L(.3,.006,st.g.gain);
+  const ch=()=>{if(!muted){const t=AC.currentTime,n=2+(Math.random()*4|0),f0=2300+Math.random()*1900;
+    for(let i=0;i<n;i++){const q=AC.createOscillator(),g=AC.createGain(),t0=t+i*.11;q.type='sine';q.frequency.setValueAtTime(f0,t0);q.frequency.exponentialRampToValueAtTime(f0*1.35,t0+.07);
+      g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.022,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+.09);q.connect(g);g.connect(o);q.start(t0);q.stop(t0+.1)}}
+    setTimeout(ch,2200+Math.random()*5500)};setTimeout(ch,1500)}catch(e){}}
+let hitN=0,hitMax=3,lastHit=0,sfxTok=0;
+function nz(d,type,f,g0,t0,att){const b=AC.createBuffer(1,Math.max(1,AC.sampleRate*d|0),AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;
+  const s=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();fl.type=type;fl.frequency.value=f;fl.Q.value=.4;
+  g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(g0,t0+att);g.gain.exponentialRampToValueAtTime(.0001,t0+d);s.buffer=b;s.connect(fl);fl.connect(g);g.connect(out());s.start(t0)}
+function boxHit(v,soft){if(muted)return;try{AC=AC||new(window.AudioContext||webkitAudioContext)();const t=AC.currentTime;
+  nz(.14,'lowpass',350+Math.random()*200,.55*v,t,.006); // dull cardboard thump
+  if(!soft){const n=5+(Math.random()*5|0);for(let i=0;i<n;i++)nz(.02+Math.random()*.03,'bandpass',900+Math.random()*1600,(.08+Math.random()*.14)*v,t+Math.random()*.16,.003)}}catch(e){}} // paper crinkle grains
+function collapseSfx(T0,n){const tok=++sfxTok,k=Math.min(6,1+Math.round(Math.sqrt(n)/1.3));hitN=0;hitMax=k;
+  for(let i=0;i<k;i++){const f=i===0?0:Math.min(.95,(i+Math.random()*.6)/k),v=i===0?1:.45+Math.random()*.4;setTimeout(()=>{if(tok===sfxTok&&st==='over')boxHit(v)},f*T0*1000)}}
+function hitSnd(){const n=performance.now();if(hitN>=hitMax||n-lastHit<150)return;hitN++;lastHit=n;boxHit(.4,true)}
+let lastCr=0;
+function crackSnd(){if(muted)return;const n=performance.now();if(n-lastCr<50)return;lastCr=n;
+  try{AC=AC||new(window.AudioContext||webkitAudioContext)();const d=.09,b=AC.createBuffer(1,AC.sampleRate*d,AC.sampleRate),a=b.getChannelData(0);
+    for(let i=0;i<a.length;i++)a[i]=(Math.random()*2-1)*Math.pow(1-i/a.length,3);
+    const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();f.type='bandpass';f.frequency.value=900+Math.random()*1800;f.Q.value=1.2;g.gain.value=.5;
+    s.buffer=b;s.connect(f);f.connect(g);g.connect(out());s.start();snd(110+Math.random()*90,.1,'square',.07)}catch(e){}}
+function creak(){if(muted)return;try{AC=AC||new(window.AudioContext||webkitAudioContext)();const t=AC.currentTime,o=AC.createOscillator(),f=AC.createBiquadFilter(),g=AC.createGain();
+  o.type='sawtooth';o.frequency.setValueAtTime(95,t);o.frequency.exponentialRampToValueAtTime(48,t+1.1);f.type='lowpass';f.frequency.value=420;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.25);g.gain.exponentialRampToValueAtTime(.0001,t+1.2);o.connect(f);f.connect(g);g.connect(out());o.start(t);o.stop(t+1.25)}catch(e){}}
+function thud(){snd(120,.2,'sine',.22);snd(70,.25,'sine',.14);noise(.1,.05)}
+function noise(d=.12,v=.035){if(muted)return;try{AC=AC||new(window.AudioContext||webkitAudioContext)();const n=AC.createBufferSource(),b=AC.createBuffer(1,AC.sampleRate*d,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=(Math.random()*2-1)*(1-i/a.length);const g=AC.createGain(),f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=1800;g.gain.setValueAtTime(v,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);n.buffer=b;n.connect(f);f.connect(g);g.connect(out());n.start();n.stop(AC.currentTime+d)}catch(e){}}
+function snd(f,d,type,v){if(muted)return;try{AC=AC||new(window.AudioContext||webkitAudioContext)();if(AC.state==='suspended')AC.resume();
+  const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.type=type||'triangle';o.frequency.value=f;g.gain.setValueAtTime(v||.1,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(out());o.start();o.stop(t+d)}catch(e){}}
+function hud(){const e=$('score');e.textContent=score;$('bestN').textContent=best;e.animate&&e.animate([{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:200})}
+function start(){$('lbReady').classList.add('hide');if(!muted)ambient();stopConf();reset();st='playing';overShown=false;$('ovOver').classList.add('hide');showHint()}
+let hintOn=false;
+function showHint(){const h=$('hint');if(!h)return;h.classList.remove('off');hintOn=true}
+function hideHint(){if(!hintOn)return;hintOn=false;$('hint').classList.add('off')}
+// 🎊 কনফেটি — আলাদা ক্যানভাসে (কার্ডের ওপরে), শুধু সেলিব্রেশনের সময় চলে, শেষ হলেই বন্ধ
+let conf=[],confT=0,confOn=false;const CCOL=['#FFC83D','#F5B301','#44A7FC','#FF8FB1','#B28DFF','#6BBE4E','#ffffff','#FF8A5B'];
+function celebrate(){conf=[];confT=0;confOn=true;cf.style.display='block';const n=W<500?110:150;
+  for(let i=0;i<n;i++){const burst=i<n*.45,a=-Math.PI/2+(Math.random()-.5)*1.6,sp=380+Math.random()*420;
+    conf.push(burst?{x:W/2,y:HT*.55,vx:Math.cos(a)*sp*.7,vy:Math.sin(a)*sp,g:620,r:Math.random()*6,vr:(Math.random()-.5)*14,w:6+Math.random()*6,h:3+Math.random()*4,c:CCOL[i%8],ph:Math.random()*6}
+      :{x:Math.random()*W,y:-20-Math.random()*HT*.5,vx:(Math.random()-.5)*90,vy:40+Math.random()*120,g:90,r:Math.random()*6,vr:(Math.random()-.5)*9,w:6+Math.random()*6,h:3+Math.random()*4,c:CCOL[i%8],ph:Math.random()*6})}}
+function confStep(dt){if(!confOn)return;confT+=dt;cctx.clearRect(0,0,W,HT);let alive=0;
+  for(const p of conf){p.vy+=p.g*dt;p.vx*=1-1.2*dt;if(p.vy>170)p.vy=170+(p.vy-170)*.9;p.x+=(p.vx+Math.sin(confT*3+p.ph)*28)*dt;p.y+=p.vy*dt;p.r+=p.vr*dt;if(p.y>HT+20)continue;alive++;
+    cctx.save();cctx.translate(p.x,p.y);cctx.rotate(p.r);cctx.scale(1,Math.cos(confT*7+p.ph));cctx.fillStyle=p.c;cctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cctx.restore()}
+  if(!alive||confT>8)stopConf()}
+function stopConf(){if(!confOn&&!conf.length)return;confOn=false;conf=[];cctx.clearRect(0,0,W,HT);cf.style.display='none'}
+function fanfare(){if(muted)return;[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>{snd(f,.4,'triangle',.12);snd(f*2,.25,'sine',.04)},i*110))}
+function countUp(el,to,ms){if(to<3){el.textContent=to;return}const t0=performance.now();(function s(n){const k=Math.min(1,(n-t0)/ms);el.textContent=Math.round(to*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(s)})(t0)}
+function pop(t){const p=$('pop');p.textContent=t;p.className='';void p.offsetWidth;p.className='go'}
+
+const EN=new URLSearchParams(location.search).get('lang')==='en';
+const MS=EN?{10:'Earbud level 🎧',25:'Smartwatch level ⌚',50:'Drone level 🚁',75:'Rocket level 🚀',100:'Satellite level 🛰️',150:'Moon level 🌕',200:'Mars level 🪐'}:{10:'ইয়ারবাড লেভেল 🎧',25:'স্মার্টওয়াচ লেভেল ⌚',50:'ড্রোন লেভেল 🚁',75:'রকেট লেভেল 🚀',100:'স্যাটেলাইট লেভেল 🛰️',150:'চাঁদ লেভেল 🌕',200:'মঙ্গল লেভেল 🪐'};
+function msText(s){if(MS[s])return MS[s];if(s>200&&s%50===0){const q=s/50-3;return EN?'Galaxy level x'+q+' ✨':'গ্যালাক্সি লেভেল x'+q+' ✨'}return ''}
+const TX=EN?{hint:'Tap the screen to drop the block',over:'Game over',rec:'New record!',yours:'Your score',best:'Best score: ',again:'Play again',back:'Back to waiting page',first:'Your first record!',beat:'You beat your previous best of ',fs:'Fullscreen',snd:'Sound',cls:'Close'}
+  :{hint:'ব্লক ফেলতে স্ক্রিনে ট্যাপ করুন',over:'খেলা শেষ',rec:'নতুন রেকর্ড!',yours:'আপনার স্কোর',best:'সেরা স্কোর: ',again:'আবার খেলুন',back:'ওয়েটিং পেজে ফিরে যান',first:'এটাই আপনার প্রথম রেকর্ড!',beat:'আপনি আগের সেরা স্কোর ছাড়িয়ে গেছেন: ',fs:'ফুল স্ক্রিন',snd:'সাউন্ড',cls:'বন্ধ করুন'};
+if(EN){document.documentElement.lang='en';document.title='Vangcur Stack Tower'}
+$('hint').textContent=TX.hint;$('oLbl').textContent=TX.yours;$('bAgain').textContent=TX.again;$('bBack').textContent=TX.back;
+$('fs').setAttribute('aria-label',TX.fs);$('mute').setAttribute('aria-label',TX.snd);$('cl').setAttribute('aria-label',TX.cls);
+const _pv=new THREE.Vector3(),pr=(x,y,z)=>{_pv.set(x,y,z).project(camera);return[(_pv.x+1)/2*W,(1-_pv.y)/2*HT]};
+function spark(x,y,z,n,col,k){const q=pr(x,y,z);for(let i=0;i<n;i++)parts.push({x:q[0],y:q[1],vx:(Math.random()-.5)*260,vy:-Math.random()*220-40,r:0,vr:0,c:col,t:0,s:2+Math.random()*3,k,L:.55+Math.random()*.35})}
+let pendingOver=false,colEnd=1,colT=99,colDur=1,colC=1.9,st='ready',blocks=[],cur=null,debris=[],ring=null,parts=[],landings=[],score=0,combo=0,speed=3.4,shake=0,overAt=0,overShown=false,prevBest=0;
+function reset(){blocks.forEach(b=>{if(b.g){scene.remove(b.g);disp(b.g)}});debris.forEach(d=>{scene.remove(d.g);disp(d.g)});if(cur&&cur.g){scene.remove(cur.g);disp(cur.g)}landings=[]; /* আগে জিওমেট্রি/ম্যাটেরিয়াল ছাড়া হতো না — বারবার হারলে মেমোরি ফুলে ধীর হতো */
+ 
+  blocks=[{x:0,z:0,w:BASE,d:BASE,top:PH}];debris=[];ring=null;score=0;combo=0;camY=camT=1.9;colT=99;pendingOver=false;spawn();hud()}
+function spawn(){const n=blocks.length,t=blocks[n-1],a=n%2?'x':'z',dir=n%4<2?1:-1;
+  cur={a,x:t.x,z:t.z,w:t.w,d:t.d,dir,i:n,y:t.top+BH/2,g:mk(t.w,t.d,n,1),intro:0};cur[a]=-dir*RANGE;cur.g.position.set(cur.x,cur.y,cur.z);
+  speed=3.4*(1+Math.min(.12,n*.003)); /* আগে 2.6 গুণ পর্যন্ত বেড়ে যেত — এখন শুরুর গতিই থাকে, ৪০টা ব্লকে মাত্র ১২% বেশি */camT=Math.max(1.9,t.top-.9)}
+function collapse(g,a,out,w,d){ // টাওয়ার ওপর থেকে নিচে ভাঙে
+  /* বড় টাওয়ারে (৩০+ ব্লক) সবগুলো পড়লে শ'খানেক মেশ+শ্যাডো একসাথে চলত → ধীর ডিভাইসে হ্যাং। এখন শুধু ওপরের TOPN আর নিচের BOTN ব্লক
+     পড়ে; মাঝেরগুলো মুছে ফেলা হয় (ক্যামেরা তখন ওপরে, দর্শক দেখে না)। ওপরের অংশ নিচের অংশের ঠিক ওপরে নামিয়ে আনা হয়, যাতে ক্যামেরা
+     নামতে নামতেই স্তূপটা চোখের সামনে ভেঙে পড়ে — ১৫০০ ইউনিট ওপর থেকে পড়ার অপেক্ষা করতে হয় না। */
+  const TOPN=24,BOTN=6,n=blocks.length;let fall=[];
+  if(n-1>TOPN+BOTN){
+    for(let j=1;j<n;j++){const b=blocks[j];if(j<=BOTN||j>=n-TOPN)fall.push(j);else{scene.remove(b.g);disp(b.g);b.g.visible=false}}
+    const off=blocks[n-TOPN].g.position.y-(blocks[BOTN].top+.8);
+    for(const j of fall)if(j>BOTN)blocks[j].g.position.y-=off;
+    g.position.y-=off}
+  else for(let j=1;j<n;j++)fall.push(j);
+  const m=fall.length+1,dl=Math.min(.07,.8/m);colT=0;colDur=Math.max(1.1,m*dl+.3);colC=camY;colEnd=Math.max(.8,(m-1)*dl+.8);collapseSfx(Math.min(1.4,colEnd),m);
+  const mp=(g,r,w,d)=>({g,w,d,t:0,pile:true,delay:(m-1-r)*dl,vx:(Math.random()-.5)*2.4+(a==='x'?out*(1.25+r*.035):0),vz:(Math.random()-.5)*2.4+(a==='z'?out*(1.25+r*.035):0),vy:-.5-r*.18,wx:(Math.random()-.5)*4.2,wz:(Math.random()-.5)*4.2});
+  fall.forEach((j,r)=>{const b=blocks[j];b.g.visible=true;debris.push(mp(b.g,r,b.w,b.d))});
+  debris.push(mp(g,m-1,w,d));shake=.5}
+function toDeb(g,a,out){return{g,a,out,t:0,vy:.7,s:out*(1.1+Math.random()*.8),wz:out*(2.5+Math.random()*2.5),wo:(Math.random()-.5)*3}}
+function slice(l,r,out){const a=cur.a,g=mk(a==='x'?r-l:cur.w,a==='z'?r-l:cur.d,cur.i,0);g.position.set(a==='x'?(l+r)/2:cur.x,cur.y,a==='z'?(l+r)/2:cur.z);return toDeb(g,a,out)}
+function place(){
+  hideHint();
+  const t=blocks[blocks.length-1],a=cur.a,s=t[a==='x'?'w':'d'],dl=cur[a]-t[a],ad=Math.abs(dl),out=dl>=0?1:-1,i=cur.i;
+  if(ad>=s){collapse(cur.g,a,out,cur.w,cur.d);cur=null;noise(.5,.08);gameOver();return}
+  let nw=cur.w,nd=cur.d,nc=cur[a];const perf=ad<=TOL;
+  if(perf){nc=t[a];combo++;if(combo>=3){if(a==='x')nw=Math.min(BASE,nw+.12);else nd=Math.min(BASE,nd+.12)}}
+  else{combo=0;const lo=Math.max(cur[a]-s/2,t[a]-s/2),hi=Math.min(cur[a]+s/2,t[a]+s/2);
+    debris.push(dl>0?slice(hi,cur[a]+s/2,1):slice(cur[a]-s/2,lo,-1));nc=(lo+hi)/2;if(a==='x')nw=hi-lo;else nd=hi-lo}
+  const x=a==='x'?nc:cur.x,z=a==='z'?nc:cur.z,top=cur.y+BH/2;
+  scene.remove(cur.g);disp(cur.g);const g=mk(nw,nd,i,1);g.position.set(x,cur.y,z);blocks.push({x,z,w:nw,d:nd,top,g});
+  landings.push({g,t:0,baseY:cur.y});
+  if(blocks.length>14)blocks[blocks.length-14].g.visible=false;
+  score++;
+  if(perf){ring={x,z,w:nw,d:nd,y:top,t:0};noise(.16,.028);pop('PERFECT! ✨'+(combo>1?' x'+combo:''));const f=523*Math.pow(2,[0,2,4,7,9,12][Math.min(combo-1,5)]/12);
+    snd(f,.35,'sine',.14);snd(f*2,.25,'triangle',.05);snd(f*3,.2,'sine',.03);thud();spark(x,top,z,14,'#bfe9ff',1);const gl2=$('glow');gl2.classList.add('on');setTimeout(()=>gl2.classList.remove('on'),120);navigator.vibrate&&navigator.vibrate(12)}
+  else{const p=debris[debris.length-1].g.position;spark(p.x,p.y+BH/2,p.z,10,'#8fb3e0',2);thud();noise(.18,.03)}
+  {const sc=score,mt=msText(sc);if(mt)setTimeout(()=>{if(st!=='playing')return;pop(mt);snd(sc>=75?1568:1175,.3,'sine',.1);noise(.18,.022);if(sc>=75){const g3=$('glow');g3.classList.add('on');setTimeout(()=>g3.classList.remove('on'),260)}},450)}
+  spawn();hud()}
+function showOver(){if(st!=='over'||overShown)return;
+  const rec=score>prevBest&&score>0,card=$('card');
+  card.classList.remove('rec');void card.offsetWidth; // অ্যানিমেশন প্রতিবার নতুন করে চালু
+  card.classList.toggle('rec',rec);
+  $('oTitle').textContent=rec?TX.rec:TX.over;
+  $('fBest').textContent=TX.best+best;
+  $('fRec').textContent=rec?(prevBest>0?TX.beat+prevBest:TX.first):'';
+  $('ovOver').classList.remove('hide');overShown=true;overAt=performance.now();
+  if(rec){countUp($('fScore'),score,900);celebrate();fanfare()}else $('fScore').textContent=score}
+function gameOver(){
+  st='over';shake=.3;prevBest=best;
+  if(score>best){best=score;try{localStorage.setItem(KEY,best)}catch(e){}}
+  hud();navigator.vibrate&&navigator.vibrate(40);
+  myRes=null;renderLb();if(ONLINE&&score>0)post({type:'vc-game-score',score});
+  pendingOver=true;
+}
+function act(){
+  if(st==='playing')place();else if(st==='ready')start();
+  else if(st==='over'&&overShown&&performance.now()-overAt>700)start();
+}
+
+function update(dt){
+  if(cur&&(st==='ready'||st==='playing')){const a=cur.a;cur[a]+=speed*cur.dir*dt;
+    if(cur[a]>RANGE){cur[a]=RANGE;cur.dir=-1}else if(cur[a]<-RANGE){cur[a]=-RANGE;cur.dir=1}cur.g.position[a]=cur[a];
+    if(cur.intro<1){cur.intro=Math.min(1,cur.intro+dt/.2);const e=1-Math.pow(1-cur.intro,3);cur.g.position.y=cur.y+(1-e)*.8;cur.g.scale.setScalar(.88+.12*e)} /* হঠাৎ উদয় নয় — ওপর থেকে নরমভাবে নামে */
+  }
+  if(st==='over'&&colT<9){colT+=dt;camT=1.9+(colC-1.9)*Math.max(0,1-colT/colDur)}
+  camY+=(camT-camY)*Math.min(1,dt*(st==="over"?6:4));
+  if(pendingOver&&st==='over'&&colT>colEnd&&Math.abs(camY-camT)<.08){pendingOver=false;showOver()}cam=camY*38;if(!LITE){birdsUpdate(dt);leavesUpdate(dt)}
+  for(const l of landings){l.t+=dt;const q=Math.min(1,l.t/.18);const ease=1-Math.pow(1-q,3);l.g.position.y=l.baseY+Math.sin(q*Math.PI)*.055*(1-q);l.g.scale.setScalar(1+.018*Math.sin(q*Math.PI));}
+  landings=landings.filter(l=>l.t<.24);
+  for(const d of debris){d.t+=dt;const p=d.g.position;
+    if(d.pile){if(d.t<d.delay)continue;d.vy-=26*dt;p.x+=d.vx*dt;p.y+=d.vy*dt;p.z+=d.vz*dt;const q=d.g.rotation;q.x+=d.wx*dt;q.z+=d.wz*dt;
+      const ext=BH/2*Math.max(Math.abs(Math.cos(q.x)),Math.abs(Math.cos(q.z)))+d.w/2*Math.abs(Math.sin(q.z))+d.d/2*Math.abs(Math.sin(q.x)),fl=(Math.abs(p.x)<1.9&&Math.abs(p.z)<1.9)?PH:0;
+      if(p.y-ext<fl){if(d.vy<-4&&!d.hit){d.hit=1;spark(p.x,fl,p.z,8,'#c9d6e6',2);hitSnd()}
+        p.y=fl+ext;d.vy=Math.abs(d.vy)>2?-d.vy*.2:0;d.vx*=.55;d.vz*=.55;d.wx*=.45;d.wz*=.45}
+      continue}
+    d.vy-=26*dt;p.y+=d.vy*dt;p[d.a]+=d.s*dt;const R=d.g.rotation;if(d.a==='x'){R.z-=d.wz*dt*.6;R.x+=d.wo*dt}else{R.x+=d.wz*dt*.6;R.z+=d.wo*dt}}
+  debris=debris.filter(d=>{if(!d.pile&&(d.g.position.y<camY-16||d.t>5)){scene.remove(d.g);disp(d.g);return false}return true});
+  if(ring){ring.t+=dt*2.4;if(ring.t>1)ring=null}
+  for(const p of parts){p.t+=dt;p.vy+=700*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.r+=p.vr*dt}
+  parts=parts.filter(p=>p.t<(p.L||3)&&p.y<HT+20);
+  if(shake>0)shake-=dt;
+}
+function render(){
+  const sh=shake>0?(Math.random()-.5)*Math.min(.55,shake*1.15):0;
+  camera.position.set(30+sh,camY+30+sh,30);camera.lookAt(0,camY,0);camera.updateMatrixWorld();GO=pr(0,0,0)[1]-HT/2;
+  ctx.clearRect(0,0,W,HT);bg();
+  fctx.clearRect(0,0,W,HT);front();
+  sun.position.set(7,camY+12,-2);sun.target.position.set(0,camY,0);
+  renderer.render(scene,camera);
+  if(ring){const r=ring,k=1+r.t*.5,pts=[[-1,-1],[1,-1],[1,1],[-1,1]].map(p=>pr(r.x+p[0]*r.w/2*k,r.y,r.z+p[1]*r.d/2*k));
+    fctx.beginPath();pts.forEach((p,i)=>i?fctx.lineTo(p[0],p[1]):fctx.moveTo(p[0],p[1]));fctx.closePath();
+    fctx.strokeStyle=`rgba(255,255,255,${1-r.t})`;fctx.lineWidth=3;fctx.stroke();fctx.strokeStyle=`rgba(68,167,252,${.4*(1-r.t)})`;fctx.lineWidth=8;fctx.stroke()}
+  for(const p of parts){const L=p.L||3;fctx.save();fctx.translate(p.x,p.y);fctx.globalAlpha=Math.max(0,1-p.t/L)*(p.k===2?.55:1);fctx.fillStyle=p.c;
+    if(p.k){if(p.k===1){fctx.globalAlpha*=.3;fctx.beginPath();fctx.arc(0,0,p.s*1.3,0,7);fctx.fill();fctx.globalAlpha/=.3}fctx.beginPath();fctx.arc(0,0,p.s*.55,0,7);fctx.fill()}
+    else{fctx.rotate(p.r);fctx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2)}fctx.restore()}
+}
+// ⚙️ কোয়ালিটি গভর্নর: ফ্রেম টাইম লম্বা হলে (ল্যাপটপ/ধীর GPU) নিজে থেকে ধাপে ধাপে রেজোলিউশন ও শ্যাডো কমায়।
+// ফোন/শক্তিশালী ডিভাইসে এটা কিছুই বদলায় না। ধাপ: ১) রেজোলিউশন ≤১.২৫ + শ্যাডো ১০২৪  ২) রেজোলিউশন ১ + শ্যাডো ৫১২  ৩) শ্যাডো বন্ধ
+let qLvl=0,qAcc=0,qN=0,qCool=90,lastRaw=0;
+function setQuality(l){qLvl=l;LITE=l>=2; // LITE: মেঘ কম, পাখি/পাতা/প্রজাপতি বন্ধ
+  if(l>=1)DPRCAP=l>=2?1:1.25;
+  if(l===1){sun.shadow.mapSize.set(768,768);renderer.shadowMap.type=THREE.PCFShadowMap}
+  if(l===2){sun.shadow.mapSize.set(512,512);renderer.shadowMap.type=THREE.BasicShadowMap}
+  if(l>=3)renderer.shadowMap.enabled=false;
+  if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}
+  scene.traverse(o=>{if(o.material)o.material.needsUpdate=true});
+  resize()}
+function governor(raw){ // raw = আসল ফ্রেম-ব্যবধান (সেকেন্ড)
+  if(qLvl>=3||document.hidden)return;if(raw>.25){qAcc=0;qN=0;return} // ট্যাব-সুইচ/পজ বাদ
+  if(qCool>0){qCool--;return}
+  qAcc+=raw;qN++;
+  if(qN>=30){const avg=qAcc/qN;qAcc=0;qN=0;if(avg>.024){setQuality(qLvl+1);qCool=45}}}
+let last=0;
+function frame(t){T=t/1000;const raw=(t-lastRaw)/1000||0;lastRaw=t;governor(raw);const dt=Math.min((t-last)/1000||0,1/20);last=t;update(dt);render();confStep(dt);requestAnimationFrame(frame)}
+
+// ── বাটনের আইকন (SVG) ──
+const SV=p=>'<svg viewBox="0 0 24 24">'+p+'</svg>';
+const IC={
+  max:SV('<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>'),
+  min:SV('<path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>'),
+  on:SV('<path d="M11 4.7 6.5 9H3v6h3.5L11 19.3z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.4 5.6a9 9 0 0 1 0 12.8"/>'),
+  off:SV('<path d="M11 4.7 6.5 9H3v6h3.5L11 19.3z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>')};
+const syncMute=()=>{$('mute').innerHTML=muted?IC.off:IC.on};
+const syncFs=()=>{$('fs').innerHTML=(document.fullscreenElement||document.webkitFullscreenElement)?IC.min:IC.max};
+
+document.addEventListener('pointerdown',e=>{if(e.button>0||e.target.closest('button'))return;if(e.pointerType==='touch')e.preventDefault();unlockAudio();act()},{passive:false});
+// 🏆 লিডারবোর্ড (টপ ৩): সার্ভারের সাথে কথা বলে প্যারেন্ট (WaitingGame) — গেম শুধু বার্তা পাঠায় ও দেখায়
+const ONLINE=parent!==window;
+const BNUM=n=>EN?String(n):String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[d]);
+const ORD_BN={1:'১ম',2:'২য়',3:'৩য়',4:'৪র্থ',5:'৫ম',6:'৬ষ্ঠ',7:'৭ম',8:'৮ম',9:'৯ম',10:'১০ম'};
+function ord(n){if(EN){const v=n%100,x=['th','st','nd','rd'];return n+(x[(v-20)%10]||x[v]||x[0])}return ORD_BN[n]||BNUM(n)+'তম'}
+const LT=EN?{you:'You are ',wr:'New record! You are now #1 overall'}:{you:'আপনি ',wr:'নতুন রেকর্ড! আপনিই এখন সবার ১ম'};
+let lbTop=null,myRes=null;
+function post(m){try{parent.postMessage(m,location.origin)}catch(e){}}
+function renderLb(){
+  const box=$('lbBox'),me=$('lbMe'),rd=$('lbReady'),has=!!(lbTop&&lbTop.length),medals=['🥇','🥈','🥉'];
+  box.textContent='';rd.textContent='';
+  if(has)lbTop.forEach(r=>{
+    const row=document.createElement('div');row.className='row'+(myRes&&myRes.accepted&&r.rank===myRes.rank?' me':'');
+    const mk=document.createElement('span');mk.className='mk';mk.textContent=medals[r.rank-1]||BNUM(r.rank);
+    const n=document.createElement('span');n.className='nm';n.textContent=r.name;
+    const sc=document.createElement('span');sc.className='sc';sc.textContent=BNUM(r.score);
+    row.append(mk,n,sc);box.appendChild(row);
+    const it=document.createElement('span');it.className='it';it.textContent=(medals[r.rank-1]||'')+' '+r.name+' '+BNUM(r.score);rd.appendChild(it);
+  });
+  box.classList.toggle('on',has);$('card').classList.toggle('hasLb',has);
+  rd.classList.toggle('hide',!(has&&st==='ready'));
+  me.textContent='';me.className='lbme';
+  if(myRes&&myRes.accepted&&myRes.rank>0){
+    if(myRes.worldRecord){me.textContent=LT.wr;me.className='lbme on wr'}
+    else{me.textContent=LT.you+ord(myRes.rank);me.className='lbme on'}
+  }
+}
+addEventListener('message',e=>{
+  if(e.origin!==location.origin||e.source!==parent)return;
+  const d=e.data||{};
+  if(d.type==='vc-game-lb'&&d.ok&&Array.isArray(d.top)){lbTop=d.top.slice(0,3);renderLb()}
+  else if(d.type==='vc-game-result'&&d.ok){if(Array.isArray(d.top))lbTop=d.top.slice(0,3);myRes=d;renderLb()}
+});
+if(ONLINE)post({type:'vc-game-lb-request'});
+$('bAgain').addEventListener('click',start);
+const closeGame=()=>{try{parent.postMessage({type:'vc-game-close'},location.origin)}catch(e){}};
+$('cl').addEventListener('click',closeGame);
+$('bBack').addEventListener('click',closeGame);
+if(parent===window){$('cl').style.display='none';$('bBack').style.display='none'}
+addEventListener('keydown',e=>{unlockAudio();if(e.code==='Escape'){closeGame();return}if(e.code==='Space'){e.preventDefault();if(!e.repeat)act()}});
+// 🔊 সাউন্ড ডিফল্ট চালু — শুধু ব্যবহারকারী নিজে বন্ধ করলে ('1') বন্ধ থাকে
+try{muted=localStorage.getItem('vc_stack_mute')==='1'}catch(e){muted=false}
+function unlockAudio(){if(muted)return;if(!amb)ambient();else if(AC&&AC.state==='suspended')AC.resume()} // ব্রাউজার প্রথম স্পর্শ/কী-তে অডিও চালু করতে দেয়
+syncMute();
+$('mute').addEventListener('click',()=>{muted=!muted;if(MG)MG.gain.value=muted?0:VOL;if(!muted)unlockAudio();try{localStorage.setItem('vc_stack_mute',muted?'1':'0')}catch(e){}syncMute()});
+$('fs').addEventListener('click',()=>{const e=document.documentElement;try{(document.fullscreenElement||document.webkitFullscreenElement)?(document.exitFullscreen||document.webkitExitFullscreen).call(document):(e.requestFullscreen||e.webkitRequestFullscreen).call(e)}catch(x){}});
+document.addEventListener('fullscreenchange',syncFs);document.addEventListener('webkitfullscreenchange',syncFs);
+if(!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen))$('fs').style.display='none';
+syncFs();
+// 👉 প্যারেন্ট পেজ গেম শুরু হওয়ার সাথে সাথে ফুলস্ক্রিন করার চেষ্টা করে (WaitingGame.tsx); সেটা ব্যর্থ হলে
+// (যেমন iOS Safari-তে, যেখানে এই API সীমিত) এখানে fs বাটনের দিকে একবার তীর-ইঙ্গিত দেখানো হয়।
+// window.innerHeight স্ক্রিনের উচ্চতার কাছাকাছি মানে প্যারেন্টের ফুলস্ক্রিন ইতিমধ্যে সফল হয়েছে — তখন কিছু দেখানো হয় না।
+function looksFullscreen(){try{return (screen.height-window.innerHeight)<60||!!(document.fullscreenElement||document.webkitFullscreenElement)}catch(e){return true}}
+if(matchMedia('(pointer:coarse)').matches){
+  setTimeout(()=>{
+    if(looksFullscreen()||!$('fs')||$('fs').style.display==='none')return;
+    const tip=document.createElement('div');tip.id='fsHint';
+    tip.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg><span>'+(EN?'Tap for fullscreen':'ফুল স্ক্রিনে যেতে এখানে ট্যাপ করুন')+'</span>';
+    tip.style.cssText='position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top,0px) + var(--bs) + 10px);display:flex;align-items:center;gap:6px;padding:7px 13px 7px 10px;border-radius:999px;background:rgba(15,40,80,.72);color:#fff;font:700 11.5px "DM Sans","Hind Siliguri",sans-serif;white-space:nowrap;z-index:8;pointer-events:none;animation:fsBob 1.1s ease-in-out infinite';
+    const kf=document.createElement('style');kf.textContent='@keyframes fsBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}';document.head.appendChild(kf);
+    app.appendChild(tip);
+    const kill=()=>{tip.remove()};
+    $('fs').addEventListener('click',kill,{once:true});
+    document.addEventListener('fullscreenchange',()=>{if(looksFullscreen())kill()});
+    setTimeout(kill,6000);
+  },1200);
+}
+cf.style.display='none';
+if(LOW)setQuality(1);
+// ট্যাব ব্যাকগ্রাউন্ডে গেলে অডিও থামে (ব্যাটারি/CPU বাঁচে), ফিরলে চালু
+document.addEventListener('visibilitychange',()=>{try{if(!AC)return;if(document.hidden)AC.suspend();else if(!muted)AC.resume()}catch(e){}});
+start();requestAnimationFrame(frame); // সরাসরি খেলা শুরু — কোনো "খেলা শুরু করুন" স্ক্রিন নেই
+})();
+</script></body></html>

@@ -1,0 +1,163 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { fetchFullOrder } from '@/lib/orderStatus';
+import { mapSupabaseOrderRow } from '@/lib/orderMapping';
+import { DEFAULT_FOOTER } from '@/lib/footerData';
+import { buildInvoiceViewModel } from '@/lib/invoice/invoiceViewModel';
+import { renderInvoiceSvg } from '@/lib/invoice/renderInvoiceSvg';
+import { ensureResvgWasm } from '@/lib/invoice/satoriAssets';
+import { logError } from '@/lib/logger';
+import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
+import { createServiceClient } from '@/lib/supabase/serviceClient';
+import { MAX_INVOICE_DOWNLOADS } from '@/lib/invoice/invoiceLimit';
+
+// 🖨️ এই রুট আগে headless Chromium (Puppeteer) চালাত — Cloudflare Workers-এ
+// সেটা চালানো সম্ভব না বলে satori (JSX → SVG) + @resvg/resvg-wasm
+// (SVG → PNG, pure WASM, কোনো native binary না) দিয়ে rewrite করা হয়েছে।
+// রেট-লিমিট আগের মতোই রাখা হয়েছে, যদিও এই নতুন পাইপলাইন আগের চেয়ে
+// অনেক হালকা।
+export const dynamic = 'force-dynamic';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function GET(req: NextRequest) {
+  const clientIp = getClientIp(req.headers);
+  const isStatusCheck = req.nextUrl.searchParams.get('status') === '1';
+
+  const rl = isStatusCheck
+    ? await slidingWindowLimit(`invoice-status:${clientIp}`, 30, 60)
+    : await slidingWindowLimit(`invoice:${clientIp}`, 8, 60);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+    );
+  }
+
+  const orderId = req.nextUrl.searchParams.get('id') || req.nextUrl.searchParams.get('orderId');
+  const phone = req.nextUrl.searchParams.get('phone') || undefined;
+
+  if (!orderId) {
+    return NextResponse.json({ ok: false, error: 'Missing order id' }, { status: 400 });
+  }
+
+  let claimed = false;
+  let claimedOrderId = '';
+  let service: ReturnType<typeof createServiceClient> | null = null;
+
+  try {
+    const supabase = await createClient();
+    const row = await fetchFullOrder(supabase, String(orderId), phone);
+
+    if (!row) {
+      return NextResponse.json({ ok: false, error: 'Order not found' }, { status: 404 });
+    }
+
+    const verifiedId = String(row.id || '');
+    if (!UUID_RE.test(verifiedId)) {
+      return NextResponse.json({ ok: false, error: 'Order not found' }, { status: 404 });
+    }
+
+    try {
+      service = createServiceClient();
+    } catch (err) {
+      logError('[InvoicePNG] service client unavailable:', err);
+      return NextResponse.json({ ok: false, unavailable: true, error: 'Invoice service unavailable' }, { status: 503 });
+    }
+
+    if (isStatusCheck) {
+      const { data, error } = await service.rpc('invoice_downloads_status', { p_order_id: verifiedId });
+      if (error || typeof data !== 'number') {
+        logError('[InvoicePNG] status check failed:', error);
+        return NextResponse.json({ ok: false, unavailable: true }, { status: 503 });
+      }
+      return NextResponse.json(
+        { ok: true, remaining: data, limit: MAX_INVOICE_DOWNLOADS },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
+    const { data: claim, error: claimError } = await service.rpc('claim_invoice_download', { p_order_id: verifiedId });
+    const claimRow = Array.isArray(claim) ? claim[0] : claim;
+    if (claimError || !claimRow) {
+      logError('[InvoicePNG] claim failed:', claimError);
+      return NextResponse.json({ ok: false, unavailable: true, error: 'Invoice service unavailable' }, { status: 503 });
+    }
+    if (!claimRow.allowed) {
+      return NextResponse.json(
+        { ok: false, limitReached: true, remaining: 0, error: 'Download limit reached' },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+    claimed = true;
+    claimedOrderId = verifiedId;
+    const remaining = Number(claimRow.remaining);
+
+    const order = mapSupabaseOrderRow(row);
+    const { ds, advancePaid, balanceDue, isFreeShipping, dueMsg } = buildInvoiceViewModel(order);
+
+    const contact = {
+      phoneLabel: DEFAULT_FOOTER.contact.phoneLabel,
+      email: DEFAULT_FOOTER.contact.email,
+    };
+
+    const assetBaseUrl = req.nextUrl.origin;
+
+    const { svg, fontBuffers } = await renderInvoiceSvg({
+      order,
+      ds,
+      contact,
+      dueMsg,
+      advancePaid,
+      balanceDue,
+      isFreeShipping,
+      assetBaseUrl,
+    });
+
+    await ensureResvgWasm(assetBaseUrl);
+    const { Resvg } = await import('@resvg/resvg-wasm');
+
+    // scale 3x — আগের Puppeteer পাইপলাইনেও deviceScaleFactor: 3 ব্যবহার
+    // হতো, যাতে html2canvas যুগের মতোই sharp/retina কোয়ালিটি বজায় থাকে।
+    const resvg = new Resvg(svg, {
+      font: { fontBuffers, loadSystemFonts: false },
+      background: '#FFFFFF',
+      fitTo: { mode: 'zoom', value: 3 },
+    });
+
+    // satori একটা বড়, ফিক্সড-হাইট ক্যানভাসে (renderInvoiceSvg.ts দেখুন)
+    // রেন্ডার করে — আসল কন্টেন্ট তার চেয়ে ছোট, তাই নিচের ফাঁকা অংশ বাদ
+    // দিতে bounding-box অনুযায়ী crop করা হচ্ছে (আগের Puppeteer পাইপলাইনে
+    // যেভাবে শুধু কার্ড এলিমেন্টের screenshot নেওয়া হতো, সমমানের ফলাফল)।
+    const bbox = resvg.innerBBox();
+    if (bbox) {
+      resvg.cropByBBox(bbox);
+    }
+
+    const rendered = resvg.render();
+    const pngBuffer = rendered.asPng();
+
+    const fileName = `Vangcur_Invoice_${String(order.orderNum || orderId).replace('#', '')}.png`;
+
+    return new NextResponse(pngBuffer as unknown as BodyInit, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Cache-Control': 'no-store',
+        'X-Invoice-Remaining': String(remaining),
+        'Access-Control-Expose-Headers': 'X-Invoice-Remaining',
+      },
+    });
+  } catch (err) {
+    if (claimed && service) {
+      try {
+        await service.rpc('release_invoice_download', { p_order_id: claimedOrderId });
+      } catch (releaseErr) {
+        logError('[InvoicePNG] release failed:', releaseErr);
+      }
+    }
+    logError('[InvoicePNG] generation failed:', err);
+    return NextResponse.json({ ok: false, error: 'Failed to generate invoice image' }, { status: 500 });
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Vangcur",
+    "identifier": "did:web:vangcur.com",
+    "url": "https://vangcur.com",
+    "description": "Vangcur is a premier e-commerce platform in Bangladesh for gadgets, RGB lights, and lifestyle tech accessories."
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:vangcur.com:catalog:product-catalog",
+      "displayName": "Vangcur Product Catalog",
+      "type": "text/html",
+      "url": "https://vangcur.com",
+      "description": "Full catalog of lifestyle electronics, RGB decor, audio gear, and unique tools with delivery across Bangladesh.",
+      "representativeQueries": [
+        "buy RGB neon light in Bangladesh",
+        "3D crystal ball lamp price in Bangladesh",
+        "trendy gadgets with home delivery"
+      ]
+    },
+    {
+      "identifier": "urn:air:vangcur.com:offers:deals-and-offers",
+      "displayName": "Vangcur Special Deals & Offers",
+      "type": "text/html",
+      "url": "https://vangcur.com/offers",
+      "description": "Latest promotional discounts, flash deals, and weekly specials.",
+      "representativeQueries": [
+        "gadget discounts in Bangladesh",
+        "flash deals on RGB lights"
+      ]
+    },
+    {
+      "identifier": "urn:air:vangcur.com:documentation:ordering-guide",
+      "displayName": "Vangcur User Guide & Ordering Instructions",
+      "type": "text/html",
+      "url": "https://vangcur.com/guide",
+      "description": "Complete guide on search, coupons, 3-step checkout, bKash verification, and parcel tracking.",
+      "representativeQueries": [
+        "how to order from Vangcur",
+        "pay with bKash and track my parcel"
+      ]
+    }
+  ]
+}

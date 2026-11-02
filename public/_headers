@@ -1,0 +1,30 @@
+# https://developers.cloudflare.com/workers/static-assets/headers
+# বাংলা ডিজিট ফন্ট: ফাইলের নামে ভার্সন আছে (-v1), তাই এক বছরের immutable ক্যাশ নিরাপদ।
+# ফন্ট বদলাতে হলে নতুন নামে (-v2) ফাইল বানিয়ে globals.css ও layout.tsx এ নাম বদলাবে।
+/fonts/noto-sans-bengali-digits-v1.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+# Next.js এর build-করা সব ফাইল (JS চাঙ্ক, CSS, ফন্ট `media/`) এর নামে কনটেন্ট-হ্যাশ থাকে — কনটেন্ট বদলালে নামও বদলায়,
+# তাই এক বছরের immutable ক্যাশ নিরাপদ (ফিরতি ভিজিটরের ব্রাউজার প্রতিবার ~৪০টা ফাইল নতুন করে জিজ্ঞেস করবে না)।
+# আগে এগুলোতে `max-age=0, must-revalidate` ছিল। নতুন ডিপ্লয়ে ফাইলের নামই বদলে যায়, তাই নতুন ফাইল সবসময় নতুন করে নামে।
+# https://opennext.js.org/cloudflare/caching#static-assets-caching
+/_next/static/*
+  Cache-Control: public,max-age=31536000,immutable
+
+# ⚡ ব্যাচ ৩: ব্র্যান্ড লোগো, সাইট-লোগো/আইকন — আগে `max-age=0, must-revalidate` (প্রতি ভিজিটে আবার জিজ্ঞেস)।
+# ফাইলের নামে ভার্সন নেই, তাই মালিকের সিদ্ধান্তে ৭ দিন (৬০৪৮০০s) — লোগো বদলালে নতুন নামে আপলোড করলে সঙ্গে সঙ্গে কাজ করে,
+# একই নামে বদলালে ব্যবহারকারীর ব্রাউজারে সর্বোচ্চ ৭ দিন পুরনোটা দেখাতে পারে।
+/brands/*
+  Cache-Control: public, max-age=604800
+/footer-illustration-*
+  Cache-Control: public, max-age=604800
+/icon-192.png
+  Cache-Control: public, max-age=604800
+/icon-512.png
+  Cache-Control: public, max-age=604800
+/apple-touch-icon.png
+  Cache-Control: public, max-age=604800
+/vangcur-logo*
+  Cache-Control: public, max-age=604800
+/vangcur-team-avatar.png
+  Cache-Control: public, max-age=604800
