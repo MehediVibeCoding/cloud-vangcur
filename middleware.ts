@@ -9,6 +9,85 @@ import { updateSession } from '@/lib/supabase/middleware';
 // 🛡️ ক্ষতিকর বট ও ভালনারেবিলিটি স্ক্যানার পাথ (সার্ভার ছোঁয়ার আগেই Edge-এ ব্লক)
 const MALICIOUS_PROBE_REGEX = /\/(?:\.env|\.git|wp-admin|wp-login|xmlrpc|phpmyadmin|\.aws|eval-stdin|composer\.(?:json|lock)|package-lock\.json)/i;
 
+// 🧹 জাঙ্ক-পাথ ফিল্টার (২০২৬-১১): `app/[...segments]` ক্যাচ-অল প্রতিটা অচেনা পাথে Supabase-এ গাইড-পেজ
+// খোঁজে, তারপর ৪০৪ দেয় — আর সেই ৪০৪ ফলাফলও ISR ক্যাশে (Workers KV) লেখা হয় + নিজেকে HEAD পাঠিয়ে
+// রিভ্যালিডেশন চলে। ভালনারেবিলিটি স্ক্যানার প্রতিদিন কয়েকশো আলাদা পাথ (/admin, /api/config,
+// /settings...) ছুঁড়ে এভাবে KV-র দৈনিক লেখার কোটা (Free: ১,০০০/দিন) ও ১ GB স্টোরেজ ভরে ফেলছিল, ফলে
+// আসল পেজ ক্যাশে বসতে পারত না। এই ফিল্টার সেই পাথগুলো পেজ-রেন্ডার, DB ও ক্যাশ ছোঁয়ার আগেই ৪০৪ দেয়।
+//
+// নিয়ম: পাথ হয় (ক) পরিচিত আসল রুট, নয়তো (খ) গাইড-পেজের আকৃতির — [prefix/]slug, যেখানে slug ছোট হাতের
+// অক্ষর/সংখ্যা + অন্তত একটা হাইফেন (যেমন neon-light-bangladesh-guide), prefix ছোট হাতের অক্ষর/সংখ্যা/হাইফেন
+// (compare, install, ideas, app-remote...)। নতুন গাইড-টেমপ্লেট/prefix যোগ করলে এই ফাইলে হাত দিতে হবে না।
+// ⚠️ নতুন কোনো টপ-লেভেল রুট (app/xyz) যোগ করলে নিচের KNOWN_ROUTE_ROOTS-এ নামটা যোগ করতে হবে;
+// নতুন /api/xyz রুট যোগ করলে KNOWN_API_ROOTS-এ।
+const KNOWN_ROUTE_ROOTS = new Set([
+  'account',
+  'category',
+  'checkout',
+  'collection',
+  'offers',
+  'product',
+  'products',
+  'reset-password',
+  'search',
+  'track-order',
+  'refund-policy',
+  'privacy-policy',
+  'shipping',
+  'warranty',
+  'terms',
+  'guide',
+  '_next',
+  'cdn-cgi',
+]);
+const KNOWN_API_ROOTS = new Set([
+  'bkash-unmatched-alert',
+  'bkash-webhook',
+  'build-id',
+  'cleanup-review-images',
+  'game-score',
+  'indexnow',
+  'invoice',
+  'lead',
+  'live-products',
+  'meta-capi',
+  'order-email',
+  'revalidate-catalog',
+  'revalidate-guide',
+  'search-index',
+  'sla-alert',
+  'upload-review-image',
+  'verify-turnstile',
+]);
+// শুধু স্ট্যাটিক ফাইলের ফোল্ডার (public/) — ফাইল থাকলে ASSETS সরাসরি দেয়, Worker-এ পৌঁছায় না; পৌঁছালে মানে ফাইল নেই
+const STATIC_ONLY_ROOTS = new Set(['.well-known', 'games', 'fonts', 'brands', 'email']);
+const KNOWN_ROOT_FILES = new Set(['/robots.txt', '/sitemap.xml', '/manifest.webmanifest', '/llms.txt']);
+const INDEXNOW_KEY_FILE_REGEX = /^\/[a-f0-9]{32}\.txt$/i;
+const GUIDE_SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
+const GUIDE_PREFIX_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// দেখতে গাইড-স্লাগের মতো হলেও স্ক্যানারের চেনা প্রোব (/admin/api-tokens, /settings/api-keys, /server-status, /wp-json...)।
+// ⚠️ এই দুটো হিউরিস্টিক: ভবিষ্যতে কোনো গাইডের prefix/স্লাগ ঠিক এই শব্দে শুরু করলে এখানে ছাড় দিতে হবে।
+const JUNK_PREFIX_REGEX = /^(?:admin|administrator|settings|config|dashboard|debug|internal|private|backup|console|manager|swagger|graphql|actuator|litellm|flowise|nacos|jenkins|v\d+)$/;
+const JUNK_SLUG_REGEX = /^(?:api|wp|server|admin|secret|credential|token|backup|config)-/;
+
+function isJunkPath(pathname: string): boolean {
+  if (pathname === '/') return false;
+  if (KNOWN_ROOT_FILES.has(pathname) || INDEXNOW_KEY_FILE_REGEX.test(pathname)) return false;
+  const segs = pathname.split('/').filter(Boolean);
+  if (segs.length === 0) return false;
+  const root = segs[0] ?? '';
+  const second = segs[1] ?? '';
+  if (root === 'api') return !(second !== '' && KNOWN_API_ROOTS.has(second));
+  if (STATIC_ONLY_ROOTS.has(root)) return true;
+  if (KNOWN_ROUTE_ROOTS.has(root)) return false;
+  if (segs.length === 1) return !GUIDE_SLUG_REGEX.test(root) || JUNK_SLUG_REGEX.test(root);
+  if (segs.length === 2) {
+    const slug = second;
+    return !(GUIDE_PREFIX_REGEX.test(root) && GUIDE_SLUG_REGEX.test(slug)) || JUNK_PREFIX_REGEX.test(root) || JUNK_SLUG_REGEX.test(slug);
+  }
+  return true;
+}
+
 // 🌐 পরিচিত সার্চ-ইঞ্জিন/ক্রলার — এদের শুধু "পেজ" রেট-লিমিট থেকে ছাড় দেওয়া হয়
 const KNOWN_SEARCH_BOT_UA_REGEX = /googlebot|bingbot|applebot|duckduckbot|yandexbot|baiduspider|slurp/i;
 
@@ -83,6 +162,14 @@ export async function middleware(request: NextRequest) {
   // ১. ক্ষতিকর বট স্ক্যানার ড্রপ
   if (MALICIOUS_PROBE_REGEX.test(pathname)) {
     return new NextResponse('Not Found', { status: 404 });
+  }
+
+  // ১ক. জাঙ্ক-পাথ (স্ক্যানারের আজেবাজে URL): পেজ-রেন্ডার/DB/ISR-ক্যাশ ছোঁয়ার আগেই ৪০৪ (ওপরের ব্যাখ্যা দেখুন)
+  if (isJunkPath(pathname)) {
+    return new NextResponse('Not Found', {
+      status: 404,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Robots-Tag': 'noindex' },
+    });
   }
 
   // ২. ক্লায়েন্ট আইপি এক্সট্র্যাক্ট (শেয়ার্ড ফাংশন, C5 ফিক্স) ও এজ রেট লিমিট যাচাই
