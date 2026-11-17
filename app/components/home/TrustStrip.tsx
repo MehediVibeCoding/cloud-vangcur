@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'motion/react';
 import { useT } from '@/lib/i18n/useT';
 
 interface TrustItem {
@@ -86,24 +84,36 @@ const TRUST_ITEMS: TrustItem[] = [
 
 export default function TrustStrip() {
   const { t } = useT();
-  // সার্চ পেজের ক্যাটাগরি বাটন থেকে হোমে এলে (SearchClient.tsx <html>-এ data-skip-home-anim বসায়)
-  // এন্ট্রি অ্যানিমেশন বাদ — আইটেমগুলো শুরু থেকেই পুরো দৃশ্যমান। সরাসরি/রিলোডে অ্যাট্রিবিউট
-  // থাকে না, তাই সার্ভার-HTML-এর সাথে মিলে যায় আর অ্যানিমেশন আগের মতোই চলে।
-  const [skipAnim] = useState(
-    () => typeof document !== 'undefined' && document.documentElement.hasAttribute('data-skip-home-anim'),
-  );
 
+  // ⚡ আগে এখানে `motion`-এর initial={{ opacity: 0 }} + whileInView ছিল — সার্ভারের HTML-এই আইটেমগুলো
+  // অদৃশ্য (opacity 0) আসত, আর JS লোড + হাইড্রেশন + IntersectionObserver শেষ হওয়ার পরেই অ্যানিমেশন শুরু
+  // হতো। তাই সাদা বক্স আগে আসত, ভেতরের আইকন/লেখা দেরিতে। এখন হিরো কার্ডের মতো শুধু CSS কিফ্রেম —
+  // CSS আসার সাথে সাথে শুরু হয়, JS-এর জন্য অপেক্ষা নেই। শুরু/শেষ অবস্থা, ০.৪২ সেকেন্ড, easing আর
+  // i × ০.০৭ সেকেন্ড stagger আগের মতোই।
+  // সার্চ পেজের ক্যাটাগরি বাটন থেকে হোমে এলে (SearchClient.tsx <html>-এ data-skip-home-anim বসায়)
+  // এন্ট্রি অ্যানিমেশন বাদ — HeroSlider-এর মতো একই অ্যাট্রিবিউট CSS দিয়ে ধরা হয়।
   return (
     <div className="mx-auto mb-[26px] mt-4 max-w-[1300px] px-5">
+      <style>{`
+        @keyframes trustItemIn {
+          from { opacity: 0; transform: translateY(8px) scale(0.94); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .trust-item-anim {
+          animation: trustItemIn 0.42s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+        }
+        html[data-skip-home-anim] .trust-item-anim {
+          animation: none !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      `}</style>
       <div className="grid grid-cols-3 gap-x-2 gap-y-0 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sh1 backdrop-blur-[10px] md:grid-cols-5 md:gap-x-4 md:px-7 md:py-4">
         {TRUST_ITEMS.map((item, i) => (
-          <motion.div
+          <div
             key={item.label}
-            initial={skipAnim ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.94, y: 8 }}
-            whileInView={{ opacity: 1, scale: 1, y: 0 }}
-            viewport={{ once: true, margin: '-20px' }}
-            transition={{ duration: 0.42, delay: i * 0.07, ease: [0.4, 0, 0.2, 1] }}
-            className={`flex items-center gap-2 ${i >= 3 ? 'hidden md:flex' : ''}`}
+            style={{ animationDelay: `${(i * 0.07).toFixed(2)}s` }}
+            className={`trust-item-anim flex items-center gap-2 ${i >= 3 ? 'hidden md:flex' : ''}`}
           >
             <div
               className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-brand ease-brand hover:scale-110 md:h-10 md:w-10 ${item.tint} [&_svg]:h-[17px] [&_svg]:w-[17px] md:[&_svg]:h-[19px] md:[&_svg]:w-[19px]`}
@@ -118,7 +128,7 @@ export default function TrustStrip() {
                 {t(item.sub)}
               </div>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>
