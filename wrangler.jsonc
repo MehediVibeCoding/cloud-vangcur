@@ -21,7 +21,7 @@
   "kv_namespaces": [
     {
       "binding": "NEXT_INC_CACHE_KV",
-      "id": "61a2a76be19045868b53e10b0cf2444f"
+      "id": "142f99a23ff144ffb7a450e75e9798f8"
     }
   ],
   // 🗂️ ক্যাশ-পার্জের ট্যাগ-খাতা (D1) — open-next.config.ts-এর tagCache এটা ব্যবহার করে।
