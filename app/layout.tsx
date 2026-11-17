@@ -26,6 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
       template: '%s | Vangcur',
     },
     description,
+    manifest: '/manifest.webmanifest',
     icons: {
       icon: '/icon-192.png',
       shortcut: '/icon-192.png',
