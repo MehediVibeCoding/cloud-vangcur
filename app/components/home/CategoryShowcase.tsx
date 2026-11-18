@@ -87,6 +87,7 @@ export default function CategoryShowcase({ heading, cards }: Props) {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:gap-5">
         {cards.map((c, i) => {
           const title = pick(c.title, c.titleEn);
+          const imgAlt = pick(c.alt, c.altEn) || title;
           const titleLines = splitTitleLines(title);
           return (
             <ScrollReveal key={`${c.collectionId}-${i}`} delay={i * 0.06} className="h-full">
@@ -98,7 +99,7 @@ export default function CategoryShowcase({ heading, cards }: Props) {
                 {c.img ? (
                   <img
                     src={optimizeCloudinaryUrl(c.img, 720)}
-                    alt=""
+                    alt={imgAlt}
                     loading="lazy"
                     decoding="async"
                     draggable={false}
