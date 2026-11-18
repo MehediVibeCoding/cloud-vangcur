@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { makeCatSlug } from '@/lib/categoryData';
@@ -17,6 +18,9 @@ import ScrollReveal from '@/app/components/ui/ScrollReveal';
  *  • লেখার অংশ: ব্যাজ, শিরোনাম, বিবরণ, টিক-ফিচার তালিকা, শেষ লাইন, আর বাটন।
  *  • ডেটা আসে অ্যাডমিন প্যানেলের "হোম শোকেস" পেজ থেকে (lib/showcaseData.ts দেখুন)।
  */
+
+// স্লাইডারে প্রতিটা ছবি কত মিলিসেকেন্ড থাকবে
+const SLIDE_MS = 4500;
 
 function ArrowIcon({ size = 14 }: { size?: number }) {
   return (
@@ -60,20 +64,53 @@ function SpotlightRow({ s, reverse, first }: { s: ShowcaseSpotlight; reverse: bo
   const note = pick(s.note, s.noteEn);
   const desc = pick(s.desc, s.descEn);
 
+  // ২টা বা বেশি ছবি থাকলে স্লাইডারের মতো ঘুরে ঘুরে দেখায়; একটা হলে আগের মতোই স্থির
+  const slides = s.imgs && s.imgs.length > 1 ? s.imgs : [s.img];
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (slides.length < 2 || paused) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % slides.length), SLIDE_MS);
+    return () => clearInterval(t);
+  }, [slides.length, paused]);
+
   const image = (
-    <div className={`group relative min-h-[260px] overflow-hidden bg-slate-200 ${reverse ? 'md:order-2' : 'md:order-1'}`}>
+    <div
+      className={`group relative min-h-[260px] overflow-hidden bg-slate-200 ${reverse ? 'md:order-2' : 'md:order-1'}`}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
       {/* মোবাইলে ৫:৪ ফ্রেম; md+ এ সারির পুরো উচ্চতা জুড়ে ছবি cover হয়ে ভরে যায় */}
       <div className="aspect-[5/4] w-full md:aspect-auto md:h-full" aria-hidden="true" />
-      <img
-        src={optimizeCloudinaryUrl(s.img, 1000)}
-        alt={title}
-        loading="lazy"
-        decoding="async"
-        draggable={false}
-        className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-[1200ms] ease-brand group-hover:scale-[1.05]"
-      />
+      {slides.map((src, k) => (
+        <img
+          key={src}
+          src={optimizeCloudinaryUrl(src, 1000)}
+          alt={k === 0 ? title : `${title} – ${k + 1}`}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          aria-hidden={k !== idx}
+          className={`absolute inset-0 h-full w-full object-cover object-center transition-[opacity,transform] duration-[900ms] ease-brand group-hover:scale-[1.05] ${k === idx ? 'opacity-100' : 'opacity-0'}`}
+        />
+      ))}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" aria-hidden="true" />
       <Link prefetch={false} href={href} aria-label={title} tabIndex={-1} className="absolute inset-0" />
+
+      {slides.length > 1 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-1.5">
+          {slides.map((_, k) => (
+            <button
+              key={k}
+              type="button"
+              aria-label={`${k + 1} / ${slides.length}`}
+              onClick={() => setIdx(k)}
+              className={`pointer-events-auto h-1.5 rounded-full transition-all duration-300 ${k === idx ? 'w-5 bg-white' : 'w-1.5 bg-white/55 hover:bg-white/80'}`}
+            />
+          ))}
+        </div>
+      )}
 
     </div>
   );

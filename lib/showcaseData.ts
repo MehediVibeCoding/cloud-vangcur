@@ -47,6 +47,7 @@ export const SHOWCASE_LIMITS = {
   feature: 60,
   featureCount: 8,
   note: 160,
+  spotImgs: 8, // স্পটলাইটের স্লাইডারে সর্বোচ্চ ছবির সংখ্যা
 } as const;
 
 export interface ShowcaseHeading {
@@ -72,6 +73,8 @@ export type SpotlightLinkType = 'product' | 'category';
 export interface ShowcaseSpotlight {
   enabled: boolean;
   img: string;
+  /** ঐচ্ছিক — ২টা বা বেশি ছবি থাকলে স্লাইডারের মতো ঘুরে ঘুরে দেখায়; img সবসময় এর প্রথম ছবি */
+  imgs?: string[];
   badge: string;
   badgeEn: string;
   title: string;
@@ -227,6 +230,18 @@ function imgUrl(v: unknown, fallback: string): string {
   return fallback;
 }
 
+// স্লাইডারের ছবির তালিকা: শুধু https/সাইটের পাথ, ডুপ্লিকেট ও ফাঁকা বাদ, সর্বোচ্চ spotImgs টা
+function imgUrlList(v: unknown, max: number): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  for (const x of v) {
+    const u = imgUrl(x, '');
+    if (u && !out.includes(u)) out.push(u);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
@@ -250,9 +265,12 @@ function normalizeSpotlight(raw: unknown, fb: ShowcaseSpotlight): ShowcaseSpotli
   const pidNum = Number(r.productId);
   const productId = Number.isFinite(pidNum) && pidNum > 0 ? pidNum : undefined;
   const priceNum = Number(r.price);
+  const imgs = imgUrlList(r.imgs, L.spotImgs);
   return {
     enabled: typeof r.enabled === 'boolean' ? r.enabled : fb.enabled,
-    img: imgUrl(r.img, fb.img) || fb.img,
+    // স্লাইডারের তালিকা থাকলে প্রথম ছবিই img (পুরনো কোড/প্রিলোডের সাথে মিল রাখতে)
+    img: imgs[0] || imgUrl(r.img, fb.img) || fb.img,
+    imgs,
     badge: str(r.badge, fb.badge, L.badge),
     badgeEn: str(r.badgeEn, fb.badgeEn, L.badge),
     title: str(r.title, fb.title, L.title),
