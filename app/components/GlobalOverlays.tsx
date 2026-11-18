@@ -10,7 +10,7 @@ import {
   OPEN_WAIT_OVERLAY_EVENT, SHOW_BG_CONFIRM_EVENT, OPEN_MEMBERSHIP_EVENT, SHOW_POST_RECEIVE_INFO_EVENT,
   OPEN_QUICK_CART_MODAL_EVENT, OPEN_ORDER_LIMIT_EVENT, OPEN_BULK_ORDER_EVENT,
 } from '@/lib/uiEvents';
-import { trackInAppNav } from '@/lib/navBack';
+import { trackInAppNav, noteAccountOrigin, variantHistoryOnNav } from '@/lib/navBack';
 import { useLanguageStore } from '@/lib/store/languageStore';
 import { useThemeStore } from '@/lib/store/themeStore';
 import { useCartStore } from '@/lib/store/cartStore';
@@ -119,8 +119,14 @@ export default function GlobalOverlays() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+  const prevPathRef = useRef<string | null>(null);
   useEffect(() => {
+    const prev = prevPathRef.current;
+    prevPathRef.current = pathname;
+    // অ্যাকাউন্টে কোন পেজ থেকে ঢুকলাম মনে রাখা (প্রোডাক্ট হলে "ফিরে যান" সেখানেই ফিরবে)
+    noteAccountOrigin(prev, pathname);
     if (firstPathRef.current) { firstPathRef.current = false; return; }
+    variantHistoryOnNav(pathname, popRef.current);
     trackInAppNav(popRef.current);
     popRef.current = false;
   }, [pathname]);

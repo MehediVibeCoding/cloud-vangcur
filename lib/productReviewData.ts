@@ -369,10 +369,13 @@ export function getLikedReviews(): string[] {
 }
 
 /** সার্ভারে থাকা এই ডিভাইসের লাইক + লোকাল লাইক মিলিয়ে ফেরত দেয় এবং লোকালে আবার লিখে রাখে */
-export async function syncLikedReviews(supabase: SupabaseClient): Promise<string[]> {
+export async function syncLikedReviews(
+  supabase: SupabaseClient,
+): Promise<{ ids: string[]; synced: boolean }> {
   const local = getLikedReviews();
   const remote = await fetchMyLikedIds(supabase, 'product_review');
-  const merged = Array.from(new Set([...local, ...remote]));
+  // remote === null → সার্ভার-সিঙ্ক ব্যর্থ; লোকালটাই ফেরত, synced=false (পরে আবার চেষ্টা হবে)
+  const merged = Array.from(new Set([...local, ...(remote ?? [])]));
   if (merged.length !== local.length) {
     try {
       localStorage.setItem(LIKED_REVIEWS_KEY, JSON.stringify(merged));
@@ -380,7 +383,7 @@ export async function syncLikedReviews(supabase: SupabaseClient): Promise<string
       // ignore
     }
   }
-  return merged;
+  return { ids: merged, synced: remote !== null };
 }
 
 export async function toggleReviewLike(

@@ -222,6 +222,21 @@ export async function middleware(request: NextRequest) {
     ? await updateSession(request)
     : NextResponse.next({ request });
 
+  // 🆔 টেকসই ডিভাইস-আইডি (লাইকের জন্য): সার্ভার-সেট কুকি Safari ITP-র ৭-দিনের সীমায় পড়ে না।
+  // API ও সার্চ-বটে বসানো হয় না (অপ্রয়োজনীয় কুকি এড়াতে)।
+  if (!isApiRoute && !isKnownSearchBot) {
+    const existingDeviceId = request.cookies.get('vc_device_id')?.value || '';
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(existingDeviceId)) {
+      response.cookies.set('vc_device_id', crypto.randomUUID().replace(/-/g, ''), {
+        path: '/',
+        maxAge: 31536000,
+        sameSite: 'lax',
+        secure: true,
+        httpOnly: false,
+      });
+    }
+  }
+
   // ৪. সার্বিক সাইট সিকিউরিটি ও ক্লিকজ্যাকিং প্রোটেকশন হেডার
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
   response.headers.set('X-Content-Type-Options', 'nosniff');

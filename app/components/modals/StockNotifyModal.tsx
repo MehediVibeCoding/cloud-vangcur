@@ -1,5 +1,6 @@
 'use client';
 
+import { cleanTyping } from '@/lib/profanityFilter';
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { STOCK_NOTIFY_EVENT } from '@/lib/productData';
@@ -246,7 +247,7 @@ export default function StockNotifyModal() {
                     value={name}
                     maxLength={MAX_NAME_LEN}
                     onChange={(e) => {
-                      setName(sanitizePlainName(e.target.value));
+                      setName(sanitizePlainName(cleanTyping(e.target.value)));
                       if (nameErr) setNameErr('');
                     }}
                     placeholder={lang === 'en' ? 'Your Full Name' : 'আপনার পূর্ণ নাম লিখুন'}

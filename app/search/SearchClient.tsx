@@ -37,11 +37,12 @@ function pageSizeForViewport(): number {
 }
 const MAX_SEARCH_LEN = 60;
 
-function SearchHeader({ query, onQueryChange, filterSlot }: { query: string; onQueryChange: (v: string) => void; filterSlot?: React.ReactNode }) {
+function SearchHeader({ query, onApply, filterSlot }: { query: string; onApply: (v: string) => void; filterSlot?: React.ReactNode }) {
   const { t, lang } = useT();
   const router = useRouter();
   const [value, setValue] = useState(query);
   const lastLimitToastRef = useRef(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // ইউজার শব্দের শেষে স্পেস টাইপ করলে URL-এর (trim করা) মান যেন সেই স্পেস মুছে না দেয়
   useEffect(() => { setValue((prev) => (prev.trim() === query ? prev : query)); }, [query]);
@@ -71,8 +72,24 @@ function SearchHeader({ query, onQueryChange, filterSlot }: { query: string; onQ
       }
     }
     const clean = rawVal.replace(/[<>`]/g, '').slice(0, MAX_SEARCH_LEN);
+    // শুধু ড্রাফট বদলায় — সার্চ প্রয়োগ হয় Enter বা সার্চ-আইকনে (কুপনের "প্রয়োগ/মুছুন"-এর মতো)
     setValue(clean);
-    onQueryChange(clean);
+  };
+
+  const trimmedValue = value.trim();
+  // প্রয়োগ-করা শব্দের সাথে ইনপুট হুবহু মিললে "মুছুন", নইলে সার্চ-আইকন
+  const isApplied = trimmedValue.length > 0 && trimmedValue === query;
+
+  const applySearch = () => {
+    if (!trimmedValue) return;
+    onApply(trimmedValue);
+    inputRef.current?.blur(); // মোবাইলে কিবোর্ড নামিয়ে ফলাফল দেখানো
+  };
+
+  const clearSearch = () => {
+    setValue('');
+    onApply('');
+    inputRef.current?.focus();
   };
 
   return (
@@ -105,14 +122,22 @@ function SearchHeader({ query, onQueryChange, filterSlot }: { query: string; onQ
               <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
             </svg>
             <input
+              ref={inputRef}
               type="search"
+              enterKeyHint="search"
               maxLength={MAX_SEARCH_LEN}
               value={value}
               placeholder={t('পুনরায় সার্চ করুন...')}
               onChange={(e) => handleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  applySearch();
+                }
+              }}
               autoComplete="off"
               style={{ outline: 'none', WebkitAppearance: 'none' }}
-              className={`h-11 w-full rounded-full border border-border-base bg-white text-[14px] font-medium text-ink outline-none focus:outline-none focus:ring-0 focus-visible:outline-none transition-colors duration-200 focus:border-brand-light pl-10 ${value ? 'pr-16' : 'pr-4'}`}
+              className={`h-11 w-full rounded-full border border-border-base bg-white text-[14px] font-medium text-ink outline-none focus:outline-none focus:ring-0 focus-visible:outline-none transition-colors duration-200 focus:border-brand-light pl-10 ${value ? 'pr-[4.5rem]' : 'pr-4'}`}
             />
             {value && (
               // 🛠️ ফিক্স: আগে এই বাটনে top-1/2 + -translate-y-1/2 (Tailwind ক্লাস)
@@ -126,16 +151,31 @@ function SearchHeader({ query, onQueryChange, filterSlot }: { query: string; onQ
               // আর নড়ে না। পাশাপাশি চোখে-লাগা নীল সার্কেল X বাদ দিয়ে একটা হালকা
               // "মুছুন" টেক্সট-বাটন বসানো হয়েছে, যেটা কম জোরালো/কম বিরক্তিকর লাগবে।
               <div className="absolute inset-y-0 right-2 flex items-center">
-                <motion.button
-                  type="button"
-                  onClick={() => { setValue(''); onQueryChange(''); }}
-                  whileTap={{ scale: 0.94 }}
-                  transition={{ type: 'spring', stiffness: 480, damping: 28 }}
-                  aria-label={t('মুছুন')}
-                  className="flex h-7 items-center rounded-full px-2.5 font-body text-[11.5px] font-bold text-muted transition-colors duration-brand hover:bg-surface-muted hover:text-brand-light"
-                >
-                  {t('মুছুন')}
-                </motion.button>
+                {isApplied ? (
+                  <motion.button
+                    type="button"
+                    onClick={clearSearch}
+                    whileTap={{ scale: 0.94 }}
+                    transition={{ type: 'spring', stiffness: 480, damping: 28 }}
+                    aria-label={t('মুছুন')}
+                    className="flex h-7 items-center rounded-full px-2.5 font-body text-[11.5px] font-bold text-muted transition-colors duration-brand hover:bg-surface-muted hover:text-brand-light"
+                  >
+                    {t('মুছুন')}
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    type="button"
+                    onClick={applySearch}
+                    whileTap={{ scale: 0.94 }}
+                    transition={{ type: 'spring', stiffness: 480, damping: 28 }}
+                    aria-label={lang === 'en' ? 'Search' : 'সার্চ করুন'}
+                    className="flex h-7 w-8 items-center justify-center rounded-full bg-brand-light text-white transition-colors duration-brand hover:brightness-105"
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+                    </svg>
+                  </motion.button>
+                )}
               </div>
             )}
           </div>
@@ -361,7 +401,16 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
   const { t, lang } = useT();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const query = cleanQuery(searchParams.get('q') || '');
+  const urlQuery = cleanQuery(searchParams.get('q') || '');
+  // প্রয়োগ-করা সার্চ শব্দ লোকাল স্টেটে (Enter/আইকনে বদলায়); URL বাইরে থেকে (অন্য সার্চ থেকে এলে) বদলালে মিলিয়ে নেওয়া হয়।
+  // আগে সরাসরি useSearchParams-এর উপর নির্ভর ছিল — replaceState-এ তা সবসময় ধরা পড়ত না, তাই নতুন শব্দে কিছুই হতো না।
+  const [query, setQuery] = useState(urlQuery);
+  const lastUrlQueryRef = useRef(urlQuery);
+  useEffect(() => {
+    if (lastUrlQueryRef.current === urlQuery) return;
+    lastUrlQueryRef.current = urlQuery;
+    setQuery(urlQuery);
+  }, [urlQuery]);
 
   const cats = initialCategories && initialCategories.length ? initialCategories : DEFAULT_CATEGORIES;
 
@@ -439,21 +488,16 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
 
   // URL আপডেট শুধু ব্রাউজারের history-তে — Next.js-এর সার্ভার-রিকোয়েস্ট ছাড়া (router.replace
   // প্রতিবার সার্ভার থেকে পুরো পেজ আবার আনত)। useSearchParams এটা নিজে ধরে নেয়।
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleQueryChange = useCallback((value: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+  const handleApply = useCallback((value: string) => {
+    const clean = cleanQuery(value);
     // নতুন শব্দে আগের ব্র্যান্ড-নির্বাচন অপ্রাসঙ্গিক হতে পারে — তাই শুধু ব্র্যান্ড মুছে যায়; দাম/সর্ট/স্টক থাকে
     if (filtersRef.current.brands.length) {
       setFilters((f) => (f.brands.length ? { ...f, brands: [] } : f));
       filtersRef.current = { ...filtersRef.current, brands: [] };
     }
-    debounceRef.current = setTimeout(() => {
-      const clean = cleanQuery(value);
-      const url = buildSearchUrl(clean, filtersRef.current);
-      window.history.replaceState(window.history.state, '', url);
-    }, 300);
+    setQuery(clean);
+    window.history.replaceState(window.history.state, '', buildSearchUrl(clean, filtersRef.current));
   }, []);
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   const goToHomeCategory = useCallback((catId: string) => {
     // হোমে গিয়ে ক্যাটাগরির পণ্য দেখানোর সময় হিরো কার্ডের এন্ট্রি অ্যানিমেশন যেন না চলে —
@@ -481,7 +525,7 @@ export default function SearchClient({ initialQuery, initialResults, initialTota
     <>
       <SearchHeader
         query={query}
-        onQueryChange={handleQueryChange}
+        onApply={handleApply}
         filterSlot={(
           <SearchFilterPanel
             filters={filters}

@@ -1,5 +1,6 @@
 'use client';
 
+import { cleanTyping } from '@/lib/profanityFilter';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
@@ -580,7 +581,7 @@ export default function ProductQnA({ productId, productName, initialData }: Prod
                   maxLength={30}
                   value={askName}
                   disabled={!!currentUser?.name && !isAdmin}
-                  onChange={(e) => setAskName(e.target.value)}
+                  onChange={(e) => setAskName(cleanTyping(e.target.value))}
                   placeholder={t('আপনার নাম লিখুন')}
                   className="w-full rounded-xl border border-border-base bg-white px-3.5 py-2.5 font-body text-[13.5px] text-ink outline-none transition-brand focus:border-brand-light disabled:bg-surface-muted disabled:text-muted"
                 />
@@ -596,7 +597,7 @@ export default function ProductQnA({ productId, productName, initialData }: Prod
                   rows={3}
                   maxLength={100}
                   value={askQuestion}
-                  onChange={(e) => setAskQuestion(e.target.value)}
+                  onChange={(e) => setAskQuestion(cleanTyping(e.target.value))}
                   placeholder={t('প্রোডাক্ট সম্পর্কে আপনি কী জানতে চান? (কমপক্ষে ১০ অক্ষর)')}
                   className="w-full rounded-xl border border-border-base bg-white p-3 font-body text-[13.5px] text-ink outline-none transition-brand focus:border-brand-light"
                 />
@@ -676,7 +677,7 @@ export default function ProductQnA({ productId, productName, initialData }: Prod
                   rows={4}
                   maxLength={500}
                   value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
+                  onChange={(e) => setReplyText(cleanTyping(e.target.value))}
                   placeholder={isAdmin ? t('সঠিক ও স্পষ্ট উত্তর লিখুন...') : t('আপনার মন্তব্য লিখুন...')}
                   className="w-full rounded-xl border border-border-base bg-white p-3 font-body text-[13.5px] text-ink outline-none transition-brand focus:border-brand-light"
                 />

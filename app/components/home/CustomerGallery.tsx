@@ -187,6 +187,8 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
       setLoaded(true);
       if (!likesAlreadySyncedThisSession()) {
         fetchMyLikedIds(supabase, 'customer_gallery').then((ids) => {
+          // ব্যর্থ হলে (null) "সিঙ্ক হয়েছে" ধরা হয় না — পরের বার আবার চেষ্টা হবে
+          if (ids === null) return;
           markLikesSyncedThisSession();
           if (cancelled || !ids.length) return;
           ids.forEach((sid) => markGalleryLiked(sid));
@@ -208,6 +210,8 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
       setLoaded(true);
       if (!likesAlreadySyncedThisSession()) {
         fetchMyLikedIds(supabase, 'customer_gallery').then((ids) => {
+          // ব্যর্থ হলে (null) "সিঙ্ক হয়েছে" ধরা হয় না — পরের বার আবার চেষ্টা হবে
+          if (ids === null) return;
           markLikesSyncedThisSession();
           if (cancelled || !ids.length) return;
           ids.forEach((sid) => markGalleryLiked(sid));
@@ -233,8 +237,10 @@ export default function CustomerGallery({ initialReviews }: { initialReviews?: R
         if (!cancelled && !error && data && data.length > 0) {
           // সার্ভারে এই ডিভাইসের আগের লাইকও মিলিয়ে নেওয়া (লোকাল স্টোরেজ মুছে গেলেও লাভ ফিরে আসবে)
           const serverLiked = await fetchMyLikedIds(supabase, 'customer_gallery');
-          markLikesSyncedThisSession();
-          serverLiked.forEach((sid) => markGalleryLiked(sid));
+          if (serverLiked !== null) {
+            markLikesSyncedThisSession();
+            serverLiked.forEach((sid) => markGalleryLiked(sid));
+          }
           const likedIds = getLikedGalleryIds();
           const mapped = (data as Review[]).map((r) => ({ ...r, liked: likedIds.has(String(r.id)) }));
           setReviews(mapped);

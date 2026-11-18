@@ -18,6 +18,7 @@ import { RippleLayer, rippleThen } from '@/lib/ripple';
 import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
 import { formatSafeDate } from '@/lib/safeLocaleDate';
 import { logout } from '@/lib/authData';
+import { getAccountBackTarget } from '@/lib/navBack';
 import {
   OPEN_CART_EVENT, OPEN_WISHLIST_EVENT, OPEN_TRACK_ORDER_EVENT,
 } from '@/lib/uiEvents';
@@ -428,7 +429,8 @@ export default function AccountClient() {
               aria-label={t('হোম')}
               onClick={(e) => {
                 e.preventDefault();
-                rippleThen(e, () => router.push('/'));
+                // প্রোডাক্ট পেজ থেকে এসে থাকলে সেই প্রোডাক্টে, নইলে হোমে
+                rippleThen(e, () => router.push(getAccountBackTarget()));
               }}
               className="vc-press group relative before:absolute before:content-[''] before:-inset-y-[10px] before:-left-3 before:-right-1 md:before:hidden flex shrink-0 items-center gap-2 rounded-full border border-border-base/70 bg-white/80 py-1.5 pl-2 pr-3.5 shadow-xs backdrop-blur-md hover:border-brand-light hover:bg-brand-bg/40 no-underline"
             >

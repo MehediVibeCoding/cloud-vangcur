@@ -1,5 +1,6 @@
 'use client';
 
+import { cleanTyping } from '@/lib/profanityFilter';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -1431,7 +1432,7 @@ export default function CheckoutPage() {
                     className={fieldInputClass(!!errors.eN)}
                     value={name}
                     maxLength={MAX_NAME_LEN}
-                    onChange={(e) => setName(sanitizePlainName(e.target.value))}
+                    onChange={(e) => setName(sanitizePlainName(cleanTyping(e.target.value)))}
                     placeholder={t('আপনার পূর্ণ নাম')}
                   />
                 </div>
@@ -1479,7 +1480,7 @@ export default function CheckoutPage() {
                     rows={3}
                     value={addr}
                     maxLength={MAX_ADDR_LEN}
-                    onChange={(e) => setAddr(sanitizeAddressInput(e.target.value))}
+                    onChange={(e) => setAddr(sanitizeAddressInput(cleanTyping(e.target.value)))}
                     placeholder={t('গ্রাম/মহল্লা, রোড, বাসা নম্বর সহ বিস্তারিত লিখুন')}
                   />
                 </div>

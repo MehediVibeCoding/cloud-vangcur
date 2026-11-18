@@ -1,5 +1,6 @@
 'use client';
 
+import { cleanTyping } from '@/lib/profanityFilter';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
@@ -160,7 +161,7 @@ export default function CompleteProfileModal({ isOpen, onClose, onSaved }: Compl
                     required
                     maxLength={MAX_NAME_LEN}
                     value={name}
-                    onChange={(e) => setName(sanitizePlainName(e.target.value))}
+                    onChange={(e) => setName(sanitizePlainName(cleanTyping(e.target.value)))}
                     placeholder={t('আপনার পূর্ণ নাম লিখুন')}
                     className="w-full rounded-xl border border-border-base bg-white px-3.5 py-2.5 font-body text-[13.5px] text-ink outline-none transition-brand focus:border-brand-light"
                   />
@@ -212,7 +213,7 @@ export default function CompleteProfileModal({ isOpen, onClose, onSaved }: Compl
                     rows={3}
                     maxLength={MAX_ADDR_LEN}
                     value={address}
-                    onChange={(e) => setAddress(sanitizeAddressInput(e.target.value))}
+                    onChange={(e) => setAddress(sanitizeAddressInput(cleanTyping(e.target.value)))}
                     placeholder={t('বাসা/হোল্ডিং নম্বর, রোড, এলাকা, থানা')}
                     className="w-full rounded-xl border border-border-base bg-white p-3 font-body text-[13.5px] text-ink outline-none transition-brand focus:border-brand-light"
                   />

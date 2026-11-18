@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -73,6 +73,8 @@ export default function RecoveryToast() {
   const pathname = usePathname();
   const router = useRouter();
   const [draft, setDraft] = useState<CheckoutDraft | null>(null);
+  const [closing, setClosing] = useState(false);
+  const closeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const dismiss = useCallback(() => {
     if (draft?.id) {
@@ -88,9 +90,32 @@ export default function RecoveryToast() {
       // ignore
     }
     setDraft(null);
+    setClosing(false);
   }, [draft?.id]);
 
   useHistoryModal(Boolean(draft), dismiss, 'recovery-toast');
+
+  // ✕ বাটন: আগে হালকা ফেড-আউট, তারপর ব্যাক-জেসচারের মতো একই পথে (history.back() → popstate → dismiss) বন্ধ।
+  // আগে ✕ সরাসরি dismiss করত, ফলে useHistoryModal-এর cleanup আলাদা replaceState + দেরির history.back() চালিয়ে
+  // পেজ লাফ দিত। এখন হিস্ট্রি-স্লট ঠিক একবারই খরচ হয়; ব্যাক-জেসচারে বন্ধ হওয়ার ফিচার আগের মতোই আছে।
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
+  const handleCloseClick = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    closeTimersRef.current.push(setTimeout(() => {
+      let hasSlot = false;
+      try { hasSlot = Boolean(window.history.state?.modalOpen); } catch { /* ignore */ }
+      if (hasSlot) {
+        window.history.back(); // popstate → হুক dismiss() ডাকে
+        // নিরাপত্তা: popstate না এলে নিজেই বন্ধ
+        closeTimersRef.current.push(setTimeout(() => dismissRef.current(), 450));
+      } else {
+        dismissRef.current();
+      }
+    }, 220));
+  }, [closing]);
+  useEffect(() => () => { closeTimersRef.current.forEach(clearTimeout); }, []);
 
   useEffect(() => {
     if (pathname !== '/') {
@@ -162,13 +187,17 @@ export default function RecoveryToast() {
 
   return (
     <div className="fixed inset-x-3 bottom-4 z-[950] sm:bottom-5 sm:left-auto sm:right-5 sm:w-[380px] animate-section-reveal">
-      <div className="relative overflow-hidden rounded-[24px] border border-white/80 bg-gradient-to-b from-brand-bg via-[#DCEBFD] to-white p-5 shadow-sh3 ring-1 ring-white/70 backdrop-blur-md">
+      <motion.div
+        animate={{ opacity: closing ? 0 : 1, y: closing ? 10 : 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        style={{ pointerEvents: closing ? 'none' : undefined }}
+        className="relative overflow-hidden rounded-[24px] border border-white/80 bg-gradient-to-b from-brand-bg via-[#DCEBFD] to-white p-5 shadow-sh3 ring-1 ring-white/70 backdrop-blur-md">
         
         <HeaderDecor />
 
         <motion.button
           type="button"
-          onClick={dismiss}
+          onClick={handleCloseClick}
           whileTap={{ scale: 0.92 }}
           transition={{ type: 'spring', stiffness: 480, damping: 28 }}
           className="absolute right-3.5 top-3.5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/80 text-ink/60 shadow-xs backdrop-blur-[8px] transition-colors duration-brand hover:bg-white hover:text-ink focus-visible:outline-none"
@@ -228,7 +257,7 @@ export default function RecoveryToast() {
           <ArrowRightIcon />
         </button>
 
-      </div>
+      </motion.div>
     </div>
   );
 }

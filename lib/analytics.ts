@@ -92,6 +92,9 @@ function metaEvent(
     /* ignore */
   }
   if (!withCapi) return;
+  // 🔌 Pixel ID সেট না থাকলে (বিজ্ঞাপন বন্ধ) CAPI কলই হয় না — Worker রিকোয়েস্ট খরচ হয় না।
+  // আবার চালু করতে: Cloudflare-এ NEXT_PUBLIC_META_PIXEL_ID + META_CAPI_ACCESS_TOKEN বসিয়ে রিডিপ্লয়।
+  if (!process.env.NEXT_PUBLIC_META_PIXEL_ID) return;
   try {
     void fetch('/api/meta-capi', {
       method: 'POST',

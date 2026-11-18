@@ -1,5 +1,6 @@
 'use client';
 
+import { cleanTyping } from '@/lib/profanityFilter';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
@@ -740,7 +741,7 @@ export default function LoginModal({
                     <label className={fieldLabelClass}>{t('পূর্ণ নাম')}</label>
                     <div className="relative">
                       <span className={fieldIconWrapClass}><IconUser /></span>
-                      <input placeholder={t('আপনার পূর্ণ নাম লিখুন')} maxLength={MAX_NAME_LEN} value={rName} onChange={(e) => setRName(sanitizePlainName(e.target.value))} className={fieldClass(false)} />
+                      <input placeholder={t('আপনার পূর্ণ নাম লিখুন')} maxLength={MAX_NAME_LEN} value={rName} onChange={(e) => setRName(sanitizePlainName(cleanTyping(e.target.value)))} className={fieldClass(false)} />
                     </div>
                   </div>
                   <div>

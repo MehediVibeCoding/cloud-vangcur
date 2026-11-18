@@ -37,14 +37,14 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description,
       siteName: 'Vangcur',
-      images: [{ url: '/vangcur-logo.png', width: 991, height: 365, alt: 'Vangcur' }],
+      images: [{ url: '/og-image-v2.jpg', width: 1200, height: 630, alt: 'Vangcur' }],
       locale: lang === 'en' ? 'en_US' : 'bn_BD',
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: ['/vangcur-logo.png'],
+      images: ['/og-image-v2.jpg'],
     },
   };
 }

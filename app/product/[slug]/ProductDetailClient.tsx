@@ -4,6 +4,7 @@ import { MAX_QTY_PER_PRODUCT } from '@/lib/cartLimits';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { handleVariantClick } from '@/lib/navBack';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { optimizeCloudinaryUrl, buildImageSrcSet } from '@/lib/cloudinaryUrl';
@@ -1321,6 +1322,12 @@ export default function ProductDetailClient({
                     <Link
                       key={v.id}
                       href={productHref(v)}
+                      onClick={(e) => {
+                        // ভেরিয়েন্ট-হিস্ট্রি: প্রতিটা ভেরিয়েন্ট হিস্ট্রিতে একবার (দেখুন lib/navBack.ts)
+                        if (handleVariantClick(e, String(prod.colorGroupId), productHref(v), (h) => router.push(h))) {
+                          e.preventDefault();
+                        }
+                      }}
                       className="flex items-center gap-1.5 rounded-full border border-brand-light/25 bg-white/60 px-3 py-1.5 text-[12.5px] font-semibold text-ink shadow-2xs backdrop-blur-[6px] transition-brand duration-brand hover:border-brand-light/60 hover:bg-brand-bg/40 hover:shadow-xs"
                     >
                       {dot}

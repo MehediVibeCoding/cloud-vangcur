@@ -1,5 +1,6 @@
 'use server';
 
+import { containsProfanity } from '@/lib/profanityFilter';
 import { MAX_QTY_PER_PRODUCT } from '@/lib/cartLimits';
 import { after } from 'next/server';
 import { headers } from 'next/headers';
@@ -148,6 +149,10 @@ export async function createOrder(payload: OrderPayload): Promise<ActionResponse
   const dist = String(payload.district || '').trim();
   const addr = sanitizeAddressInput(String(payload.address || '')).trim();
   const email = sanitizeEmailInput(String(payload.email || '')).trim();
+  // 🚫 অশোভন শব্দ — ব্রাউজার ফিল্টার এড়িয়ে সরাসরি কল করলেও সার্ভার আটকায়
+  if (containsProfanity(name) || containsProfanity(addr)) {
+    return fail(t('অশোভন শব্দ ব্যবহার করা যাবে না'));
+  }
   const shipping = String(payload.shipping || '').trim();
   const txn = String(payload.paymentTxn || '').trim().toUpperCase();
   const last4 = String(payload.paymentLast4 || '').trim();
