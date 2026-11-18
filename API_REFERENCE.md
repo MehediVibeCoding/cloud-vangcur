@@ -57,7 +57,7 @@ interface OrderPayload {
 
 #### ৩. অভ্যন্তরীণ এক্সিকিউশন ধাপ ও আরপিসি কলস:
 1. **ইনপুট ফিল্টারিং:** `validateName`, `validatePhone`, `validateAddress`, `validateTxnId`।
-2. **মডারেটর চেক:** `mehedivibecoding@gmail.com` ইমেইল হলে রেট লিমিট ও ২০k সীমা বাইপাস।
+2. **মডারেটর চেক:** `profiles` টেবিলে `is_admin = true` অথবা `role IN ('admin', 'super_admin', 'moderator')` হলে রেট লিমিট ও ২০k সীমা বাইপাস। শুধুমাত্র DB-ভিত্তিক চেক, কোনো ইমেইল হার্ডকোড করা নেই।
 3. **রেট লিমিটিং RPC:** `check_and_set_rate_limit(phone)` এবং `check_and_set_fingerprint_limit(fingerprintId)`।
 4. **ডাটাবেজ প্রাইস ভেরিফিকেশন:** সুপাবেস `custom_products` থেকে রিয়েল-টাইম ডাটা ফেচ।
 5. **কুপন ভ্যালিডেশন RPC:** `validate_and_apply_coupon(code, subtotal, phone, userId)`।
@@ -141,7 +141,7 @@ interface OrderPayload {
 ### ১. টেলিগ্রাম অর্ডার নোটিফিকেশন (`lib/telegram.ts`)
 - **ফাংশন:** `sendTelegramOrderNotification(order)`
 - **মেথড:** POST `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`
-- **পেলোড:** HTML ফরম্যাটেড রিয়েল-টাইম অর্ডার ডিটেইলস (অর্ডার নম্বর, কাস্টমার নাম, ফোন, জেলা, ঠিকানা, পণ্যের তালিকা, শিপিং, সর্বমোট বিল, বিকাশ ট্রানজেকশন তথ্য, ৩-টায়ার অগ্রিম প্রদেয় ও কুরিয়ারের জন্য বাকি COD বিল)।
+- **পেলোড:** HTML ফরম্যাটেড রিয়েল-টাইম অর্ডার ডিটেইলস (অর্ডার নম্বর, কাস্টমার নাম, ফোন, জেলা, ঠিকানা, পণ্যের তালিকা, শিপিং, সর্বমোট বিল, বিকাশ ট্রানজেকশন তথ্য, ৩-টায়ার অগ্রিম প্রদেয় ও কুরিয়ারের জন্য বাকি COD বিল)।
 - **টাইমআউট:** `AbortSignal.timeout(5000)`।
 
 ### ২. ক্লাউডিনারি ক্লায়েন্ট আপলোড (`lib/cloudinaryUpload.ts`)
@@ -154,4 +154,4 @@ interface OrderPayload {
 - **ফাংশন:** `getWeatherCode(lat, lon)`
 - **মেথড:** GET `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
 - **ক্যাশিং:** ২ ঘণ্টার লোকাল স্টোরেজ ক্যাশ (`vc_weather_cache`)।
-- **উদ্দেশ্য:** কাস্টমারের জেলা অনুযায়ী বৃষ্টি হচ্ছে কি না তা শনাক্ত করে প্রোফাইলে লাইভ বৃষ্টির অ্যানিমেশন প্রদর্শন।
+- **উদ্দেশ্য:** কাস্টমারের জেলা অনুযায়ী বৃষ্টি হচ্ছে কি না তা শনাক্ত করে প্রোফাইলে লাইভ বৃষ্টির অ্যানিমেশন প্রদর্শন।
