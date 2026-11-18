@@ -12,7 +12,7 @@ Vangcur প্ল্যাটফর্মের ডাটাবেজ মডে�
 ### মূল ডাটাবেজ সুরক্ষানীতি:
 1. **Public/Anon ক্লায়েন্ট অ্যাক্সেস:** পাবলিক ক্লায়েন্ট শুধুমাত্র অনুমোদিত পণ্য (`custom_products`), সাধারণ সেটিংস (`store_settings`), অনুমোদিত রিভিউ (`product_reviews`) এবং প্রশ্নাবলি (`product_questions`) পড়তে পারে।
 2. **অর্ডার ও স্টক মিউটেশন:** অর্ডারের আসল দাম যাচাই, স্টক কমানো এবং কুপন ব্যবহার শুধুমাত্র সার্ভার-সাইড `Service Role Client` ও সিকিউর Postgres RPC-র মাধ্যমে ঘটে।
-3. **মডারেটর ও অ্যাডমিন রুল:** `mehedivibecoding@gmail.com` ইমেইলধারী ইউজার অথবা `profiles` টেবিলে `is_admin = true` / `role IN ('admin', 'moderator', 'super_admin')` চিহ্নিত ব্যবহারকারীরা কিউএন্ডএ এবং রিভিউ ব্যবস্থাপনায় মডারেশন অধিকার পান।
+3. **মডারেটর ও অ্যাডমিন রুল:** `profiles` টেবিলে `is_admin = true` / `role IN ('admin', 'moderator', 'super_admin')` চিহ্নিত ব্যবহারকারীরা কিউএন্ডএ এবং রিভিউ ব্যবস্থাপনায় মডারেশন অধিকার পান। কোনো ইমেইল হার্ডকোড করা নেই; ক্লায়েন্ট থেকে `is_admin` বদলানো যায় না (`is_admin_user()` RLS policy + `trg_protect_profile_privilege` trigger)।
 
 ---
 

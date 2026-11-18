@@ -67,7 +67,7 @@ Next.js 16 App Router আর্কিটেকচারে পারফরম্
    [ Server Action: createOrder(payload) ]
                   │
   ├── ১. ইনপুট স্যানিটাইজেশন ও রিজেক্স ভ্যালিডেশন (Name, Phone, District, Address, TxnID)
-  ├── ২. ইউজার অথেন্টিকেশন ও মডারেটর রোল চেক (mehedivibecoding@gmail.com bypass)
+  ├── ২. ইউজার অথেন্টিকেশন ও মডারেটর রোল চেক (DB-ভিত্তিক: profiles.is_admin / role)
   ├── ৩. রেট লিমিট ভেরিফিকেশন (Phone & Fingerprint RPCs)
   ├── ৪. ডাটাবেজ থেকে আসল প্রোডাক্ট প্রাইস ও শিপিং কনফিগ ফেচ
   ├── ৫. সার্ভার-সাইড কুপন ভ্যালিডেশন RPC (validate_and_apply_coupon)
