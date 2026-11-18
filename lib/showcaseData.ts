@@ -37,6 +37,7 @@ export const SHOWCASE_LIMITS = {
   headingLead: 60,
   headingHl: 24,
   cardTitle: 22,
+  cardAlt: 160, // কার্ড-ছবির alt টেক্সট (SEO + স্ক্রিন রিডার)
   badge: 24,
   title: 80,
   desc: 500,
@@ -64,6 +65,9 @@ export interface ShowcaseCard {
   /** কার্ডের নিচের বাটনে বসা কালেকশনের নাম */
   title: string;
   titleEn: string;
+  /** কার্ড-ছবির alt টেক্সট (বাংলা/ইংরেজি) — ফাঁকা হলে কার্ডের নাম alt হয় */
+  alt: string;
+  altEn: string;
   /** স্থায়ী — অ্যাডমিন থেকে বদলানো যায় না */
   collectionId: CollectionId;
 }
@@ -125,10 +129,10 @@ export const DEFAULT_SHOWCASE: ShowcaseConfig = {
     hlEn: 'Curated Collection',
   },
   cards: [
-    { img: IMG_NONE, title: 'গিফট আইডিয়া', titleEn: 'Gift Ideas', collectionId: 'gift' },
-    { img: IMG_NONE, title: 'প্রিমিয়াম গ্যাজেট', titleEn: 'Premium Gadgets', collectionId: 'premium' },
-    { img: IMG_NONE, title: 'রুম ডেকর', titleEn: 'Room Decor', collectionId: 'room-decor' },
-    { img: IMG_NONE, title: 'ইউজফুল টুলস', titleEn: 'Useful Tools', collectionId: 'useful-tools' },
+    { img: IMG_NONE, title: 'গিফট আইডিয়া', titleEn: 'Gift Ideas', alt: 'গিফট আইডিয়া — গোলাপি সাটিন রিবনে বাঁধা সুন্দর গিফট বক্স', altEn: 'Gift ideas — a gift box tied with a pink satin ribbon', collectionId: 'gift' },
+    { img: IMG_NONE, title: 'প্রিমিয়াম গ্যাজেট', titleEn: 'Premium Gadgets', alt: 'প্রিমিয়াম গ্যাজেট — হেডফোন, পাওয়ার ব্যাংক, ব্লুটুথ স্পিকার, ইয়ারবাড, হ্যান্ডহেল্ড ফ্যান, মুন ল্যাম্প ও মিনি ক্যামেরার কালেকশন', altEn: 'Premium gadgets — headphones, power bank, speaker, earbuds, handheld fan, moon lamp and mini camera on a gold tray', collectionId: 'premium' },
+    { img: IMG_NONE, title: 'রুম ডেকর', titleEn: 'Room Decor', alt: 'রুম ডেকর — দেয়ালে নিয়ন লাইট, ওয়াল আর্ট, ফ্লোর ল্যাম্প ও ভিনাইল প্লেয়ারে সাজানো আরামদায়ক রুম', altEn: 'Room decor — cosy room with a wall neon light, wall art, floor lamp and vinyl player', collectionId: 'room-decor' },
+    { img: IMG_NONE, title: 'ইউজফুল টুলস', titleEn: 'Useful Tools', alt: 'ইউজফুল টুলস — পেগবোর্ডে সাজানো কর্ডলেস ড্রিল, ম্যাসাজ গান, ট্রাইপড ও ওয়ার্কবেঞ্চ গ্যাজেট', altEn: 'Useful tools — cordless drills, massage gun, tripods and workbench gadgets on a pegboard', collectionId: 'useful-tools' },
   ],
   spotlights: [
     {
@@ -253,6 +257,8 @@ function normalizeCard(raw: unknown, fb: ShowcaseCard): ShowcaseCard {
     img: imgUrl(r.img, fb.img) || fb.img,
     title: str(r.title, fb.title, L.cardTitle) || fb.title,
     titleEn: str(r.titleEn, fb.titleEn, L.cardTitle),
+    alt: str(r.alt, fb.alt, L.cardAlt),
+    altEn: str(r.altEn, fb.altEn, L.cardAlt),
     // 🔒 সবসময় ডিফল্টের স্থায়ী id — সেভ করা ডেটা থেকে কখনো পড়া হয় না
     collectionId: fb.collectionId,
   };
