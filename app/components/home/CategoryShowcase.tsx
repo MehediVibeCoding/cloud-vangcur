@@ -95,14 +95,16 @@ export default function CategoryShowcase({ heading, cards }: Props) {
                 aria-label={title}
                 className="group relative block aspect-[5/8] w-full overflow-hidden rounded-[22px] bg-slate-200 shadow-sh2 ring-1 ring-white/70 outline-none transition-[transform,box-shadow] duration-500 ease-brand focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 active:scale-[0.985] sm:rounded-[28px] [@media(hover:hover)]:hover:-translate-y-1 [@media(hover:hover)]:hover:shadow-sh3"
               >
-                <img
-                  src={optimizeCloudinaryUrl(c.img, 720)}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  draggable={false}
-                  className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-[1200ms] ease-brand group-hover:scale-[1.06]"
-                />
+                {c.img ? (
+                  <img
+                    src={optimizeCloudinaryUrl(c.img, 720)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-[1200ms] ease-brand group-hover:scale-[1.06]"
+                  />
+                ) : null}
 
                 {/* নিচের অর্ধেকে নরম শেড — ছবি পরিষ্কার থাকে, কিন্তু ৮১% উচ্চতার লেখা সব ছবিতেই পড়া যায় */}
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/65 via-black/30 to-transparent" aria-hidden="true" />

@@ -1693,7 +1693,7 @@ export default function CheckoutPage() {
                   <div className="flex items-center justify-between gap-2 min-[400px]:gap-3">
                     <div className="flex items-center gap-2.5 min-[400px]:gap-3 min-w-0">
                       <div className="flex h-11 w-11 min-[400px]:h-[52px] min-[400px]:w-[52px] shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/80 p-1 shadow-xs">
-                        <img src="https://res.cloudinary.com/dkjzleczw/image/upload/v1785388318/bkash-logo-icon_beuxfl.png" alt="bKash" className="h-7 w-7 min-[400px]:h-9 min-[400px]:w-9 shrink-0 object-contain" />
+                        <img src="https://img.vangcur.com/hero-cards/bkash-logo.webp" alt="bKash" className="h-7 w-7 min-[400px]:h-9 min-[400px]:w-9 shrink-0 object-contain" />
                       </div>
                       <div className="min-w-0">
                         <div className="mb-0.5 font-body text-[9.5px] min-[400px]:text-[10px] font-bold uppercase tracking-wide text-muted truncate">bKash Send Money</div>
@@ -1723,7 +1723,7 @@ export default function CheckoutPage() {
 
                   <div className={`overflow-hidden transition-[max-height,opacity] duration-[400ms] ${qrOpen ? 'mt-2 max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="flex items-start gap-3.5 rounded-[14px] border border-white/80 bg-white/90 p-3.5">
-                      <img src="https://res.cloudinary.com/dkjzleczw/image/upload/v1785388318/bkash-payment-qr_zmr6dz.jpg" alt="bKash QR" className="h-[130px] w-[130px] shrink-0 rounded-xl border border-border-base object-cover shadow-xs" />
+                      <img src="https://img.vangcur.com/hero-cards/BanglaQr.jpg.jpeg" alt="bKash QR" loading="lazy" decoding="async" className="h-[130px] w-[130px] shrink-0 rounded-xl border border-border-base object-cover shadow-xs" />
                       <div className="pt-0.5">
                         <div className="mb-1.5 font-body text-[12.5px] font-bold text-brand-light">{t('বিকাশ অ্যাপ দিয়ে স্ক্যান করুন')}</div>
                         <div className="font-body text-[11.5px] leading-[1.85] text-ink/80">

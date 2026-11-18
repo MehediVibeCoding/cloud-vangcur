@@ -106,10 +106,12 @@ export interface ShowcaseConfig {
   spotlights: ShowcaseSpotlight[];
 }
 
-// ডেমো ছবি (পরে অ্যাডমিন প্যানেল থেকে বদলানো হবে)
-const IMG_SQUARE = 'https://res.cloudinary.com/dkjzleczw/image/upload/v1790567648/vangcur/reviews/ujkyrgbuz0ajb0eeebws.webp';
-const IMG_WIDE = 'https://res.cloudinary.com/dkjzleczw/image/upload/v1791453080/ChatGPT_Image_Oct_8_2026_03_41_59_PM_mjfh7t.png';
-const IMG_TALL = 'https://res.cloudinary.com/dkjzleczw/image/upload/v1789009718/9f60ce93-82e1-4b01-8764-374a9560cf30_lnrcrq.png';
+// ডিফল্ট ছবি (সবই R2 / img.vangcur.com — Cloudinary আর নয়; অ্যাডমিন প্যানেল থেকে বদলানো যায়)।
+// স্পটলাইট: নিয়ন লাইট = হিরোর প্রথম কার্ডের ছবি, ফ্যান = প্রোডাক্ট #26-এর প্রথম ছবি।
+const IMG_SQUARE = 'https://img.vangcur.com/hero-cards/blue-neon-light-strip-wall-decor-vangcur.png';
+const IMG_WIDE = 'https://img.vangcur.com/products/xiaomi-aisolove-f01-handheld-turbo-fan-green-01-vangcur.jpg';
+// কার্ডের ডিফল্ট ছবি ইচ্ছাকৃতভাবে খালি — ছবি না থাকলে CategoryShowcase শুধু রঙিন ব্যাকগ্রাউন্ড + লেখা দেখায়।
+const IMG_NONE = '';
 
 export const DEFAULT_SHOWCASE: ShowcaseConfig = {
   enabled: true,
@@ -120,10 +122,10 @@ export const DEFAULT_SHOWCASE: ShowcaseConfig = {
     hlEn: 'Curated Collection',
   },
   cards: [
-    { img: IMG_TALL, title: 'গিফট আইডিয়া', titleEn: 'Gift Ideas', collectionId: 'gift' },
-    { img: IMG_WIDE, title: 'প্রিমিয়াম গ্যাজেট', titleEn: 'Premium Gadgets', collectionId: 'premium' },
-    { img: IMG_SQUARE, title: 'রুম ডেকর', titleEn: 'Room Decor', collectionId: 'room-decor' },
-    { img: IMG_TALL, title: 'ইউজফুল টুলস', titleEn: 'Useful Tools', collectionId: 'useful-tools' },
+    { img: IMG_NONE, title: 'গিফট আইডিয়া', titleEn: 'Gift Ideas', collectionId: 'gift' },
+    { img: IMG_NONE, title: 'প্রিমিয়াম গ্যাজেট', titleEn: 'Premium Gadgets', collectionId: 'premium' },
+    { img: IMG_NONE, title: 'রুম ডেকর', titleEn: 'Room Decor', collectionId: 'room-decor' },
+    { img: IMG_NONE, title: 'ইউজফুল টুলস', titleEn: 'Useful Tools', collectionId: 'useful-tools' },
   ],
   spotlights: [
     {

@@ -26,7 +26,6 @@ export async function generateMetadata(): Promise<Metadata> {
       template: '%s | Vangcur',
     },
     description,
-    manifest: '/manifest.webmanifest',
     icons: {
       icon: '/icon-192.png',
       shortcut: '/icon-192.png',
@@ -96,8 +95,6 @@ export default async function RootLayout({
             __html: `(function(){try{var k='vc_theme',t=null;var u=null;try{u=window.localStorage.getItem('vc_user');}catch(e){}if(u&&u!=='null'){var m=document.cookie.match(new RegExp('(?:^|; )'+k+'=([^;]*)'));if(m)t=decodeURIComponent(m[1]);if(t!=='dark'&&t!=='light'){try{t=window.localStorage.getItem(k);}catch(e){}}}if(t==='dark'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.style.colorScheme='light';}}catch(e){}})();`,
           }}
         />
-        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         {/* 🐢 পারফরম্যান্স ফিক্স (audit): PageSpeed নিজেই এই preconnect suggest করেছিল
             (~310ms LCP savings) — About/Footer সেকশনের Realtime সাবস্ক্রিপশন ও
             বিভিন্ন ক্লায়েন্ট কম্পোনেন্ট সরাসরি ব্রাউজার থেকে Supabase-এ কানেক্ট করে,
