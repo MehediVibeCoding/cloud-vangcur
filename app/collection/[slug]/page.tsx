@@ -10,7 +10,7 @@ import CollectionPageClient from './CollectionPageClient';
 
 const SITE_URL = 'https://vangcur.com';
 
-export const revalidate = 7200;
+export const revalidate = 86400;
 
 // ⚡ ক্যাটাগরি পেজের মতোই: বিল্ডে কিছু প্রি-রেন্ডার হয় না, প্রথম ভিজিটে বানিয়ে ক্যাশ হয় (on-demand ISR)
 export async function generateStaticParams() {

@@ -11,7 +11,7 @@ import ProductsPageClient from './ProductsPageClient';
 
 const SITE_URL = 'https://vangcur.com';
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 interface ProductsPageProps {
   searchParams: Promise<{ page?: string; cat?: string }>;

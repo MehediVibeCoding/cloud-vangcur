@@ -14,11 +14,11 @@ import ProductDetailClient from './ProductDetailClient';
 
 const SITE_URL = 'https://vangcur.com';
 
-// 🛡️ রিকোয়েস্ট/KV-লেখা সেভিং (২০২৬-১০): ৩০০ (৫ মিনিট) → ৭২০০ (২ ঘণ্টা)। ফ্রি প্ল্যানে KV লেখার সীমা কম;
+// 🛡️ রিকোয়েস্ট/KV-লেখা সেভিং (২০২৬-১০): ৩০০ (৫ মিনিট) → ৮৬৪০০ (২৪ ঘণ্টা)। ফ্রি প্ল্যানে KV লেখার সীমা কম;
 // প্রতিটা নবায়নে Supabase কোয়েরি + CPU + KV লেখা খরচ হয়। দাম/স্টক তাজা রাখে /api/live-products (৩ মিনিট পর পর),
-// আর অ্যাডমিন বদলালে অন-ডিমান্ড পার্জ। জরুরি বদল সর্বোচ্চ ২ ঘণ্টায় সব পেজে পৌঁছাবে।
+// আর অ্যাডমিন বদলালে অন-ডিমান্ড পার্জ। অ্যাডমিন বদলালে অন-ডিমান্ড পার্জ হয়, আর দাম/স্টক /api/live-products থেকে তাজা থাকে।
 // ⚠️ Next.js এর সেগমেন্ট কনফিগ — অবশ্যই সরাসরি সংখ্যা (৭২০০) লিখতে হবে, গাণিতিক এক্সপ্রেশন নয়।
-export const revalidate = 7200;
+export const revalidate = 86400;
 
 // ⚡ খালি generateStaticParams: বিল্ডের সময় কিছু প্রি-রেন্ডার হয় না, কিন্তু প্রথম ভিজিটে পেজ
 // বানিয়ে CDN-এ ক্যাশ হয় এবং `revalidate` অনুযায়ী ব্যাকগ্রাউন্ডে নবায়ন হয় (on-demand ISR)।
@@ -138,6 +138,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const canonicalSlug = `${makeSlug(p.name)}-${p.id}`;
 
+  // OG ছবি: Worker-এ ছবি আঁকার বদলে প্রোডাক্টের নিজের প্রথম ছবির সরাসরি URL (CPU খরচ নেই)
+  const ogImg = (p.imgs || []).find((img) => typeof img === 'string' && img.startsWith('http'));
+  const ogImages = ogImg
+    ? [{ url: ogImg, alt: p.name }]
+    : [{ url: `${SITE_URL}/vangcur-logo.png`, width: 991, height: 365, alt: 'Vangcur' }];
+
   return {
     // F3: meta_title/autoTitle-এ ব্র্যান্ড আগে থেকেই আছে — layout-এর টেমপ্লেট যেন আবার না জোড়ে
     title: brandedTitle(title),
@@ -150,11 +156,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description: ogDescription,
       locale: lang === 'en' ? 'en_US' : 'bn_BD',
       siteName: 'Vangcur',
+      images: ogImages,
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description: ogDescription,
+      images: ogImages.map((i) => i.url),
     },
   };
 }

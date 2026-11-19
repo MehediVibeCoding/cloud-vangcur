@@ -20,7 +20,7 @@ import ClientHome from './ClientHome';
 import SeoIntro from './components/home/SeoIntro';
 import HomeJsonLd from './components/home/HomeJsonLd';
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 // ⚡ ব্যাচ ১: হোমের নিজস্ব title/description (আগে layout-এর ডিফল্ট — শুধু "Vangcur" — আসত)।
 // getServerLang() layout-এও ব্যবহৃত, তাই এটা নতুন কোনো ডাটাবেজ/নেটওয়ার্ক কল যোগ করে না।

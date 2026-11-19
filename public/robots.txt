@@ -1,0 +1,11 @@
+User-Agent: *
+Allow: /
+Disallow: /checkout
+Disallow: /checkout/*
+Disallow: /account
+Disallow: /account/*
+Disallow: /reset-password
+Disallow: /search
+Disallow: /api/*
+
+Sitemap: https://vangcur.com/sitemap.xml
