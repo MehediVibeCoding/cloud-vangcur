@@ -6,6 +6,11 @@
   // 📊 Worker এর CPU সময়, এরর ও রিকোয়েস্ট লগ Cloudflare ড্যাশবোর্ডে (Workers → Logs/Metrics) দেখার জন্য।
   // ফ্রি প্ল্যানে ১০ms CPU সীমা আছে, তাই কোনো পেজ সীমা ছুঁচ্ছে কিনা এখান থেকেই ধরা পড়বে।
   "observability": { "enabled": true },
+  // ⚡ Workers Caching (Cloudflare-এর নতুন সুবিধা): চালু থাকলে Cloudflare আগে নিজের ক্যাশ দেখে, ক্যাশে থাকলে
+  // Worker-ই জাগে না (CPU লাগে না)। কত সময় ক্যাশ থাকবে তা ঠিক করে Next.js-এর পাঠানো `Cache-Control: s-maxage`।
+  // ⚠️ Custom Domain-এ Worker আগে চলে, তাই Zone-এর Cache Rule এই Worker-এর রেসপন্সে খাটে না — এজন্যই এখানে সেটিং।
+  // রেসপন্সে Set-Cookie থাকলে বা রিকোয়েস্টে Authorization থাকলে অটো বাইপাস হয়। বন্ধ করতে `enabled: false` করে ডিপ্লয় দিন।
+  "cache": { "enabled": true },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
