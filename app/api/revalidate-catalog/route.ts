@@ -9,7 +9,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { timingSafeEqual } from 'crypto';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { logWarn } from '@/lib/logger';
+
+// ctx.cache (Workers Caching) এর ন্যূনতম টাইপ — প্রজেক্টে workers-types নেই, তাই এখানেই সংজ্ঞা।
+type WorkerCachePurger = {
+  purge: (opts: { purgeEverything: true }) => Promise<{ success: boolean; errors?: unknown }>;
+};
+
+// 🧹 Workers Caching (wrangler.jsonc `cache.enabled`) এর HTML ক্যাশও মোছে। এটা না করলে ISR মুছলেও
+// এজে পুরনো পেজ `s-maxage` (~২৪ ঘণ্টা) পর্যন্ত থেকে যেত। ব্যর্থ হলে রিকোয়েস্ট ভাঙে না, শুধু false ফেরত দেয়।
+async function purgeEdgeCache(): Promise<boolean> {
+  try {
+    const { ctx } = await getCloudflareContext({ async: true });
+    const cache = (ctx as unknown as { cache?: WorkerCachePurger }).cache;
+    if (!cache) {
+      logWarn('[revalidate-catalog] ctx.cache পাওয়া যায়নি — এজ ক্যাশ মোছা হয়নি');
+      return false;
+    }
+    const result = await cache.purge({ purgeEverything: true });
+    if (!result.success) {
+      logWarn('[revalidate-catalog] এজ ক্যাশ পার্জ ব্যর্থ', { errors: result.errors });
+    }
+    return result.success;
+  } catch (err) {
+    logWarn('[revalidate-catalog] এজ ক্যাশ পার্জে এরর', { err: String(err) });
+    return false;
+  }
+}
 
 function secretsMatch(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -43,5 +70,8 @@ export async function POST(req: NextRequest) {
   // (stale-while-revalidate নয়), যাতে অ্যাডমিনের বদল তখনই লাইভে দেখা যায়।
   revalidateTag('catalog', { expire: 0 });
 
-  return NextResponse.json({ ok: true });
+  // ISR মোছার পরে এজ ক্যাশ মুছি, যাতে পরের ভিজিট নতুন পেজ বানায়।
+  const edgePurged = await purgeEdgeCache();
+
+  return NextResponse.json({ ok: true, edgePurged });
 }
