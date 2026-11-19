@@ -1,0 +1,13 @@
+{
+  // 🖨️ ইনভয়েস PNG রেন্ডার Worker। মূল সাইট (cloud-vangcur) এটাকে Service Binding (INVOICE_RENDERER) দিয়ে ডাকে।
+  // কোনো পাবলিক URL নেই (workers.dev ও Route বন্ধ), তাই বাইরে থেকে কেউ সরাসরি ডাকতে পারে না।
+  "name": "vangcur-invoice",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  // ফন্ট (.woff) বান্ডলে বাইনারি হিসেবে ঢোকে। .wasm ফাইল Wrangler নিজে CompiledWasm মডিউল ধরে —
+  // Workers-এ রানটাইমে wasm কম্পাইল নিষিদ্ধ, তাই wasm সবসময় এভাবে ইম্পোর্ট করতে হয়।
+  "rules": [{ "type": "Data", "globs": ["**/*.woff"], "fallthrough": true }]
+}
