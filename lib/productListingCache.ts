@@ -1,10 +1,10 @@
 // ফাইলের পাথ: lib/productListingCache.ts
-// [NEW] সার্ভার-সাইডে প্রোডাক্ট-লিস্টিংয়ের ক্যাশ (৫ মিনিট, কুকি ছাড়া anon ক্লায়েন্ট, 'catalog' ট্যাগ)।
+// [NEW] সার্ভার-সাইডে প্রোডাক্ট-লিস্টিংয়ের ক্যাশ (২৪ ঘণ্টা, কুকি ছাড়া anon ক্লায়েন্ট, 'catalog' ট্যাগ)।
 //
 // কেন: /products পেজ আর হোমের ক্যাটাগরি-বদল (fetchProductsPageAction) আগে প্রতিটি ভিজিটে ডাটাবেজ থেকে
 // পুরো ক্যাটালগের হালকা সারি (id, cat, cats, stock) স্ক্যান করত — /products-এ দুইবার (প্রোব + আসল পেজ),
 // তার ওপর ক্যাটাগরি-তালিকা ও পেজের ভারী ডেটা। এই মডিউল সেই স্ক্যান আর পেজ-ডেটা ক্যাশে রাখে, তাই
-// ভিজিটর যত-ই বাড়ুক ডাটাবেজে কোয়েরি যায় ৫ মিনিটে (বা অ্যাডমিন বদলালে) একবার।
+// ভিজিটর যত-ই বাড়ুক ডাটাবেজে কোয়েরি যায় ২৪ ঘণ্টায় (বা অ্যাডমিন বদলালে) একবার।
 // অ্যাডমিন প্রোডাক্ট বদলালে revalidateTag('catalog') সব একসাথে মুছে দেয় (app/api/revalidate-catalog)।
 //
 // 🛡️ ক্যাশ-কী ঘেঁটে দেওয়ার (cache-bust) আক্রমণ ঠেকাতে: ক্যাটাগরি lowercase+trim করা হয়; অজানা
@@ -53,7 +53,7 @@ const getCachedOrderedRows = unstable_cache(
     return rows;
   },
   ['vc-ordered-rows-v1'],
-  { revalidate: 300, tags: ['catalog'] },
+  { revalidate: 86400, tags: ['catalog'] },
 );
 
 /**
@@ -81,7 +81,7 @@ const getCachedProductsPage = unstable_cache(
     return fetchProductsPageFromIds(supabase, ids, offset, limit, true);
   },
   ['vc-products-page-v1'],
-  { revalidate: 300, tags: ['catalog'] },
+  { revalidate: 86400, tags: ['catalog'] },
 );
 
 export interface ProductsListingData {

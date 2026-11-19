@@ -44,6 +44,7 @@ const KNOWN_API_ROOTS = new Set([
   'bkash-unmatched-alert',
   'bkash-webhook',
   'build-id',
+  'device-id',
   'cleanup-review-images',
   'game-score',
   'indexnow',
@@ -111,7 +112,7 @@ const INTERNAL_SECRET_PROTECTED_API_PATHS = [
 // 🆕 পাবলিক, সেশন-নিরপেক্ষ, ক্যাশ-করা ডেটার API — এগুলো লগইন/কুকি ব্যবহার করে না, তাই লগইন-করা
 // ইউজারের প্রতিটি কলে Supabase Auth-এ `getUser()` রাউন্ড-ট্রিপ (updateSession) অযথা। রেট-লিমিট
 // (Redis + এজ-মেমরি) আগের মতোই প্রযোজ্য — শুধু সেশন-রিফ্রেশ স্কিপ।
-const SESSIONLESS_PUBLIC_API_PATHS = ['/api/live-products', '/api/search-index'];
+const SESSIONLESS_PUBLIC_API_PATHS = ['/api/live-products', '/api/search-index', '/api/device-id'];
 
 function needsAuthRefresh(pathname: string): boolean {
   if (SESSIONLESS_PUBLIC_API_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
@@ -221,21 +222,6 @@ export async function middleware(request: NextRequest) {
   const response = needsAuthRefresh(pathname)
     ? await updateSession(request)
     : NextResponse.next({ request });
-
-  // 🆔 টেকসই ডিভাইস-আইডি (লাইকের জন্য): সার্ভার-সেট কুকি Safari ITP-র ৭-দিনের সীমায় পড়ে না।
-  // API ও সার্চ-বটে বসানো হয় না (অপ্রয়োজনীয় কুকি এড়াতে)।
-  if (!isApiRoute && !isKnownSearchBot) {
-    const existingDeviceId = request.cookies.get('vc_device_id')?.value || '';
-    if (!/^[A-Za-z0-9_-]{16,64}$/.test(existingDeviceId)) {
-      response.cookies.set('vc_device_id', crypto.randomUUID().replace(/-/g, ''), {
-        path: '/',
-        maxAge: 31536000,
-        sameSite: 'lax',
-        secure: true,
-        httpOnly: false,
-      });
-    }
-  }
 
   // ৪. সার্বিক সাইট সিকিউরিটি ও ক্লিকজ্যাকিং প্রোটেকশন হেডার
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');

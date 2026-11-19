@@ -14,7 +14,7 @@ import { COLLECTION_IDS } from '@/lib/showcaseData';
 
 const SITE_URL = 'https://vangcur.com';
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 /**
  * F7: প্রোডাক্টের আসল শেষ-কনটেন্ট-বদলের তারিখ (custom_products.updated_at — ডাটাবেজ ট্রিগার শুধু

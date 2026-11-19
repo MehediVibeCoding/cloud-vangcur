@@ -14,7 +14,7 @@ import ClientHome from '@/app/ClientHome';
 
 const SITE_URL = 'https://vangcur.com';
 
-export const revalidate = 7200;
+export const revalidate = 86400;
 
 // ⚡ খালি generateStaticParams: বিল্ডের সময় কিছু প্রি-রেন্ডার হয় না, কিন্তু প্রথম ভিজিটে পেজ
 // বানিয়ে CDN-এ ক্যাশ হয় এবং `revalidate` অনুযায়ী ব্যাকগ্রাউন্ডে নবায়ন হয় (on-demand ISR)।

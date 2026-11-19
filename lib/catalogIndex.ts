@@ -1,5 +1,5 @@
 // ফাইলের পাথ: lib/catalogIndex.ts
-// [NEW] সার্ভার-সাইডে হালকা ক্যাটালগ ইনডেক্স (৫ মিনিট ক্যাশ, কুকি ছাড়া anon ক্লায়েন্ট)।
+// [NEW] সার্ভার-সাইডে হালকা ক্যাটালগ ইনডেক্স (২৪ ঘণ্টা ক্যাশ, কুকি ছাড়া anon ক্লায়েন্ট)।
 // /search পেজ ও /api/search-index দুটোই এটা ব্যবহার করে — ফলে প্রতিটা সার্চ-ভিজিটে ডাটাবেস
 // থেকে পুরো ক্যাটালগ আনা হয় না। অ্যাডমিন প্রোডাক্ট বদলালে revalidateTag('catalog') ক্যাশ মুছে দেয়
 // (app/api/revalidate-catalog/route.ts)।
@@ -21,7 +21,7 @@ export const getCachedCatalogIndex = unstable_cache(
   },
   // 🆕 v3: ইনডেক্সে `brand` যোগ (সার্চ-ম্যাচিং ও ব্র্যান্ড-ফিল্টারের জন্য) — কী বদলানোয় brand-হীন পুরনো ক্যাশ আর ব্যবহার হবে না
   ['catalog-index-v3'],
-  { revalidate: 300, tags: ['catalog'] },
+  { revalidate: 86400, tags: ['catalog'] },
 );
 
 // ইনডেক্সের একেকটা প্রোডাক্টে শুধু সেই ফিল্ডগুলোই রাখা হয় যা এর ব্যবহারকারীরা সত্যিই পড়ে:
@@ -59,7 +59,7 @@ function toIndexProduct(p: Product): Product {
 }
 
 // সার্চ পেজের ক্যাটাগরি তালিকা — আগে প্রতিটা সার্চ-ভিজিটে সরাসরি ডাটাবেস থেকে আনা হতো।
-// এখন একই ৫ মিনিটের ক্যাশ + একই 'catalog' ট্যাগ (অ্যাডমিন বদলালে একসাথে মুছে যায়)।
+// এখন একই ২৪ ঘণ্টার ক্যাশ + একই 'catalog' ট্যাগ (অ্যাডমিন বদলালে একসাথে মুছে যায়)।
 export const getCachedCategories = unstable_cache(
   async (): Promise<Category[]> => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -68,5 +68,5 @@ export const getCachedCategories = unstable_cache(
     return fetchCategories(createClient(url, key));
   },
   ['catalog-categories-v1'],
-  { revalidate: 300, tags: ['catalog'] },
+  { revalidate: 86400, tags: ['catalog'] },
 );

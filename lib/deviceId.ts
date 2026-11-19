@@ -61,6 +61,25 @@ export function getDeviceId(): string {
 }
 
 /**
+ * টেকসই (সার্ভার-সেট, ১ বছর) কুকি নিশ্চিত করে: কুকি না থাকলে একবার /api/device-id ডাকে।
+ * আগে এটা মিডলওয়্যার প্রতিটা পেজ-রেসপন্সে বসাত, যা এজ-ক্যাশের পথে বাধা — এখন শুধু প্রথমবার, ক্লায়েন্ট থেকে।
+ * localStorage-এ আগের আইডি থাকলে সেটাই কুকিতে তোলা হয় (লাইকের ধারাবাহিকতা বজায় থাকে)।
+ */
+export async function ensureDeviceCookie(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  if (VALID.test(readCookie())) return;
+  let local = '';
+  try { local = localStorage.getItem(KEY) || ''; } catch { /* ignore */ }
+  try {
+    const qs = VALID.test(local) ? `?id=${encodeURIComponent(local)}` : '';
+    await fetch(`/api/device-id${qs}`, { credentials: 'same-origin', cache: 'no-store' });
+  } catch {
+    // নেটওয়ার্ক ব্যর্থ — getDeviceId() নিচে JS-কুকি/localStorage ফলব্যাকে চলবে
+  }
+  getDeviceId();
+}
+
+/**
  * এই ডিভাইস সার্ভারে আগে কোন কোন আইটেমে লাইক দিয়েছে (লোকাল স্টোরেজ মুছে গেলেও লাভ ফিরে আসে)।
  * ⚠️ ব্যর্থ হলে `null` (খালি তালিকা নয়) — যাতে ডাকার জায়গা "সিঙ্ক হয়েছে" ধরে না নেয়
  * এবং একটা নেটওয়ার্ক-গ্লিচে পুরো সেশনের হার্ট খালি না থাকে।
