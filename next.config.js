@@ -1,8 +1,22 @@
+// 🚀 স্ট্যাটিক ফাইল আলাদা হোস্টে (static.vangcur.com): Workers Caching চালু থাকায় মূল Worker-হোস্টের প্রতিটা
+// ফাইল-রিকোয়েস্ট (JS/CSS চাঙ্ক, ব্র্যান্ড লোগো, ফুটার ছবি) দিনের ১ লাখ রিকোয়েস্ট-সীমায় গোনা হয়।
+// শুধু-ফাইলের Worker (`vangcur-static`, wrangler.static.jsonc) Cache ছাড়া চলে, তাই ওর রিকোয়েস্ট ফ্রি ও সীমাহীন।
+// - প্রোডাকশন বিল্ডে ডিফল্ট চালু। `npm run dev`-এ বন্ধ (লোকালে ফাইল আগের মতো localhost থেকে আসে)।
+// - জরুরি বন্ধ করতে: Workers Builds → Build variables-এ `STATIC_ORIGIN` = `off` বসিয়ে আবার ডিপ্লয় (কোড বদলাতে হবে না)।
+const STATIC_ORIGIN_RAW = process.env.STATIC_ORIGIN ?? 'https://static.vangcur.com';
+const STATIC_ORIGIN =
+  process.env.NODE_ENV === 'production' && STATIC_ORIGIN_RAW && STATIC_ORIGIN_RAW !== 'off'
+    ? STATIC_ORIGIN_RAW.replace(/\/+$/, '')
+    : '';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // `/_next/static/*` (JS, CSS, ফন্ট) এই হোস্ট থেকে লোড হয়। `public/` ফাইল এতে পড়ে না — সেগুলো lib/staticUrl.ts দিয়ে।
+  assetPrefix: STATIC_ORIGIN || undefined,
   // 🔖 বিল্ড-আইডি: ডেপ্লয় বদলেছে কিনা ধরতে (StaleTabReload + /api/build-id)। Cloudflare Workers Builds-এ কমিট SHA থাকে;
   // না পেলে খালি স্ট্রিং — তখন StaleTabReload আগের মতো সবসময় রিলোড করে (নিরাপদ ফলব্যাক)।
   env: {
+    NEXT_PUBLIC_STATIC_ORIGIN: STATIC_ORIGIN,
     NEXT_PUBLIC_BUILD_ID:
       process.env.WORKERS_CI_COMMIT_SHA || process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || '',
   },
