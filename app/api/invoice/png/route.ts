@@ -3,18 +3,17 @@ import { createClient } from '@/lib/supabase/server';
 import { fetchFullOrder } from '@/lib/orderStatus';
 import { mapSupabaseOrderRow } from '@/lib/orderMapping';
 import { DEFAULT_FOOTER } from '@/lib/footerData';
-import { buildInvoiceViewModel } from '@/lib/invoice/invoiceViewModel';
-import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { logError } from '@/lib/logger';
 import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
 import { createServiceClient } from '@/lib/supabase/serviceClient';
 import { MAX_INVOICE_DOWNLOADS } from '@/lib/invoice/invoiceLimit';
 
-// 🖨️ ইনভয়েস PNG এখন আলাদা Worker-এ (`vangcur-invoice`, কোড: workers/invoice/) বানানো হয় — satori + resvg-wasm
-// ভারী, আর মূল Worker-এর বান্ডল হালকা রাখতে ওটা এখানে নেই। এই রুট শুধু অর্ডার যাচাই, রেট-লিমিট, ডাউনলোড-সীমা
-// (claim/release) সামলায় এবং ছবি বানানোর ধাপে Service Binding (`INVOICE_RENDERER`) দিয়ে ওই Worker-কে ডাকে।
-// ওই Worker-এর কোনো পাবলিক URL নেই; শুধু এই বাইন্ডিং দিয়েই পৌঁছানো যায়।
+// 🖨️ ইনভয়েস PNG এখন Vercel-এ বানানো হয় (headless Chromium, `/api/invoice/render`) — Cloudflare Free plan-এর ১০ms CPU
+// সীমায় satori/resvg-wasm রেন্ডার (~২ সেকেন্ড CPU) টেকে না। এই রুট শুধু অর্ডার যাচাই, রেট-লিমিট, ডাউনলোড-সীমা
+// (claim/release) সামলায়, তারপর যাচাই-করা অর্ডারের ডেটা গোপন চাবিসহ Vercel-এ পাঠিয়ে PNG ফেরত নেয়।
+// প্রয়োজনীয় Secret (Cloudflare → Workers → cloud-vangcur → Settings → Variables and Secrets):
+//   INVOICE_RENDER_URL    = Vercel ডিপ্লয়মেন্টের ঠিকানা (যেমন https://xxxx.vercel.app, শেষে / ছাড়া)
+//   INVOICE_RENDER_SECRET = Vercel-এর INVOICE_RENDER_SECRET-এর সাথে হুবহু একই গোপন চাবি
 export const dynamic = 'force-dynamic';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -93,47 +92,27 @@ export async function GET(req: NextRequest) {
     const remaining = Number(claimRow.remaining);
 
     const order = mapSupabaseOrderRow(row);
-    const { ds, advancePaid, balanceDue, isFreeShipping, dueMsg } = buildInvoiceViewModel(order);
-
     const contact = {
       phoneLabel: DEFAULT_FOOTER.contact.phoneLabel,
       email: DEFAULT_FOOTER.contact.email,
     };
 
-    const assetBaseUrl = req.nextUrl.origin;
-
-    // ছবির URL এখানেই অপটিমাইজ করে পাঠাই (env/ডোমেইন-নির্ভর লজিক মূল সাইটেই থাকে)
-    const itemImageUrls = (order.items || []).map((item) => {
-      const url = item.imgs && item.imgs[0];
-      if (typeof url !== 'string' || !url.startsWith('http')) return null;
-      return optimizeCloudinaryUrl(url, 120);
-    });
-
-    const { env } = await getCloudflareContext({ async: true });
-    const renderer = (env as unknown as { INVOICE_RENDERER?: { fetch: (input: string, init?: RequestInit) => Promise<Response> } })
-      .INVOICE_RENDERER;
-    if (!renderer) {
-      throw new Error('INVOICE_RENDERER service binding পাওয়া যায়নি (wrangler.jsonc দেখুন)');
+    const renderUrl = process.env.INVOICE_RENDER_URL;
+    const renderSecret = process.env.INVOICE_RENDER_SECRET;
+    if (!renderUrl || !renderSecret) {
+      throw new Error('INVOICE_RENDER_URL / INVOICE_RENDER_SECRET সেট করা নেই');
     }
 
-    const renderRes = await renderer.fetch('https://invoice-renderer.internal/render', {
+    // ঠান্ডা শুরুতে Vercel-এ Chromium চালু হতে কয়েক সেকেন্ড লাগে — অপেক্ষার সময় Worker-এর CPU গোনা হয় না
+    const renderRes = await fetch(`${renderUrl.replace(/\/$/, '')}/api/invoice/render`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        order,
-        ds,
-        contact,
-        dueMsg,
-        advancePaid,
-        balanceDue,
-        isFreeShipping,
-        assetBaseUrl,
-        itemImageUrls,
-      }),
+      headers: { 'Content-Type': 'application/json', 'x-invoice-secret': renderSecret },
+      body: JSON.stringify({ order, contact }),
+      signal: AbortSignal.timeout(45000),
     });
     if (!renderRes.ok) {
       const detail = await renderRes.text().catch(() => '');
-      throw new Error(`invoice worker HTTP ${renderRes.status}: ${detail.slice(0, 300)}`);
+      throw new Error(`invoice renderer HTTP ${renderRes.status}: ${detail.slice(0, 300)}`);
     }
     const pngBuffer = await renderRes.arrayBuffer();
 
