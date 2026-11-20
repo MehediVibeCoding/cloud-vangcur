@@ -16,7 +16,6 @@ const OUT = '.open-next/static-site';
 
 const COPY_DIRS = ['_next/static', 'brands'];
 const COPY_FILES = [
-  'fonts/noto-sans-bengali-digits-v1.woff2',
   'footer-illustration-desktop.webp',
   'footer-illustration-mobile.webp',
   'vangcur-team-avatar.png',
@@ -54,15 +53,13 @@ for (const f of COPY_FILES) {
 }
 
 // CORS: ফন্ট (woff2) আলাদা হোস্ট থেকে নামলে ব্রাউজার CORS হেডার চায়। ফাইলগুলো সবই পাবলিক।
-// ক্যাশ: `_next/static` ও ডিজিট ফন্টের নামে ভার্সন/হ্যাশ আছে → ১ বছর immutable (public/_headers-এর নিয়মই)।
+// ক্যাশ: `_next/static`-এর নামে হ্যাশ আছে → ১ বছর immutable (public/_headers-এর নিয়মই)।
 // লোগো/ব্র্যান্ড/ফুটার ছবির নামে ভার্সন নেই → ৭ দিন (আগের মতোই; বদলাতে হলে নতুন নামে আপলোড করুন)।
 const headers = `/*
   Access-Control-Allow-Origin: *
   Cross-Origin-Resource-Policy: cross-origin
   X-Content-Type-Options: nosniff
 /_next/static/*
-  Cache-Control: public, max-age=31536000, immutable
-/fonts/*
   Cache-Control: public, max-age=31536000, immutable
 /brands/*
   Cache-Control: public, max-age=604800
