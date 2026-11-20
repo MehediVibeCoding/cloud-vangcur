@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image, { getImageProps } from 'next/image';
 import VangcurLogoMark from '@/app/components/ui/VangcurLogoMark';
+import { staticUrl } from '@/lib/staticUrl';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/authStore';
 import { DEFAULT_FOOTER } from '@/lib/footerData';
@@ -226,11 +227,11 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
       {/* 🌊 শীর্ষভাগে ট্রু ট্রান্সপারেন্ট ক্লিপ-পাথ ভেক্টর ডেফিনিশন (SVG Defs) */}
       <svg width="0" height="0" className="absolute pointer-events-none" aria-hidden="true">
         <defs>
-          {/* মোবাইল ডিভাইসে উচ্চতায় স্লিক ও হালকা কাটআউট */}
+          {/* মোবাইল ডিভাইসে উচ্চতায় স্লিক ও হালকা কাটআউট */}
           <clipPath id="footer-top-wave-clip-mobile" clipPathUnits="objectBoundingBox">
             <path d="M 0,0.034 C 0.14,0.034 0.22,0.012 0.36,0.012 C 0.52,0.012 0.64,0.052 0.80,0.052 C 0.90,0.052 0.96,0.040 1,0.036 L 1,1 L 0,1 Z" />
           </clipPath>
-          {/* ডেস্কটপ ডিভাইসে উচ্চতায় স্লিক ও হালকা কাটআউট */}
+          {/* ডেস্কটপ ডিভাইসে উচ্চতায় স্লিক ও হালকা কাটআউট */}
           <clipPath id="footer-top-wave-clip-desktop" clipPathUnits="objectBoundingBox">
             <path d="M 0,0.024 C 0.14,0.024 0.22,0.008 0.36,0.008 C 0.52,0.008 0.64,0.036 0.80,0.036 C 0.90,0.036 0.96,0.028 1,0.025 L 1,1 L 0,1 Z" />
           </clipPath>
@@ -275,7 +276,7 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
             transform: 'translateZ(0)',
           }}
         >
-          <FooterPhoto src="/footer-illustration-mobile.webp" hideMedia="(min-width: 768px)" hot={hotImage} />
+          <FooterPhoto src={staticUrl('/footer-illustration-mobile.webp')} hideMedia="(min-width: 768px)" hot={hotImage} />
 
         </div>
 
@@ -288,7 +289,7 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
             transform: 'translateZ(0)',
           }}
         >
-          <FooterPhoto src="/footer-illustration-desktop.webp" hideMedia="(max-width: 767px)" hot={hotImage} />
+          <FooterPhoto src={staticUrl('/footer-illustration-desktop.webp')} hideMedia="(max-width: 767px)" hot={hotImage} />
 
         </div>
 
@@ -391,7 +392,7 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
             <ul className="space-y-3 font-body text-[13.5px]">
               <li>
                 <Link prefetch={false} href="/guide" className={colLinkClass}>
-                  {lang === 'en' ? 'User Guide & Help' : 'ইউজার গাইড ও সহায়িকা'}
+                  {lang === 'en' ? 'User Guide & Help' : 'ইউজার গাইড ও সহায়িকা'}
                 </Link>
               </li>
               <li>
