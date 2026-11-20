@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
-import { preload } from 'react-dom';
+import { preload, preconnect } from 'react-dom';
 import './globals.css';
 import { dmSans, hindSiliguri } from './fonts';
 import GlobalOverlays from './components/GlobalOverlays';
@@ -10,6 +10,7 @@ import StaleSessionReload from './components/StaleSessionReload';
 import ProductNavOverlay from './components/ProductNavOverlay';
 import Analytics from './components/Analytics';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { STATIC_ORIGIN, staticUrl } from '@/lib/staticUrl';
 
 const SITE_URL = 'https://vangcur.com';
 
@@ -64,14 +65,23 @@ export default async function RootLayout({
 }) {
   const lang = await getServerLang();
   // বাংলা সংখ্যার (০-৯) ফন্ট নিজের সার্ভারে (৩.৮ KB) — আগে Google Fonts থেকে দুই ধাপে আসত
-  // (preconnect → css → woff2) এবং JS দিয়ে দেরিতে সক্রিয় হতো। এখন @font-face (globals.css) আর এই
+  // (preconnect → css → woff2) এবং JS দিয়ে দেরিতে সক্রিয় হতো। এখন @font-face (নিচের ইনলাইন <style>) আর এই
   // preload একসাথে: ডিজিট প্রথম পেইন্টেই সঠিক ফন্টে আসে। `preload()` (react-dom) <head> এর শুরুতে
   // একটাই লিংক বসায়; JSX এ <link rel="preload"> লিখলে React সেটা দুবার (hoist + জায়গামতো) দেয়।
-  preload('/fonts/noto-sans-bengali-digits-v1.woff2', {
+  const digitFontUrl = staticUrl('/fonts/noto-sans-bengali-digits-v1.woff2');
+  // 🚀 স্ট্যাটিক ফাইল আলাদা হোস্টে (lib/staticUrl.ts): ব্রাউজার যেন HTML পড়তেই সংযোগ খুলে রাখে। দুটো লাগে —
+  // ফন্ট CORS-মোডে আসে (আলাদা সংযোগ-পুল), স্ক্রিপ্ট/CSS/ছবি সাধারণ মোডে। হোস্ট না থাকলে (dev) কিছুই বসে না।
+  if (STATIC_ORIGIN) {
+    preconnect(STATIC_ORIGIN);
+    preconnect(STATIC_ORIGIN, { crossOrigin: 'anonymous' });
+  }
+  preload(digitFontUrl, {
     as: 'font',
     type: 'font/woff2',
     crossOrigin: 'anonymous',
   });
+  // বাংলা ডিজিটের @font-face (আগে globals.css-এ ছিল, নিয়ম/ফন্ট-নাম একই) — ঠিকানা এখানে বসে বলে ইনলাইন।
+  const digitFontFace = `@font-face{font-family:'Noto Sans Bengali';font-style:normal;font-weight:400 700;font-display:swap;src:url('${digitFontUrl}') format('woff2');unicode-range:U+09E6-09EF}`;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
   let supabaseOrigin: string | null = null;
   try {
@@ -96,6 +106,7 @@ export default async function RootLayout({
             __html: `(function(){try{var k='vc_theme',t=null;var u=null;try{u=window.localStorage.getItem('vc_user');}catch(e){}if(u&&u!=='null'){var m=document.cookie.match(new RegExp('(?:^|; )'+k+'=([^;]*)'));if(m)t=decodeURIComponent(m[1]);if(t!=='dark'&&t!=='light'){try{t=window.localStorage.getItem(k);}catch(e){}}}if(t==='dark'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.style.colorScheme='light';}}catch(e){}})();`,
           }}
         />
+        <style dangerouslySetInnerHTML={{ __html: digitFontFace }} />
         {/* 🐢 পারফরম্যান্স ফিক্স (audit): PageSpeed নিজেই এই preconnect suggest করেছিল
             (~310ms LCP savings) — About/Footer সেকশনের Realtime সাবস্ক্রিপশন ও
             বিভিন্ন ক্লায়েন্ট কম্পোনেন্ট সরাসরি ব্রাউজার থেকে Supabase-এ কানেক্ট করে,
