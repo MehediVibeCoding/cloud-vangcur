@@ -44,12 +44,6 @@
     {
       "binding": "WORKER_SELF_REFERENCE",
       "service": "cloud-vangcur"
-    },
-    // 🖨️ ইনভয়েস PNG রেন্ডার Worker (কোড: workers/invoice/) — app/api/invoice/png/route.ts এটাকে ডাকে।
-    // ⚠️ `vangcur-invoice` Worker আগে থেকে Cloudflare-এ থাকতে হবে, নইলে এই Worker-এর ডিপ্লয় ফেল করবে।
-    {
-      "binding": "INVOICE_RENDERER",
-      "service": "vangcur-invoice"
     }
   ],
   // 🛠️ এই vars গুলো শুধুই রানটাইমে (সার্ভার সাইড: middleware.ts, server.ts,
