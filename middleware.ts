@@ -1,6 +1,7 @@
 import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
+import { STATIC_ORIGIN } from '@/lib/staticUrl';
 
 // INTENTIONAL: এই ফাইল `proxy.ts`-এ মাইগ্রেট করবেন না। Next 16 "middleware deprecated" warning দেয়, কিন্তু
 // `proxy.ts` Node.js রানটাইমে চলে, আর @opennextjs/cloudflare-এ সেটা experimental/অসমর্থিত (Cloudflare Workers-এ
@@ -97,7 +98,7 @@ const AUTH_REFRESH_PATH_PREFIXES = ['/checkout', '/account', '/api/'];
 // 🔒 ফিক্স (H4): আগে প্রতিটা /api/* রিকোয়েস্টেই Upstash Redis-এ একটা sliding-window চেক
 // (রিড+রাইট) হতো — এমনকি এই নিচের রুটগুলোতেও, যেগুলো পাবলিক না, নিজস্ব সিক্রেট-কি/ওয়েবহুক-
 // সিগনেচার দিয়ে আগে থেকেই সুরক্ষিত (শুধু bKash, Cloudflare cron, Supabase DB webhook কল করে)।
-// এগুলোতে Redis-কল এখন স্কিপ — বাকি এজ-মেমোরি রেট-লিমিট (checkEdgeRateLimit) তবুও চলে,
+// এগুলোতে Redis-কল এখন স্কিপ — বাকি এজ-মেমরি রেট-লিমিট (checkEdgeRateLimit) তবুও চলে,
 // তাই পুরোপুরি খোলা থাকছে না, শুধু প্রতি কলে Redis-খরচ বাদ যাচ্ছে।
 const INTERNAL_SECRET_PROTECTED_API_PATHS = [
   '/api/bkash-webhook',
@@ -235,13 +236,15 @@ export async function middleware(request: NextRequest) {
   );
 
   // 🛡️ Content-Security-Policy (Cloudflare Insights + GA4 + Meta Pixel + Microsoft Clarity অনুমোদিত)
+  // 🚀 static.vangcur.com (lib/staticUrl.ts): JS/CSS চাঙ্ক, ফন্ট ও ছবি এখান থেকে আসে — না যোগ করলে ব্রাউজার ব্লক করবে
+  const so = STATIC_ORIGIN ? ` ${STATIC_ORIGIN}` : '';
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' data: blob: https://img.vangcur.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://www.google.com https://www.facebook.com https://*.clarity.ms https://c.bing.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://api.open-meteo.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://stats.g.doubleclick.net https://www.google.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://c.bing.com",
+    `script-src 'self' 'unsafe-inline'${so} https://www.googletagmanager.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms`,
+    `style-src 'self' 'unsafe-inline'${so} https://fonts.googleapis.com`,
+    `img-src 'self' data: blob:${so} https://img.vangcur.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://www.google.com https://www.facebook.com https://*.clarity.ms https://c.bing.com`,
+    `font-src 'self'${so} https://fonts.gstatic.com data:`,
+    `connect-src 'self'${so} https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://api.open-meteo.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://stats.g.doubleclick.net https://www.google.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://c.bing.com`,
     "frame-src 'self' https://challenges.cloudflare.com https://www.googletagmanager.com",
     "object-src 'none'",
     "base-uri 'self'",

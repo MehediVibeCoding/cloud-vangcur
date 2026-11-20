@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
-import { preload } from 'react-dom';
+import { preload, preconnect } from 'react-dom';
 import './globals.css';
 import { dmSans, hindSiliguri } from './fonts';
 import GlobalOverlays from './components/GlobalOverlays';
@@ -10,6 +10,7 @@ import StaleSessionReload from './components/StaleSessionReload';
 import ProductNavOverlay from './components/ProductNavOverlay';
 import Analytics from './components/Analytics';
 import { getServerLang } from '@/lib/i18n/getServerLang';
+import { STATIC_ORIGIN } from '@/lib/staticUrl';
 
 const SITE_URL = 'https://vangcur.com';
 
@@ -67,6 +68,12 @@ export default async function RootLayout({
   // (preconnect → css → woff2) এবং JS দিয়ে দেরিতে সক্রিয় হতো। এখন @font-face (globals.css) আর এই
   // preload একসাথে: ডিজিট প্রথম পেইন্টেই সঠিক ফন্টে আসে। `preload()` (react-dom) <head> এর শুরুতে
   // একটাই লিংক বসায়; JSX এ <link rel="preload"> লিখলে React সেটা দুবার (hoist + জায়গামতো) দেয়।
+  // 🚀 স্ট্যাটিক ফাইল আলাদা হোস্টে (lib/staticUrl.ts): ব্রাউজার যেন HTML পড়তেই সংযোগ খুলে রাখে। দুটো লাগে —
+  // ফন্ট CORS-মোডে আসে (আলাদা সংযোগ-পুল), স্ক্রিপ্ট/CSS/ছবি সাধারণ মোডে। হোস্ট না থাকলে (dev) কিছুই বসে না।
+  if (STATIC_ORIGIN) {
+    preconnect(STATIC_ORIGIN);
+    preconnect(STATIC_ORIGIN, { crossOrigin: 'anonymous' });
+  }
   preload('/fonts/noto-sans-bengali-digits-v1.woff2', {
     as: 'font',
     type: 'font/woff2',

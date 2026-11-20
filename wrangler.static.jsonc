@@ -1,0 +1,16 @@
+{
+  // 🚀 শুধু-স্ট্যাটিক-ফাইলের Worker — static.vangcur.com থেকে JS/CSS চাঙ্ক, ফন্ট, ব্র্যান্ড লোগো, ফুটার ছবি দেয়।
+  // কেন আলাদা: মূল Worker-এ Workers Caching চালু, তাই সেখানকার প্রতিটা ফাইল-রিকোয়েস্টও দৈনিক ১ লাখ সীমায় গোনা হয়।
+  // এই Worker-এ কোড বা Cache নেই (শুধু assets), তাই এর রিকোয়েস্ট ফ্রি ও সীমাহীন (Cloudflare ডকস: "Requests to static assets are free").
+  // ⚠️ `cache` এখানে কখনো চালু করবেন না — করলে এই রিকোয়েস্টও আবার গোনা শুরু হবে।
+  //
+  // ফাইলগুলো scripts/prepare-static.mjs বিল্ডের পর `.open-next/static-site`-এ সাজায়; ডিপ্লয়: `npm run static:deploy`
+  // (Workers Builds-এ মূল Worker ডিপ্লয়ের আগে চলে)। কাস্টম ডোমেইন static.vangcur.com Cloudflare ড্যাশবোর্ড/API থেকে
+  // একবার বসানো (এই ফাইলে `routes` ইচ্ছা করে নেই — ডিপ্লয়-টোকেনের জোন-অনুমতির ওপর নির্ভর করতে না হয়)।
+  "name": "vangcur-static",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": false,
+  "assets": {
+    "directory": ".open-next/static-site"
+  }
+}

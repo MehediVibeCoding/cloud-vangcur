@@ -1,5 +1,7 @@
 'use client';
 
+import { staticUrl } from '@/lib/staticUrl';
+
 interface UserAvatarProps {
   name?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -61,7 +63,7 @@ export default function UserAvatar({
         className={`flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full shadow-sm ${sizeClasses} ${colorClass} ${className}`}
       >
         <img
-          src="/vangcur-team-avatar.png"
+          src={staticUrl('/vangcur-team-avatar.png')}
           alt="Vangcur Team"
           className="h-full w-full object-cover"
         />
