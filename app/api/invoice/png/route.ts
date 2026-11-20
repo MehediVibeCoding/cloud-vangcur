@@ -4,18 +4,17 @@ import { fetchFullOrder } from '@/lib/orderStatus';
 import { mapSupabaseOrderRow } from '@/lib/orderMapping';
 import { DEFAULT_FOOTER } from '@/lib/footerData';
 import { buildInvoiceViewModel } from '@/lib/invoice/invoiceViewModel';
-import { renderInvoiceSvg } from '@/lib/invoice/renderInvoiceSvg';
-import { ensureResvgWasm } from '@/lib/invoice/satoriAssets';
+import { optimizeCloudinaryUrl } from '@/lib/cloudinaryUrl';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { logError } from '@/lib/logger';
 import { slidingWindowLimit, getClientIp } from '@/lib/limiter';
 import { createServiceClient } from '@/lib/supabase/serviceClient';
 import { MAX_INVOICE_DOWNLOADS } from '@/lib/invoice/invoiceLimit';
 
-// 🖨️ এই রুট আগে headless Chromium (Puppeteer) চালাত — Cloudflare Workers-এ
-// সেটা চালানো সম্ভব না বলে satori (JSX → SVG) + @resvg/resvg-wasm
-// (SVG → PNG, pure WASM, কোনো native binary না) দিয়ে rewrite করা হয়েছে।
-// রেট-লিমিট আগের মতোই রাখা হয়েছে, যদিও এই নতুন পাইপলাইন আগের চেয়ে
-// অনেক হালকা।
+// 🖨️ ইনভয়েস PNG এখন আলাদা Worker-এ (`vangcur-invoice`, কোড: workers/invoice/) বানানো হয় — satori + resvg-wasm
+// ভারী, আর মূল Worker-এর বান্ডল হালকা রাখতে ওটা এখানে নেই। এই রুট শুধু অর্ডার যাচাই, রেট-লিমিট, ডাউনলোড-সীমা
+// (claim/release) সামলায় এবং ছবি বানানোর ধাপে Service Binding (`INVOICE_RENDERER`) দিয়ে ওই Worker-কে ডাকে।
+// ওই Worker-এর কোনো পাবলিক URL নেই; শুধু এই বাইন্ডিং দিয়েই পৌঁছানো যায়।
 export const dynamic = 'force-dynamic';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -103,43 +102,44 @@ export async function GET(req: NextRequest) {
 
     const assetBaseUrl = req.nextUrl.origin;
 
-    const { svg, fontBuffers } = await renderInvoiceSvg({
-      order,
-      ds,
-      contact,
-      dueMsg,
-      advancePaid,
-      balanceDue,
-      isFreeShipping,
-      assetBaseUrl,
+    // ছবির URL এখানেই অপটিমাইজ করে পাঠাই (env/ডোমেইন-নির্ভর লজিক মূল সাইটেই থাকে)
+    const itemImageUrls = (order.items || []).map((item) => {
+      const url = item.imgs && item.imgs[0];
+      if (typeof url !== 'string' || !url.startsWith('http')) return null;
+      return optimizeCloudinaryUrl(url, 120);
     });
 
-    await ensureResvgWasm(assetBaseUrl);
-    const { Resvg } = await import('@resvg/resvg-wasm');
-
-    // scale 3x — আগের Puppeteer পাইপলাইনেও deviceScaleFactor: 3 ব্যবহার
-    // হতো, যাতে html2canvas যুগের মতোই sharp/retina কোয়ালিটি বজায় থাকে।
-    const resvg = new Resvg(svg, {
-      font: { fontBuffers, loadSystemFonts: false },
-      background: '#FFFFFF',
-      fitTo: { mode: 'zoom', value: 3 },
-    });
-
-    // satori একটা বড়, ফিক্সড-হাইট ক্যানভাসে (renderInvoiceSvg.ts দেখুন)
-    // রেন্ডার করে — আসল কন্টেন্ট তার চেয়ে ছোট, তাই নিচের ফাঁকা অংশ বাদ
-    // দিতে bounding-box অনুযায়ী crop করা হচ্ছে (আগের Puppeteer পাইপলাইনে
-    // যেভাবে শুধু কার্ড এলিমেন্টের screenshot নেওয়া হতো, সমমানের ফলাফল)।
-    const bbox = resvg.innerBBox();
-    if (bbox) {
-      resvg.cropByBBox(bbox);
+    const { env } = await getCloudflareContext({ async: true });
+    const renderer = (env as unknown as { INVOICE_RENDERER?: { fetch: (input: string, init?: RequestInit) => Promise<Response> } })
+      .INVOICE_RENDERER;
+    if (!renderer) {
+      throw new Error('INVOICE_RENDERER service binding পাওয়া যায়নি (wrangler.jsonc দেখুন)');
     }
 
-    const rendered = resvg.render();
-    const pngBuffer = rendered.asPng();
+    const renderRes = await renderer.fetch('https://invoice-renderer.internal/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order,
+        ds,
+        contact,
+        dueMsg,
+        advancePaid,
+        balanceDue,
+        isFreeShipping,
+        assetBaseUrl,
+        itemImageUrls,
+      }),
+    });
+    if (!renderRes.ok) {
+      const detail = await renderRes.text().catch(() => '');
+      throw new Error(`invoice worker HTTP ${renderRes.status}: ${detail.slice(0, 300)}`);
+    }
+    const pngBuffer = await renderRes.arrayBuffer();
 
     const fileName = `Vangcur_Invoice_${String(order.orderNum || orderId).replace('#', '')}.png`;
 
-    return new NextResponse(pngBuffer as unknown as BodyInit, {
+    return new NextResponse(pngBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
