@@ -11,7 +11,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { setProductNavHint, clearProductNavHint } from '@/lib/productNavHint';
+import { rememberCardImageSrc } from '@/lib/cloudinaryUrl';
 import ProductSkeletonAuto from '@/app/components/product/ProductSkeletonAuto';
+import ProductImagePreloader from '@/app/components/product/ProductImagePreloader';
 
 const OVERLAY_DELAY_MS = 150;
 const OVERLAY_MAX_MS = 8000;
@@ -52,6 +54,14 @@ export default function ProductNavOverlay() {
       // নিজের পেজের লিংকে ক্লিক — নেভিগেশন হবে না, ওভারলে আটকে যাবে — তাই বাদ
       if (a.pathname === fromPath) return;
 
+      // কার্ডের ছবি যে URL-এ আসলে ডাউনলোড হয়েছে সেটা মনে রাখি — ডিটেইল পেজের স্কেলেটন/ভিত্তি-স্তর হুবহু সেটাই চাইবে
+      // (lib/cloudinaryUrl.ts-এর rememberCardImageSrc দেখুন)। ছবি পুরো লোড না হয়ে থাকলে কিছু করি না।
+      const cardImg = a.querySelector('img');
+      if (cardImg && cardImg.complete && cardImg.naturalWidth > 0) {
+        const m = cardImg.currentSrc.match(/\/cdn-cgi\/image\/[^/]+\/(https?:\/\/.+)$/);
+        if (m) rememberCardImageSrc(m[1], cardImg.currentSrc);
+      }
+
       // কার্ড থেকে হলে ProductCard-এর onClickCapture এর পরে এই হিন্টে কার্ডের তথ্য জুড়ে দেবে; অন্য জায়গা (সার্চ/অফার
       // ইত্যাদি) থেকে হলে তথ্য থাকে না — তখন সাধারণ স্কেলেটন
       setProductNavHint(null, fromPath);
@@ -81,5 +91,11 @@ export default function ProductNavOverlay() {
     };
   }, [hide]);
 
-  return overlayOn ? <ProductSkeletonAuto /> : null;
+  return (
+    <>
+      {overlayOn ? <ProductSkeletonAuto /> : null}
+      {/* গ্যালারির বাকি ছবি শান্ত অবস্থায় ব্রাউজার-ক্যাশে আনে — Worker/ডাটাবেজে কোনো রিকোয়েস্ট নেই */}
+      <ProductImagePreloader />
+    </>
+  );
 }

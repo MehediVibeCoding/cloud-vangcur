@@ -53,8 +53,30 @@ export const PRODUCT_SRCSET_WIDTHS = [320, 480, 720] as const;
 export const PRODUCT_IMG_SIZES =
   '(min-width: 1280px) calc((min(100vw, 1300px) - 110px) / 6), (min-width: 1024px) calc((100vw - 82px) / 4), (min-width: 768px) calc((100vw - 68px) / 3), calc((100vw - 54px) / 2)';
 
+// 🖼️ কার্ড → ডিটেইল পেজের তাৎক্ষণিক ছবি: কার্ডের <img> `srcSet` দিয়ে ছবি আনে (ব্রাউজার ৩২০/৪৮০/৭২০-এর একটা বাছে),
+// অথচ ডিটেইল পেজের স্কেলেটন ও গ্যালারির "ভিত্তি-স্তর" চায় আলাদা URL (width=380, dpr=2) — যেটা কার্ড কখনো আনেনি, তাই
+// ক্যাশে নেই, আর নেটওয়ার্ক লাগায় ঝলকানি/লোডিং দেখা যেত। ProductNavOverlay কার্ডে ক্লিকের মুহূর্তে কার্ডের আসল
+// ডাউনলোড-হওয়া URL (currentSrc) এখানে রাখে; নিচের ফাংশন width=380 চাইলে (শুধু এই প্রিভিউ-স্তরগুলো ৩৮০ চায়) সেই
+// URL-ই ফেরত দেয় — ফলে ছবি ক্যাশ থেকে সঙ্গে সঙ্গে আসে, কোনো নতুন রিকোয়েস্ট লাগে না।
+// ⚠️ শুধু ব্রাউজারে ভরা হয় (সার্ভারে খালি থাকে), তাই SSR/হাইড্রেশনে কোনো পার্থক্য হয় না।
+export const CARD_PREVIEW_WIDTH = 380;
+const cardLoadedSrc = new Map<string, string>();
+
+export function rememberCardImageSrc(rawUrl: string, loadedSrc: string): void {
+  if (!rawUrl || !loadedSrc) return;
+  if (cardLoadedSrc.size >= 60) {
+    const oldest = cardLoadedSrc.keys().next().value;
+    if (oldest !== undefined) cardLoadedSrc.delete(oldest);
+  }
+  cardLoadedSrc.set(rawUrl, loadedSrc);
+}
+
 export function optimizeCloudinaryUrl(url?: string, width = 450): string {
   if (!url || !url.startsWith('http')) return url || '';
+  if (width === CARD_PREVIEW_WIDTH) {
+    const loaded = cardLoadedSrc.get(url);
+    if (loaded) return loaded;
+  }
 
   // --- লিগ্যাসি Cloudinary ডেটা (যদি কোনো পুরনো রো-তে থেকে যায়) ---
   if (url.includes('res.cloudinary.com')) {
