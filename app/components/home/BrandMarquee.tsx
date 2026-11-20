@@ -3,6 +3,7 @@
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { BRANDS_ROW_1, BRANDS_ROW_2, type Brand } from '@/lib/brandData';
+import { staticUrl } from '@/lib/staticUrl';
 
 /**
  * ব্র্যান্ড লোগো মার্কি — দুই সারি:
@@ -66,12 +67,12 @@ function BrandLogo({ b, decorative }: { b: Brand; decorative: boolean }) {
   if (b.white) {
     return (
       <>
-        <img src={`/brands/${b.file}.webp`} className="vc-l-light" {...common} alt={common.alt} />
-        <img src={`/brands/${b.file}-white.webp`} className="vc-l-dark" {...common} alt="" />
+        <img src={staticUrl(`/brands/${b.file}.webp`)} className="vc-l-light" {...common} alt={common.alt} />
+        <img src={staticUrl(`/brands/${b.file}-white.webp`)} className="vc-l-dark" {...common} alt="" />
       </>
     );
   }
-  return <img src={`/brands/${b.file}.webp`} {...common} alt={common.alt} />;
+  return <img src={staticUrl(`/brands/${b.file}.webp`)} {...common} alt={common.alt} />;
 }
 
 function BrandRow({ brands, direction, duration }: { brands: Brand[]; direction: 'left' | 'right'; duration: number }) {
