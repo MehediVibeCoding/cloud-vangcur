@@ -18,6 +18,8 @@
   Cache-Control: public, max-age=604800
 /footer-illustration-*
   Cache-Control: public, max-age=604800
+/favicon.ico
+  Cache-Control: public, max-age=604800
 /icon-192.png
   Cache-Control: public, max-age=604800
 /icon-512.png

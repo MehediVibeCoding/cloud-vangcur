@@ -4,7 +4,6 @@ import { preload, preconnect } from 'react-dom';
 import './globals.css';
 import { dmSans, hindSiliguri } from './fonts';
 import GlobalOverlays from './components/GlobalOverlays';
-import DeviceIdBootstrap from './components/DeviceIdBootstrap';
 import StaleTabReload from './components/StaleTabReload';
 import StaleSessionReload from './components/StaleSessionReload';
 import ProductNavOverlay from './components/ProductNavOverlay';
@@ -143,7 +142,6 @@ export default async function RootLayout({
         <StaleSessionReload />
         <ProductNavOverlay />
         <GlobalOverlays />
-        <DeviceIdBootstrap />
       </body>
     </html>
   );

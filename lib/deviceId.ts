@@ -36,7 +36,11 @@ function generate(): string {
   return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
 }
 
-export function getDeviceId(): string {
+/**
+ * আইডি বের করে (কুকি → localStorage → নতুন)। `persistCookie` true হলে কুকি না থাকার ক্ষেত্রে JS-কুকিও বসায়
+ * (শুধু ensureDeviceCookie()-এর শেষ ফলব্যাক, সার্ভার-কল ব্যর্থ হলে)। কোনো নেটওয়ার্ক-কল করে না।
+ */
+function resolveId(persistCookie: boolean): string {
   if (typeof window === 'undefined') return '';
   const fromCookie = readCookie();
   const cookieOk = VALID.test(fromCookie);
@@ -49,8 +53,8 @@ export function getDeviceId(): string {
   if (id !== local) {
     try { localStorage.setItem(KEY, id); } catch { /* ignore */ }
   }
-  // কুকি না থাকলেই (মিডলওয়্যার চলেনি / মুছে গেছে) JS দিয়ে বসানো — আছে এমন কুকি ছোঁয়া হয় না
-  if (!cookieOk) {
+  // কুকি না থাকলে এবং persistCookie চাইলে (শুধু ফলব্যাক) JS দিয়ে বসানো — আছে এমন কুকি ছোঁয়া হয় না
+  if (!cookieOk && persistCookie) {
     try {
       document.cookie = `vc_device_id=${encodeURIComponent(id)}; Max-Age=31536000; Path=/; SameSite=Lax; Secure`;
     } catch {
@@ -60,23 +64,48 @@ export function getDeviceId(): string {
   return id;
 }
 
+/** শুধু পড়ার জন্য (যেমন লাইক-তালিকা আনা): কোনো নেটওয়ার্ক-কল বা কুকি-লেখা ঘটায় না। */
+export function peekDeviceId(): string {
+  return resolveId(false);
+}
+
+/**
+ * লাইক লেখার পথে ব্যবহার (increment_*_like): আইডি সঙ্গে সঙ্গে ফেরত দেয় এবং পেছনে (অপেক্ষা না করে)
+ * টেকসই সার্ভার-কুকি নিশ্চিত করে। ⚡ লেজি: পেজ খোলার সময় নয়, শুধু প্রথম লাইকে ১টা /api/device-id কল —
+ * বেশিরভাগ ভিজিটর লাইক দেয় না, তাই তাদের জন্য Worker-এ ১টা রিকোয়েস্ট বাঁচে (ফ্রি প্ল্যানের দৈনিক সীমা)।
+ * আইডি আগেই localStorage-এ বসে যায়, তাই ব্যাকগ্রাউন্ড কলও একই আইডি কুকিতে তোলে — লাইক ও কুকির আইডি মেলে।
+ */
+export function getDeviceId(): string {
+  const id = resolveId(false);
+  if (id) void ensureDeviceCookie();
+  return id;
+}
+
 /**
  * টেকসই (সার্ভার-সেট, ১ বছর) কুকি নিশ্চিত করে: কুকি না থাকলে একবার /api/device-id ডাকে।
- * আগে এটা মিডলওয়্যার প্রতিটা পেজ-রেসপন্সে বসাত, যা এজ-ক্যাশের পথে বাধা — এখন শুধু প্রথমবার, ক্লায়েন্ট থেকে।
+ * একসাথে অনেকগুলো কল এলেও নেটওয়ার্ক-রিকোয়েস্ট যায় একটাই (pending প্রমিস শেয়ার হয়)।
  * localStorage-এ আগের আইডি থাকলে সেটাই কুকিতে তোলা হয় (লাইকের ধারাবাহিকতা বজায় থাকে)।
  */
-export async function ensureDeviceCookie(): Promise<void> {
-  if (typeof window === 'undefined') return;
-  if (VALID.test(readCookie())) return;
-  let local = '';
-  try { local = localStorage.getItem(KEY) || ''; } catch { /* ignore */ }
-  try {
-    const qs = VALID.test(local) ? `?id=${encodeURIComponent(local)}` : '';
-    await fetch(`/api/device-id${qs}`, { credentials: 'same-origin', cache: 'no-store' });
-  } catch {
-    // নেটওয়ার্ক ব্যর্থ — getDeviceId() নিচে JS-কুকি/localStorage ফলব্যাকে চলবে
-  }
-  getDeviceId();
+let pendingEnsure: Promise<void> | null = null;
+
+export function ensureDeviceCookie(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (VALID.test(readCookie())) return Promise.resolve();
+  if (pendingEnsure) return pendingEnsure;
+  pendingEnsure = (async () => {
+    let local = '';
+    try { local = localStorage.getItem(KEY) || ''; } catch { /* ignore */ }
+    try {
+      const qs = VALID.test(local) ? `?id=${encodeURIComponent(local)}` : '';
+      await fetch(`/api/device-id${qs}`, { credentials: 'same-origin', cache: 'no-store' });
+    } catch {
+      // নেটওয়ার্ক ব্যর্থ — নিচের ফলব্যাক (JS-কুকি/localStorage) চলবে
+    }
+    resolveId(true);
+  })().finally(() => {
+    pendingEnsure = null;
+  });
+  return pendingEnsure;
 }
 
 /**
@@ -88,7 +117,7 @@ export async function fetchMyLikedIds(
   supabase: SupabaseClient,
   targetType: 'product_review' | 'customer_gallery',
 ): Promise<string[] | null> {
-  const id = getDeviceId();
+  const id = peekDeviceId(); // শুধু পড়া — এতে /api/device-id ডাকা হয় না
   if (!id) return null;
   try {
     const { data, error } = await supabase.rpc('get_my_likes', {
