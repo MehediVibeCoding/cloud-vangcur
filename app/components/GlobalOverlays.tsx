@@ -11,6 +11,7 @@ import {
   OPEN_QUICK_CART_MODAL_EVENT, OPEN_ORDER_LIMIT_EVENT, OPEN_BULK_ORDER_EVENT,
 } from '@/lib/uiEvents';
 import { trackInAppNav, noteAccountOrigin, variantHistoryOnNav } from '@/lib/navBack';
+import { useDetailNavHistory } from '@/lib/useDetailNavHistory';
 import { useLanguageStore } from '@/lib/store/languageStore';
 import { useThemeStore } from '@/lib/store/themeStore';
 import { useCartStore } from '@/lib/store/cartStore';
@@ -28,9 +29,9 @@ const FloatContactButtons = dynamic(() => import('./layout/FloatContactButtons')
 const BackToTopButton = dynamic(() => import('./layout/BackToTopButton'), { ssr: false });
 const RareOverlays = dynamic(() => import('./RareOverlays'), { ssr: false });
 
-// ────────────────────────────────────────────────────────────────────────
-// টোস্ট আইকনসমূহ — বৃত্তাকার গাঢ় রঙের ভেতর সাদা SVG আইকন
-// ────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+// টোস্ট আইকনসমূহ — বৃত্তাকার গাঢ় রঙের ভেতর সাদা SVG আইকন
+// ────────────────────────────────────────────────────────────────────────────────
 function ToastSuccessIcon() {
   return (
     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-white shadow-xs">
@@ -107,6 +108,9 @@ export default function GlobalOverlays() {
   const pathname = usePathname();
   const lang = useLanguageStore((s) => s.lang);
 
+  // প্রোডাক্ট/গাইড পেজের সব ইন-সাইট লিংকে একই ব্যাক-হিস্ট্রি নিয়ম + ব্যাকে ফিরলে পেজ উপর থেকে (lib/useDetailNavHistory.ts)
+  useDetailNavHistory();
+
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
@@ -163,7 +167,7 @@ export default function GlobalOverlays() {
     useThemeStore.getState().hydrate();
   }, []);
 
-  // 🚀 ব্রাউজার Idle অবস্থায় পৌঁছালে শান্তভাবে ব্যাকগ্রাউন্ডে রেয়ার ওভারলে মাউন্ট করা (৯৫ KB Unused JS ফিক্স)
+  // 🚀 ব্রাউজার Idle অবস্থায় পৌঁছালে শান্তভাবে ব্যাকগ্রাউন্ডে রেয়ার ওভারলে মাউন্ট করা (৯৫ KB Unused JS ফিক্স)
   useEffect(() => {
     let idleId: number | null = null;
     let timerId: ReturnType<typeof setTimeout> | null = null;
@@ -210,7 +214,7 @@ export default function GlobalOverlays() {
     };
   }, []);
 
-  // 🌐 অফলাইন ও অনলাইন নেটওয়ার্ক কানেকশন ট্র্যাকার
+  // 🌐 অফলাইন ও অনলাইন নেটওয়ার্ক কানেকশন ট্র্যাকার
   useEffect(() => {
     const handleOffline = () => {
       showToast(lang === 'en' ? 'Internet connection disconnected' : 'ইন্টারনেট সংযোগ বিচ্ছিন্ন হয়েছে', 'warning');
@@ -249,7 +253,7 @@ export default function GlobalOverlays() {
 
   return (
     <>
-      {/* 🌟 ইউনিভার্সাল ডায়নামিক টোস্ট রেন্ডারার */}
+      {/* 🌟 ইউনিভার্সাল ডায়নামিক টোস্ট রেন্ডারার */}
       <div
         aria-live="polite"
         className={`pointer-events-none fixed bottom-7 left-1/2 z-[1300] flex -translate-x-1/2 items-center gap-2.5 rounded-full border px-4 py-2.5 shadow-sh2 backdrop-blur-md transition-all duration-300 ease-out max-w-[95vw] sm:max-w-xl ${
