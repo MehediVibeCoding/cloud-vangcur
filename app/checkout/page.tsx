@@ -397,10 +397,6 @@ export default function CheckoutPage() {
   const trackedBeginCheckoutRef = useRef(false);
 
   useEffect(() => {
-    router.prefetch('/');
-  }, [router]);
-
-  useEffect(() => {
     setAppliedCoupon(getAppliedCoupon());
     const onCouponChange = (e: Event) => {
       const c = (e as CustomEvent<{ coupon: AppliedCoupon | null }>).detail?.coupon;

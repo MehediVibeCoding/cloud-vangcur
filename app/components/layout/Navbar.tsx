@@ -378,6 +378,9 @@ function SearchDropdown({
   );
 }
 
+// পেজ-সেশনে /checkout প্রিফেচ একবারই (নিচের useEffect দেখুন)
+let checkoutPrefetchedThisSession = false;
+
 export default function Navbar({
   cartCount = 0, wishCount = 0, onCartClick, onWishClick, onLoginClick, onTrackClick, currentUser, onAccountClick,
   sticky = true, showHomeButton = false,
@@ -426,9 +429,14 @@ export default function Navbar({
   // - /search: সরানো হলো — এটা একমাত্র ডায়নামিক (ƒ) রুট, মানে প্রিফেচ হলে আসল ফাংশন-ইনভোকেশন
   //   লাগে; ব্যবহারকারী সার্চ বক্সে হাত দিলে অন্য জায়গায় এমনিতেই প্রিফেচ হয় (দেখুন নিচের হ্যান্ডলারগুলো)
   // - /track-order: রাখা হলো, স্ট্যাটিক রুট বলে ফাংশন খরচ নেই, বাংলাদেশে অর্ডার-ট্র্যাকিং সাধারণ ব্যবহার
+  // 🛡️ রিকোয়েস্ট-সেভিং (২০২৬-১১): কার্টে পণ্য থাকলে প্রতিটা পেজ-নেভিগেশনে নয়, পেজ-সেশনে মাত্র একবার প্রিফেচ
+  // (মডিউল-লেভেল ফ্ল্যাগ; ফুল রিলোডে আবার একবার)।
   useEffect(() => {
     const run = () => {
-      if (cartCount > 0) router.prefetch('/checkout');
+      if (cartCount > 0 && !checkoutPrefetchedThisSession) {
+        checkoutPrefetchedThisSession = true;
+        router.prefetch('/checkout');
+      }
     };
     if ('requestIdleCallback' in window) {
       const id = window.requestIdleCallback(run, { timeout: 5000 });

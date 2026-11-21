@@ -61,7 +61,7 @@ function makeLinkNode(label: string, href: string, bold: boolean, keyRef: { n: n
   const isInternal = safeHref.startsWith('/');
   const className = linkClassName(bold);
   return isInternal ? (
-    <Link key={keyRef.n++} href={safeHref} className={className}>
+    <Link key={keyRef.n++} prefetch={false} href={safeHref} className={className}>
       {cleanLabel}
     </Link>
   ) : (
