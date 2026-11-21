@@ -2,6 +2,8 @@
 // (নতুন ট্যাবে বা অন্য সাইট থেকে এসে ঢুকলেও length > 1 হতে পারে, তখন router.back() সাইটের বাইরে নিয়ে যেত)।
 // তাই সাইটের ভেতরের নেভিগেশন গোনা হয় (sessionStorage) — GlobalOverlays প্রতি পাথ-বদলে trackInAppNav() ডাকে।
 
+import { RESERVED_URL_PREFIXES } from '@/types/guides';
+
 const KEY = 'vc_inapp_nav';
 
 function read(): number {
@@ -80,6 +82,33 @@ export function getAccountBackTarget(): string {
 // ══════════════════════════════════════════════════════════════════════════════
 export const VARIANT_HISTORY_ENABLED = true;
 
+// 🌐 সব ডিটেইল পেজ (প্রোডাক্ট + গাইড) একই "গ্রুপ"-এ — কালার-ভেরিয়েন্ট বাদেও বর্ণনার টেক্সট-লিংক, রিলেটেড কার্ড, গাইড↔প্রোডাক্ট
+// সবখানে একই নিয়ম চলে (কেন্দ্রীয় লিসেনার: lib/useDetailNavHistory.ts)। কালার-ভেরিয়েন্টের লিংকও এই গ্রুপেই পড়ে।
+export const DETAIL_GROUP = 'detail';
+
+// গাইড পেজ রুট-লেভেলে (/[...segments]), কোনো কমন প্রিফিক্স নেই — তাই "গাইড" চেনা হয় সাইটের নিজস্ব RESERVED_URL_PREFIXES
+// (types/guides.ts, GlobalOverlays-এর isGuidePage-ও এটাই ব্যবহার করে) বাদ দিয়ে: ওগুলো গাইড নয় (হোম, ক্যাটাগরি, সার্চ,
+// চেকআউট, অ্যাকাউন্ট, ফুটারের পলিসি-পেজ ইত্যাদি)। পলিসি-পেজ ইচ্ছাকৃতভাবে ডিটেইল নয় — ওগুলোর নিজস্ব স্ক্রল-মেমোরি আছে
+// (lib/scrollMemory.ts)।
+/** প্রোডাক্ট পেজ বা গাইড পেজ হলে true */
+export function isDetailPath(path: string): boolean {
+  const p = normPath(path);
+  if (p.startsWith('/product/')) return p.length > '/product/'.length;
+  const seg = p.split('/')[1];
+  if (!seg || seg.includes('.')) return false; // হোম, অথবা sitemap.xml/ছবির মতো ফাইল
+  return !RESERVED_URL_PREFIXES.includes(seg);
+}
+
+// কেন্দ্রীয় লিসেনার একই ক্লিক সামলালে কালার-ভেরিয়েন্ট বাটনের পুরনো onClick যেন দ্বিতীয়বার হিস্ট্রি না বদলায়
+let centralStamp = 0;
+export function noteCentralHandled(): void {
+  centralStamp = Date.now();
+}
+
+// আগে-দেখা পেজে লাফ (history.go) ব্যর্থ ধরার আগে অপেক্ষা। আগে ৭০০ms ছিল — ধীর মোবাইল নেটে পেজ আনতে এর বেশি লাগলে
+// ব্যর্থ ভেবে নতুন এন্ট্রি জমত, হিস্ট্রি ভাঙা মনে হতো।
+const JUMP_FALLBACK_MS = 2500;
+
 const VH_KEY = 'vc_variant_hist';
 const VH_INTENT_KEY = 'vc_variant_intent';
 
@@ -145,6 +174,7 @@ export function handleVariantClick(
   push: (href: string) => void,
 ): boolean {
   if (!VARIANT_HISTORY_ENABLED || typeof window === 'undefined') return false;
+  if (groupId !== DETAIL_GROUP && Date.now() - centralStamp < 100) return false; // কেন্দ্রীয় লিসেনার এই ক্লিক ইতিমধ্যে সামলেছে
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return false;
   try {
     const cur = normPath(window.location.pathname);
@@ -172,7 +202,7 @@ export function handleVariantClick(
           try { sessionStorage.setItem(VH_INTENT_KEY, target); } catch { /* ignore */ }
           push(targetHref);
         }
-      }, 700);
+      }, JUMP_FALLBACK_MS);
       return true;
     }
 
@@ -198,7 +228,7 @@ export function handleVariantClick(
     };
     const onPop = () => window.setTimeout(go, 60);
     window.addEventListener('popstate', onPop);
-    window.setTimeout(go, 700);
+    window.setTimeout(go, JUMP_FALLBACK_MS);
     window.history.go(delta);
     return true;
   } catch {
