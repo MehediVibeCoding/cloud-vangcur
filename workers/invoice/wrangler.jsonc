@@ -1,5 +1,6 @@
 {
-  // 🖨️ ইনভয়েস PNG রেন্ডার Worker। মূল সাইট (cloud-vangcur) এটাকে Service Binding (INVOICE_RENDERER) দিয়ে ডাকে।
+  // ⏸️ নিষ্ক্রিয়: এখন ইনভয়েস বানায় Vercel; এই Worker Cloudflare-এ ডিপ্লয় করা নেই। পুনরায় চালুর ধাপ: /INVOICE_SYSTEM.md
+  // 🖨️ ইনভয়েস PNG রেন্ডার Worker। মূল সাইট (cloud-vangcur) এটাকে Service Binding (INVOICE_RENDERER) দিয়ে ডাকত।
   // কোনো পাবলিক URL নেই (workers.dev ও Route বন্ধ), তাই বাইরে থেকে কেউ সরাসরি ডাকতে পারে না।
   "name": "vangcur-invoice",
   "main": "src/index.ts",
