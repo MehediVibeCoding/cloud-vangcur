@@ -34,6 +34,8 @@ export function ItemThumb({ imgs }: { imgs?: string[] }) {
           width: 32,
           height: 32,
           objectFit: 'cover',
+          // প্রোডাক্ট ছবি ৩:৪ ফ্রেমে থাকে, আসল প্রোডাক্টটা উপরের ১:১ অংশে — তাই মাঝ নয়, উপর থেকে ক্রপ।
+          objectPosition: 'top',
           borderRadius: 8,
           flexShrink: 0,
           border: '1px solid #E2E8F0',
