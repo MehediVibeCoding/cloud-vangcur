@@ -13,6 +13,7 @@ import type {
   StepsBlock,
   ChecklistBlock,
   ImageTextBlock,
+  ImageBlock,
   FaqBlock,
   RelatedLinksBlock,
   GalleryBlock,
@@ -23,6 +24,7 @@ import type {
 } from '@/types/guides';
 import { GuideIcon, GuideCheckboxIcon, GuideChevronIcon, GuideArrowRightIcon } from './GuideIcons';
 import { renderLinkedText } from '@/lib/linkedText';
+import { optimizeCloudinaryUrl, buildImageSrcSet } from '@/lib/cloudinaryUrl';
 
 type Lang = 'bn' | 'en';
 
@@ -59,7 +61,7 @@ function WideContainer({ children, className = '' }: { children: React.ReactNode
 // সেকশনের মাঝে (যেখানে পরের ব্লকের নিজস্ব heading আছে) স্বাভাবিক বড় প্যাডিং
 // বজায় থাকে। শূন্য (একদম গ্যাপ-ছাড়া) না রেখে ইচ্ছাকৃতভাবে অল্প একটু স্পেস
 // (৪px) রাখা হয়েছে, যাতে টুকরাগুলো একদম গায়ে-গায়ে লেগে না যায়।
-const CONTINUATION_TYPES = new Set(['richText', 'checklist', 'steps']);
+const CONTINUATION_TYPES = new Set(['richText', 'checklist', 'steps', 'image']);
 
 function isContinuationBlock(block?: GuideBlock): boolean {
   if (!block) return false;
@@ -415,6 +417,46 @@ function ImageTextBlockView({ block, lang }: { block: ImageTextBlock; lang: Lang
   );
 }
 
+// 🖼️ [NEW] একক পুরো-চওড়া ছবি ব্লক (types/guides.ts-এর ImageBlock)।
+// ⚠️ ইচ্ছাকৃতভাবে next/image না, সাধারণ <img>: সাইটের ছবির সিস্টেম (IMAGE_SYSTEM.md) আগে থেকেই
+// R2 → Cloudflare `/cdn-cgi/image/` দিয়ে ছোট/WebP করে (ProductCard-এর মতোই), আর next.config.js-এ
+// `images.remotePatterns` নেই — তাই next/image-এ img.vangcur.com-এর ছবি আটকে যেতে পারত।
+// ফ্রেম ৩:২ (aspect-[3/2]) — ছবি লোডের আগেই জায়গা ধরা থাকে, তাই লেআউট লাফায় না (CLS শূন্য)।
+// srcset-এর ৩টা width = ৩টা আলাদা Cloudflare transformation (ফ্রি লিমিট মাসে ৫,০০০ — তুচ্ছ)।
+const IMAGE_BLOCK_SRCSET_WIDTHS = [640, 960, 1440] as const;
+// Container সর্বোচ্চ ৮৮০px, দুই পাশে px-5 → কনটেন্ট ৮৪০px; ছোট স্ক্রিনে px-4 → ১০০vw − ৩২px।
+const IMAGE_BLOCK_SIZES = '(min-width: 900px) 840px, calc(100vw - 32px)';
+
+function ImageBlockView({ block, lang, nextBlock }: { block: ImageBlock; lang: Lang; nextBlock?: GuideBlock }) {
+  const url = block.image?.url?.trim();
+  const alt = block.image?.alt?.[lang] ?? '';
+  const caption = block.caption?.[lang]?.trim();
+  return (
+    <Container className={`pt-1 ${isContinuationBlock(nextBlock) ? 'pb-1' : 'pb-2'}`}>
+      <figure>
+        {url ? (
+          <div className="relative aspect-[3/2] w-full overflow-hidden rounded-2xl bg-brand-bg/40">
+            <img
+              src={optimizeCloudinaryUrl(url, 720)}
+              srcSet={buildImageSrcSet(url, IMAGE_BLOCK_SRCSET_WIDTHS)}
+              sizes={IMAGE_BLOCK_SIZES}
+              alt={alt}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <ImageOrPlaceholder lang={lang} aspect="aspect-[3/2]" />
+        )}
+        {caption && (
+          <figcaption className="mt-2.5 text-center font-body text-[13px] leading-[1.7] text-muted">{caption}</figcaption>
+        )}
+      </figure>
+    </Container>
+  );
+}
+
 function ProductRecommendationBlockView({
   block,
   lang,
@@ -612,6 +654,8 @@ export function GuideBlockRenderer({
       return <ChecklistBlockView block={block} lang={lang} nextBlock={nextBlock} />;
     case 'imageText':
       return <ImageTextBlockView block={block} lang={lang} />;
+    case 'image':
+      return <ImageBlockView block={block} lang={lang} nextBlock={nextBlock} />;
     case 'productRecommendation':
       return (
         <ProductRecommendationBlockView
