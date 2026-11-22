@@ -5,7 +5,8 @@
 // যেটা /search পেজের (unstable_cache) কপির সাথে মিলত না। ফলে ড্রপডাউনে প্রোডাক্ট দেখালেও
 // রেজাল্ট পেজে "০টি পণ্য" আসত। এখন দুটোই একই `getCachedCatalogIndex()` থেকে পড়ে —
 // একটাই ক্যাশ, তাই কখনো আলাদা হতে পারে না। অ্যাডমিন বদলালে 'catalog' ট্যাগ মুছলে দুটোই নতুন হয়।
-// CDN-এ মাত্র ৬০ সেকেন্ড রাখা হয়, যাতে পুরনো কপি বেশিক্ষণ আটকে না থাকে।
+// CDN-এ ১০ মিনিট (s-maxage=600) রাখা হয় (আগে ৬০ সেকেন্ড — প্রতি মিনিটে একবার Worker চালিয়ে ক্যাটালগ বানাতে হতো, টেস্টে
+// কোল্ড মিসে ২৬০ ms CPU)। অ্যাডমিন বদলালে সার্চ-ড্রপডাউনে পুরনো তালিকা সর্বোচ্চ ১০ মিনিট দেখা যেতে পারে।
 
 import { NextResponse } from 'next/server';
 import { getCachedCatalogIndex } from '@/lib/catalogIndex';
@@ -15,7 +16,7 @@ export async function GET() {
     const products = await getCachedCatalogIndex();
     return NextResponse.json(
       { products },
-      { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300' } },
+      { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=600, stale-while-revalidate=300' } },
     );
   } catch {
     return NextResponse.json({ products: [] }, { headers: { 'Cache-Control': 'no-store' } });
