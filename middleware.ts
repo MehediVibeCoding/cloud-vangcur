@@ -166,6 +166,24 @@ function checkEdgeRateLimit(ip: string, isApiRoute: boolean): boolean {
   return true;
 }
 
+// ⚡ /products স্ট্যাটিক (ISR) রাখতে: ?cat= / ?page= থাকলে অনুরোধটি অভ্যন্তরীণ পাথ-ভিত্তিক রুটে রিরাইট
+// হয় (ব্রাউজারের URL বদলায় না)। শুধু নিরাপদ মান রিরাইট হয় — নইলে ডিফল্ট /products দেখায় (ক্যাশ-কী ঘেঁটে
+// দেওয়া ঠেকাতে)।
+const PRODUCTS_CAT_REGEX = /^[\p{L}\p{N}_ -]{1,60}$/u;
+const PRODUCTS_PAGE_REGEX = /^\d{1,4}$/;
+
+function productsRewritePath(request: NextRequest): string | null {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return null;
+  const sp = request.nextUrl.searchParams;
+  const catRaw = sp.get('cat');
+  const pageRaw = sp.get('page');
+  if (catRaw === null && pageRaw === null) return null;
+  const cat = catRaw === null || catRaw === '' ? 'all' : catRaw;
+  const page = pageRaw === null || pageRaw === '' ? '1' : pageRaw;
+  if (!PRODUCTS_CAT_REGEX.test(cat) || !PRODUCTS_PAGE_REGEX.test(page)) return null;
+  return `/products/view/${encodeURIComponent(cat)}/${Number(page) || 1}`;
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
@@ -180,6 +198,11 @@ export async function middleware(request: NextRequest) {
       status: 404,
       headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Robots-Tag': 'noindex' },
     });
+  }
+
+  // ১খ. অভ্যন্তরীণ রিরাইট-রুটে সরাসরি এক্সেস (ডুপ্লিকেট কনটেন্ট) → /products-এ
+  if (pathname === '/products/view' || pathname.startsWith('/products/view/')) {
+    return NextResponse.redirect(new URL('/products', request.url), 308);
   }
 
   // ২. ক্লায়েন্ট আইপি এক্সট্র্যাক্ট (শেয়ার্ড ফাংশন, C5 ফিক্স) ও এজ রেট লিমিট যাচাই
@@ -228,9 +251,17 @@ export async function middleware(request: NextRequest) {
   }
 
   // ৩. Supabase সেশন আপডেট
-  const response = needsAuthRefresh(pathname)
-    ? await updateSession(request)
-    : NextResponse.next({ request });
+  const productsRewrite = pathname === '/products' ? productsRewritePath(request) : null;
+  let response: NextResponse;
+  if (productsRewrite) {
+    const target = request.nextUrl.clone();
+    target.pathname = productsRewrite;
+    response = NextResponse.rewrite(target);
+  } else {
+    response = needsAuthRefresh(pathname)
+      ? await updateSession(request)
+      : NextResponse.next({ request });
+  }
 
   // ৪. সার্বিক সাইট সিকিউরিটি ও ক্লিকজ্যাকিং প্রোটেকশন হেডার
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');

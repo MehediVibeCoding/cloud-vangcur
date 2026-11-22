@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
   // ডেটা দেখায়, তাই একটা বদলালে সবগুলোই নতুন করে বানানো নিরাপদ) এবং সাইটম্যাপ।
   revalidatePath('/');
   revalidatePath('/offers');
+  revalidatePath('/products');
+  revalidatePath('/products/view/[cat]/[page]', 'page');
   revalidatePath('/category/[slug]', 'page');
   revalidatePath('/collection/[slug]', 'page');
   revalidatePath('/product/[slug]', 'page');
