@@ -112,6 +112,20 @@ export interface ImageTextBlock extends BaseBlock {
   imageSide: 'left' | 'right';
 }
 
+/** [NEW] একক, পুরো-চওড়া ছবি (যেমন "পাশাপাশি ছবি"-র তুলনা-ছবি) — শুধু ছবি + ঐচ্ছিক ক্যাপশন।
+ *  কোনো heading নেই: এটা সবসময় আগের টেক্সট-ব্লকের সাথে লেগে থাকা "continuation" (দেখুন GuideBlocks.tsx-এর
+ *  CONTINUATION_TYPES)। `image.url` খালি থাকলে HeroBlock-এর মতোই "এখানে বাস্তব ছবি যোগ করা হবে"
+ *  প্লেসহোল্ডার দেখায়।
+ *
+ *  📐 ছবির সাইজ: ৩:২ অনুপাত, আদর্শ ১৬০০×১০৬৭ px (ন্যূনতম ১২০০×৮০০)। ডেস্কটপে কনটেন্ট-কলাম সর্বোচ্চ
+ *  ৮৪০ CSS px চওড়া, মোবাইলে স্ক্রিনের পুরো চওড়া — একই ছবি দুটোতেই ক্রপ ছাড়া মেলে। অন্য অনুপাতের ছবি দিলে
+ *  ৩:২ ফ্রেমে `object-cover` হয়ে কিনারা কাটা পড়বে। */
+export interface ImageBlock extends BaseBlock {
+  type: 'image';
+  image: { url: string; alt: LocalizedText };
+  caption?: LocalizedText;
+}
+
 export interface ProductRecommendationBlock extends BaseBlock {
   type: 'productRecommendation';
   heading?: LocalizedText;
@@ -179,6 +193,7 @@ export type GuideBlock =
   | StepsBlock
   | ChecklistBlock
   | ImageTextBlock
+  | ImageBlock
   | ProductRecommendationBlock
   | FaqBlock
   | RelatedLinksBlock
@@ -245,4 +260,4 @@ export const RESERVED_URL_PREFIXES = [
 export function guidePageUrlPath(slug: string, urlPrefix: string): string {
   const prefix = urlPrefix.replace(/^\/|\/$/g, '');
   return prefix ? `/${prefix}/${slug}` : `/${slug}`;
-}
+  }
