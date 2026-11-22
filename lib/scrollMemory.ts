@@ -15,6 +15,11 @@
 // আর জায়গায় বসার পর লেআউট স্থির না হওয়া পর্যন্ত (সর্বোচ্চ ৩ সেকেন্ড) প্রতি ফ্রেমে ঠিক রাখা হয় — আগে মাত্র ০.৪৫ সেকেন্ড
 // একই px-এ ধরে রাখা হতো, তাই পরে উচ্চতা বদলালে সংশোধন হতো না।
 
+// [v3] তালিকা-পেজের (হোম, /products, ক্যাটাগরি, কালেকশন, অফার) গ্রিড থেকে প্রোডাক্ট/গাইডে ঢুকে ব্যাক করলেও একই জায়গায় ফেরা।
+// আগে এই ফিচার শুধু ফুটারের পলিসি-লিংকের "ফিরে যান" বাটনে চলত — গ্রিড থেকে ব্যাকে (বিশেষ করে ব্যাক-জেসচারে) পেজ উপরে চলে যেত।
+// ক্লিকের সময় পজিশন সেভ (প্রোডাক্ট-কার্ড হলে সেই কার্ডটাই নোঙর), ব্যাকে (popstate) গন্তব্য তালিকা-পেজে পৌঁছালে ফেরানো —
+// ScrollMemory.tsx দেখুন। /products-এর গ্রিড virtualized (lib/useGridVirtualizer.ts) — পেজ লম্বা হওয়া পর্যন্ত নিচের লুপ অপেক্ষা করে।
+
 const MAP_KEY = 'vc_sr_map_v2';
 const FLAG_KEY = 'vc_sr_back_v1';
 const MAX_ENTRIES = 12;
@@ -32,6 +37,19 @@ export function isPolicyPath(path: string): boolean {
   return POLICY_PATH_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`) || path.startsWith(`${p}?`));
 }
 
+// যেসব পেজ থেকে প্রোডাক্ট/গাইডে ঢুকে ব্যাক করলে আগের জায়গায় ফেরাতে হবে (প্রোডাক্টের গ্রিড/তালিকা আছে এমন পেজ)।
+// সার্চ বাদ — SearchClient.tsx-এর নিজস্ব স্ক্রল-রিস্টোর আছে।
+export function isListingPath(path: string): boolean {
+  const p = path.split(/[?#]/)[0];
+  return (
+    p === '/' ||
+    p === '/products' || p.startsWith('/products/') ||
+    p.startsWith('/category/') ||
+    p.startsWith('/collection/') ||
+    p === '/offers'
+  );
+}
+
 /** সেভ করা অবস্থান */
 interface SavedPos {
   /** স্ক্রল-px */
@@ -41,7 +59,7 @@ interface SavedPos {
   /** সেভের সময় পেজের মোট উচ্চতা */
   h: number;
   /** নোঙর: ফুটারের যে লিংকে ক্লিক হয়েছিল + ক্লিকের সময় পর্দার উপর থেকে তার দূরত্ব */
-  a?: { sel: string; top: number };
+  a?: { sel: string; top: number; /** একই সিলেক্টরে একাধিক মিল থাকলে (কার্ডে ছবি+নামের দুই লিংক) কোনটা */ n?: number };
 }
 
 export function currentLocationKey(): string {
@@ -75,8 +93,16 @@ export function saveScrollPosition(link?: Element | null): void {
   const pos: SavedPos = { y, b: Math.max(0, max - y), h };
   // ফুটারের লিংক হলে সেটাকেই নোঙর বানাই (একই href-এর লিংক ফুটারে একটাই)
   const href = link?.getAttribute('href');
-  if (link && href && !href.includes('"') && link.closest('footer')) {
-    pos.a = { sel: `footer a[href="${href}"]`, top: Math.round(link.getBoundingClientRect().top) };
+  if (link && href && !href.includes('"')) {
+    if (link.closest('footer')) {
+      pos.a = { sel: `footer a[href="${href}"]`, top: Math.round(link.getBoundingClientRect().top) };
+    } else if (href.startsWith('/product/')) {
+      // প্রোডাক্ট-কার্ড: কার্ডের লিংকটাই নোঙর (হোমের content-visibility/virtualized গ্রিডে px-এর চেয়ে নির্ভরযোগ্য)।
+      // ফিরে এসে কার্ড DOM-এ না থাকলে (virtualized) নিচের px/নিচ-থেকে-দূরত্ব দিয়ে আগে কাছাকাছি যাওয়া হয়, তারপর কার্ডে মেলানো।
+      const sel = `a[href="${href}"]`;
+      const n = Array.from(document.querySelectorAll(sel)).indexOf(link);
+      if (n >= 0) pos.a = { sel, top: Math.round(link.getBoundingClientRect().top), n };
+    }
   }
   const key = currentLocationKey();
   const map = readMap();
@@ -122,7 +148,28 @@ export function restoreScrollIfRequested(): void {
   if (!saved || typeof saved.y !== 'number' || saved.y <= 0) return;
   delete map[key];
   writeMap(map);
+  runRestore(saved);
+}
 
+/** ব্রাউজারের ব্যাক/ফরওয়ার্ডে তালিকা-পেজে পৌঁছালে ডাকা হয়: সেভ করা পজিশন থাকলে ফেরায় (এন্ট্রি মোছে না — ফরওয়ার্ড-ব্যাক বারবার চললেও কাজ করে)। ফেরালে true। */
+export function restoreScrollOnBack(): boolean {
+  const saved = readMap()[currentLocationKey()];
+  if (!saved || typeof saved.y !== 'number' || saved.y <= 0) return false;
+  runRestore(saved);
+  return true;
+}
+
+/** তালিকা-পেজে নতুন নেভিগেশনে (ব্যাক নয়) ঢুকলে পুরনো সেভ করা পজিশন মুছি — নতুন ভিজিট উপর থেকেই শুরু। */
+export function forgetSavedScroll(): void {
+  const key = currentLocationKey();
+  const map = readMap();
+  if (key in map) {
+    delete map[key];
+    writeMap(map);
+  }
+}
+
+function runRestore(saved: SavedPos): void {
   if (cancelActive) cancelActive();
   let stopped = false;
   const start = performance.now();
@@ -150,7 +197,7 @@ export function restoreScrollIfRequested(): void {
   // এই মুহূর্তে কোথায় বসা উচিত — এখনো বলার মতো অবস্থা না হলে (পেজ ছোট/নোঙর আঁকা হয়নি) null
   const desiredTop = (H: number, maxScroll: number): number | null => {
     if (saved.a) {
-      const el = document.querySelector(saved.a.sel);
+      const el = document.querySelectorAll(saved.a.sel)[saved.a.n ?? 0];
       if (el) return Math.round(window.scrollY + el.getBoundingClientRect().top - saved.a.top);
     }
     if (saved.b < NEAR_BOTTOM_PX) {
