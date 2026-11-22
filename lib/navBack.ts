@@ -90,12 +90,19 @@ export const DETAIL_GROUP = 'detail';
 // (types/guides.ts, GlobalOverlays-এর isGuidePage-ও এটাই ব্যবহার করে) বাদ দিয়ে: ওগুলো গাইড নয় (হোম, ক্যাটাগরি, সার্চ,
 // চেকআউট, অ্যাকাউন্ট, ফুটারের পলিসি-পেজ ইত্যাদি)। পলিসি-পেজ ইচ্ছাকৃতভাবে ডিটেইল নয় — ওগুলোর নিজস্ব স্ক্রল-মেমোরি আছে
 // (lib/scrollMemory.ts)।
+// ⚠️ রুট-লেভেলের যেসব আসল রুট RESERVED_URL_PREFIXES-এ নেই (types/guides.ts ছোঁয়া হয় না) অথচ গাইড নয়:
+// /products (গ্রিড/তালিকা), /collection/[slug], /warranty (পলিসি-পেজ)। এগুলো আগে ভুলে "গাইড" ধরা হতো — ফলে প্রোডাক্ট থেকে
+// /products-এ ব্যাক করলে "ডিটেইল→ডিটেইল" ভেবে পেজ জোর করে উপরে টানা হতো, আর স্ট্যাকও সাফ হতো না।
+// নতুন টপ-লেভেল (গাইড-নয় এমন) রুট বানালে এখানেও যোগ করুন।
+const NON_GUIDE_ROOTS = ['products', 'collection', 'warranty'];
+
 /** প্রোডাক্ট পেজ বা গাইড পেজ হলে true */
 export function isDetailPath(path: string): boolean {
   const p = normPath(path);
   if (p.startsWith('/product/')) return p.length > '/product/'.length;
   const seg = p.split('/')[1];
   if (!seg || seg.includes('.')) return false; // হোম, অথবা sitemap.xml/ছবির মতো ফাইল
+  if (NON_GUIDE_ROOTS.includes(seg)) return false;
   return !RESERVED_URL_PREFIXES.includes(seg);
 }
 
@@ -142,14 +149,31 @@ function writeVH(v: VariantHist | null): void {
   }
 }
 
+// লাফের "ব্যর্থ ধরার" টাইমার (নিচে)। লাফ সফল হলে (popstate এলে) বন্ধ করা জরুরি — নইলে ২.৫ সেকেন্ডের মধ্যে ওই একই পেজে
+// ফিরে এলে টাইমার ভুল করে ভাবে "লাফ কাজ করেনি" আর বাড়তি push করে হিস্ট্রি নষ্ট করে (A↔B দ্রুত ঘুরলে ঘটত)।
+let jumpTimer: number | undefined;
+function clearJumpTimer(): void {
+  if (jumpTimer !== undefined) {
+    window.clearTimeout(jumpTimer);
+    jumpTimer = undefined;
+  }
+}
+
 /** GlobalOverlays: প্রতি পাথ-বদলে ডাকে — ভেরিয়েন্ট-হিস্ট্রির পয়েন্টার ঠিক রাখে */
 export function variantHistoryOnNav(pathname: string, isPop: boolean): void {
+  if (isPop) clearJumpTimer(); // লাফ (বা অন্য ব্যাক) পৌঁছেছে — ব্যর্থতার টাইমার আর দরকার নেই
   const st = readVH();
   if (!st) return;
   const here = normPath(pathname);
   if (isPop) {
     const idx = st.s.findIndex((p) => normPath(p) === here);
-    if (idx >= 0 && idx !== st.i) writeVH({ ...st, i: idx });
+    if (idx < 0) {
+      // ব্যাকে স্ট্যাকের বাইরের পেজে (হোম, /products, সার্চ…) গেলাম — ঘোরাঘুরির সিস্টেম থেকে বেরিয়েছি, মেমরি সাফ।
+      // (আগে এখানে কিছুই মুছত না — পুরনো স্ট্যাক পরের প্রোডাক্টে ঢুকে ব্যাক করলে ভুল পেজে নিয়ে যেত)
+      writeVH(null);
+      return;
+    }
+    if (idx !== st.i) writeVH({ ...st, i: idx });
     return;
   }
   // নতুন নেভিগেশন: আমাদের নিজের ভেরিয়েন্ট-ক্লিক হলে রাখি, অন্য যেকোনো কিছু হলে হিস্ট্রি রিসেট
@@ -193,8 +217,10 @@ export function handleVariantClick(
       if (delta === 0) return false;
       writeVH({ ...st, i: idx });
       pendingJump = delta;
+      clearJumpTimer();
       window.history.go(delta);
-      window.setTimeout(() => {
+      jumpTimer = window.setTimeout(() => {
+        jumpTimer = undefined;
         if (normPath(window.location.pathname) === cur) {
           // লাফ কাজ করেনি (সম্ভবত হিস্ট্রি বদলে গেছে) — সাধারণ push, হিস্ট্রি রিসেট
           pendingJump = null;
@@ -206,31 +232,14 @@ export function handleVariantClick(
       return true;
     }
 
-    // (খ) নতুন ভেরিয়েন্ট
-    const tail = st.s.length - 1;
-    if (st.i === tail) {
-      writeVH({ ...st, s: [...st.s, target], i: tail + 1 });
-      try { sessionStorage.setItem(VH_INTENT_KEY, target); } catch { /* ignore */ }
-      return false; // সাধারণ Link push
-    }
-    // মাঝখানে থেকে নতুন ভেরিয়েন্টে গেলে push করলে সামনের এন্ট্রিগুলো কেটে যেত —
-    // তাই আগে শেষ এন্ট্রিতে লাফ, তারপর push।
-    const delta = tail - st.i;
-    writeVH({ c: groupId, s: [...st.s, target], i: tail + 1 });
-    pendingJump = delta;
-    let done = false;
-    const go = () => {
-      if (done) return;
-      done = true;
-      window.removeEventListener('popstate', onPop);
-      try { sessionStorage.setItem(VH_INTENT_KEY, target); } catch { /* ignore */ }
-      push(targetHref);
-    };
-    const onPop = () => window.setTimeout(go, 60);
-    window.addEventListener('popstate', onPop);
-    window.setTimeout(go, JUMP_FALLBACK_MS);
-    window.history.go(delta);
-    return true;
+    // (খ) নতুন ভেরিয়েন্ট — সাধারণ push।
+    // মাঝখান (st.i < শেষ) থেকে নতুন পেজে গেলে ব্রাউজার নিজেই সামনের (forward) এন্ট্রিগুলো কেটে ফেলে — সব ব্রাউজারের
+    // স্বাভাবিক আচরণ। তাই আমাদের স্ট্যাকও সেখানেই ছাঁটি: [হোম, A, B, C] তে B থেকে D-তে গেলে স্ট্যাক = [A, B, D]।
+    // (আগে শেষ এন্ট্রি C-তে লাফ দিয়ে তারপর D push করা হতো — হিস্ট্রি [.., B, C, D] হয়ে D থেকে ব্যাকে B-র বদলে C আসত।)
+    const keep = st.s.slice(0, st.i + 1);
+    writeVH({ c: groupId, s: [...keep, target], i: keep.length });
+    try { sessionStorage.setItem(VH_INTENT_KEY, target); } catch { /* ignore */ }
+    return false; // সাধারণ Link push
   } catch {
     return false;
   }
