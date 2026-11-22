@@ -8,6 +8,7 @@ import StaleTabReload from './components/StaleTabReload';
 import StaleSessionReload from './components/StaleSessionReload';
 import ProductNavOverlay from './components/ProductNavOverlay';
 import Analytics from './components/Analytics';
+import RegisterSW from './components/RegisterSW';
 import { getServerLang } from '@/lib/i18n/getServerLang';
 import { STATIC_ORIGIN } from '@/lib/staticUrl';
 
@@ -27,6 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
       template: '%s | Vangcur',
     },
     description,
+    manifest: '/manifest.webmanifest',
     icons: {
       icon: '/icon-192.png',
       shortcut: '/icon-192.png',
@@ -142,6 +144,7 @@ export default async function RootLayout({
         <StaleSessionReload />
         <ProductNavOverlay />
         <GlobalOverlays />
+        <RegisterSW />
       </body>
     </html>
   );

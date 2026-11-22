@@ -32,3 +32,7 @@
   Cache-Control: public, max-age=604800
 /manifest.webmanifest
   Cache-Control: public, max-age=86400
+
+# 🔧 PWA service worker: ব্রাউজার যেন সবসময় নতুন sw.js চেক করে (ক্যাশে আটকে না থাকে)।
+/sw.js
+  Cache-Control: no-cache
