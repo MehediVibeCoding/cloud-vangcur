@@ -666,7 +666,7 @@ export default function ProductDetailClient({
     // (ব্যাকগ্রাউন্ড ট্যাবে এমনিতেই স্কিপ হয় — document.hidden চেক নিচেই আছে, অপরিবর্তিত।
     // দীর্ঘমেয়াদে আরও ভালো সমাধান: পোলিং পুরোপুরি বাদ দিয়ে Supabase Realtime
     // broadcast channel দিয়ে শুধু স্টক/দাম বদলালেই push পাওয়া — এটা আলাদা, বড় কাজ।)
-    const POLL_MS = 180000;
+    const POLL_MS = 600000; // ১০ মিনিট (সার্ভার/এজ ক্যাশের সাথে মিল রেখে; আগে ৩ মিনিট)
 
     const tick = async () => {
       if (typeof document !== 'undefined' && document.hidden) return;
@@ -680,7 +680,9 @@ export default function ProductDetailClient({
       try {
         const ctl = new AbortController();
         const timeout = setTimeout(() => ctl.abort(), 6000);
-        const res = await fetch(`/api/live-products?ids=${encodeURIComponent(ids.join(','))}`, { signal: ctl.signal });
+        // 🛡️ `ids` ছাড়া একটাই URL — সব প্রোডাক্ট পেজ এজ-ক্যাশের একটাই এন্ট্রি ভাগ করে (দেখুন app/api/live-products/route.ts)।
+        // নিচের liveById.has ফিল্টার শুধু এই পেজের প্রোডাক্টগুলোই রাখে, বাকি আইটেম উপেক্ষা হয়।
+        const res = await fetch('/api/live-products', { signal: ctl.signal });
         clearTimeout(timeout);
         if (res.ok) {
           const json = (await res.json()) as {

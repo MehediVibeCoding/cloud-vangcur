@@ -115,8 +115,16 @@ const INTERNAL_SECRET_PROTECTED_API_PATHS = [
 // (Redis + এজ-মেমরি) আগের মতোই প্রযোজ্য — শুধু সেশন-রিফ্রেশ স্কিপ।
 const SESSIONLESS_PUBLIC_API_PATHS = ['/api/live-products', '/api/search-index', '/api/device-id'];
 
+// 🛡️ রিকোয়েস্ট-সেভিং (২০২৬-১১): /api/lead লগইন/কুকি ব্যবহার করে না (নিজের Redis রেট-লিমিট আছে) — তবু আগে প্রতি কলে
+// Supabase Auth-এ `getUser()` রাউন্ড-ট্রিপ হতো (wall-time ১–২ সেকেন্ড)। শুধু সেশন-রিফ্রেশ স্কিপ; রেট-লিমিট আগের মতোই
+// (Redis, middleware-এ — isPublicCachedApi-তে নয়, তাই এজ-মেমরির বদলে আগের পথেই থাকছে)।
+const SESSIONLESS_WRITE_API_PATHS = ['/api/lead'];
+
 function needsAuthRefresh(pathname: string): boolean {
   if (SESSIONLESS_PUBLIC_API_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return false;
+  }
+  if (SESSIONLESS_WRITE_API_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return false;
   }
   return AUTH_REFRESH_PATH_PREFIXES.some(
