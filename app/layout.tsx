@@ -10,7 +10,7 @@ import ProductNavOverlay from './components/ProductNavOverlay';
 import Analytics from './components/Analytics';
 import RegisterSW from './components/RegisterSW';
 import { getServerLang } from '@/lib/i18n/getServerLang';
-import { STATIC_ORIGIN } from '@/lib/staticUrl';
+import { STATIC_ORIGIN, staticUrl } from '@/lib/staticUrl';
 
 const SITE_URL = 'https://vangcur.com';
 
@@ -75,7 +75,8 @@ export default async function RootLayout({
     preconnect(STATIC_ORIGIN);
     preconnect(STATIC_ORIGIN, { crossOrigin: 'anonymous' });
   }
-  preload('/fonts/noto-sans-bengali-digits-v1.woff2', {
+  // ⚠️ CSS (static হোস্ট) ঠিক এই ঠিকানা থেকেই ফন্ট আনে; preload অন্য হোস্টে গেলে ফন্ট দুবার নামে ও preload নষ্ট হয়।
+  preload(staticUrl('/fonts/noto-sans-bengali-digits-v1.woff2'), {
     as: 'font',
     type: 'font/woff2',
     crossOrigin: 'anonymous',
