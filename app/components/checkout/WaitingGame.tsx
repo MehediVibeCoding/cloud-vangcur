@@ -76,6 +76,9 @@ export default function WaitingGame({ variant, active }: Props) {
   const autoShownRef = useRef(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  // বর্তমান খেলার "রান" আইডি (সার্ভার খেলা শুরুতে দেয়; স্কোর জমার সময় লাগে)। Promise, কারণ খুব দ্রুত শেষ হওয়া খেলায়
+  // স্কোর পাঠানোর সময় রান-রিকোয়েস্ট এখনো ফিরে নাও আসতে পারে — তখন অপেক্ষা করা হয়।
+  const runRef = useRef<Promise<string | null> | null>(null);
 
   useEffect(() => {
     // ব্যাচ ১৫: অর্ডার পেন্ডিং কিন্তু এই ডিভাইসে `vc_pending_ts` নেই (অন্য ডিভাইসে খোলা / লোকাল স্টোরেজ মোছা)
@@ -160,7 +163,7 @@ export default function WaitingGame({ variant, active }: Props) {
     return () => clearTimeout(timer);
   }, [variant, mounted, active, expired, games.length]);
 
-  // গেমের ভেতরের বার্তা (শুধু আমাদের নিজের iframe থেকে): ✕ বাটন, লিডারবোর্ড চাওয়া, স্কোর জমা
+  // গেমের ভেতরের বার্তা (শুধু আমাদের নিজের iframe থেকে): ✕ বাটন, লিডারবোর্ড চাওয়া, খেলা শুরু (রান খোলা), স্কোর জমা
   useEffect(() => {
     if (phase !== 'playing' || !game) return undefined;
     const gameId = game.id;
@@ -189,9 +192,36 @@ export default function WaitingGame({ variant, active }: Props) {
         }
         return;
       }
-      if (data?.type === 'vc-game-score' && typeof data.score === 'number') {
+      if (data?.type === 'vc-game-start') {
+        // নতুন খেলা শুরু → সার্ভারে একটা রান খোলো। অর্ডার না থাকলে রান নেই (স্কোরও জমা হবে না)।
         const pending = readPendingOrder();
         if (!pending) {
+          runRef.current = Promise.resolve(null);
+          return;
+        }
+        runRef.current = (async () => {
+          try {
+            const res = await fetch('/api/game-score', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'start', game: gameId, orderId: pending.id, phone: pending.phone,
+              }),
+            });
+            const json = await res.json();
+            return json?.ok && typeof json.run === 'string' ? (json.run as string) : null;
+          } catch {
+            return null;
+          }
+        })();
+        return;
+      }
+      if (data?.type === 'vc-game-score' && typeof data.score === 'number') {
+        const pending = readPendingOrder();
+        const runPromise = runRef.current;
+        runRef.current = null; // প্রতিটা রান একবারই ব্যবহার হয়
+        const run = runPromise ? await runPromise : null;
+        if (!pending || !run) {
           reply({ type: 'vc-game-result', ok: false });
           return;
         }
@@ -200,7 +230,7 @@ export default function WaitingGame({ variant, active }: Props) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              game: gameId, orderId: pending.id, phone: pending.phone, score: data.score,
+              game: gameId, orderId: pending.id, phone: pending.phone, score: data.score, run,
             }),
           });
           const json = await res.json();
@@ -211,7 +241,10 @@ export default function WaitingGame({ variant, active }: Props) {
       }
     };
     window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      runRef.current = null;
+    };
   }, [phase, game, closeAll]);
 
   // 🖥️ গেম শুরু হওয়ার সাথে সাথে পুরো প্যানেলটা ব্রাউজারের নেটিভ ফুলস্ক্রিনে নেওয়ার চেষ্টা (ডেস্কটপ ও মোবাইল দুটোতেই —
