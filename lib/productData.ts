@@ -241,7 +241,9 @@ export function computeProductsListPaging(total: number, requestedPage: number):
   const listable = Math.max(0, total - PRODUCTS_LIST_RESERVED_HOME);
   const totalPages = Math.max(1, Math.ceil(listable / PRODUCTS_LIST_PAGE_SIZE));
   const page = Math.min(Math.max(1, Math.floor(requestedPage) || 1), totalPages);
-  const offset = PRODUCTS_LIST_RESERVED_HOME + (page - 1) * PRODUCTS_LIST_PAGE_SIZE;
+  // মোট ≤ হোমের জন্য রাখা সংখ্যা হলে হোম কিছুই বাদ রাখে না, তাই ০ থেকে শুরু — নইলে সরাসরি /products-এ খালি দেখাত
+  const reserved = total > PRODUCTS_LIST_RESERVED_HOME ? PRODUCTS_LIST_RESERVED_HOME : 0;
+  const offset = reserved + (page - 1) * PRODUCTS_LIST_PAGE_SIZE;
   return { page, offset, limit: PRODUCTS_LIST_PAGE_SIZE, totalPages };
 }
 

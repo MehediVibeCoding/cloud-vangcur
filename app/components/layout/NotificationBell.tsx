@@ -251,7 +251,8 @@ export default function NotificationBell({ className = '' }: { className?: strin
     const draftNotifs = buildDraftOrderNotifications(drafts, lang);
     const reviewNotifs = buildReviewRequestNotifications(orders, lang);
     const tierNotif = buildTierUpgradeNotification(orderStats(orders).completed, lang);
-    const codeNotifs = await buildSecretCodeNotifications(supabase, lang);
+    // গেস্টের কোনো টায়ার রিওয়ার্ড নেই — তাই অকারণ RPC কল বাঁচাতে শুধু লগইন করা ইউজারের জন্য
+    const codeNotifs = currentUser ? await buildSecretCodeNotifications(supabase, lang) : [];
 
     const dismissed = getDismissedNotifIds();
     const next = [

@@ -363,7 +363,9 @@ export default function MembershipModal({
     const slice = slices[index] || slices[0];
 
     const sliceAngle = 360 / slices.length;
-    const targetDegree = 360 * 5 + (360 - (index * sliceAngle + sliceAngle / 2));
+    // SVG-তে ০° = ৩টার দিক, কিন্তু তীর ১২টায় (২৭০°) — তাই স্লাইসের কেন্দ্রকে ২৭০°-তে আনতে হবে।
+    const centerAngle = index * sliceAngle + sliceAngle / 2;
+    const targetDegree = 360 * 5 + ((270 - centerAngle + 360) % 360);
 
     setSpinRotation(0);
     requestAnimationFrame(() => {

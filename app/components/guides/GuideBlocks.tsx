@@ -3,7 +3,6 @@
 import { useRef, useState } from 'react';
 import useCloseWhenOffscreen from '@/lib/useCloseWhenOffscreen';
 import Link from 'next/link';
-import Image from 'next/image';
 import type {
   GuideBlock,
   LocalizedText,
@@ -124,7 +123,15 @@ function ImageOrPlaceholder({
   if (image?.url) {
     return (
       <div className={`relative w-full overflow-hidden rounded-2xl bg-brand-bg/40 ${aspect}`}>
-        <Image src={image.url} alt={t(image.alt, lang)} fill sizes={sizes} className="object-cover" />
+        {/* সাধারণ <img>: next.config.js-এ images.remotePatterns নেই, তাই next/image-এ img.vangcur.com-এর ছবি ভাঙত (ImageBlockView-এর মতোই) */}
+        <img
+          src={optimizeCloudinaryUrl(image.url, 720)}
+          alt={t(image.alt, lang)}
+          sizes={sizes}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       </div>
     );
   }
@@ -477,7 +484,13 @@ function ProductRecommendationBlockView({
         className="flex flex-col gap-4 overflow-hidden rounded-2xl border border-brand-light/30 bg-gradient-to-br from-[#F0F7FF] via-white to-white p-4 shadow-sh1 transition-transform hover:scale-[1.01] sm:flex-row sm:items-center"
       >
         <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-white sm:h-24 sm:w-24">
-          <Image src={product.image} alt={title} fill sizes="200px" className="object-contain p-1.5" />
+          <img
+            src={optimizeCloudinaryUrl(product.image, 400)}
+            alt={title}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-contain p-1.5"
+          />
         </div>
         <div className="flex-1">
           <h3 className="font-body text-[16px] font-bold text-ink">{title}</h3>

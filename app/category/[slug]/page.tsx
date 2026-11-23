@@ -111,6 +111,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     : [DEFAULT_CATEGORIES, DEFAULT_HERO_CARDS, DEFAULT_SHOWCASE];
   const initialProducts = productsPage.products;
   const initialHasMore = productsPage.hasMore;
+  const initialTotal = productsPage.total;
 
   return (
     <>
@@ -123,6 +124,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         initialHeroCards={initialHeroCards}
         initialCategory={cat.id}
         initialHasMore={initialHasMore}
+        initialTotal={initialTotal}
         initialShowcase={initialShowcase}
       />
     </>

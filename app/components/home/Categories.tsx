@@ -136,7 +136,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
   const pageCount = maxPage + 1;
 
   return (
-    <div className="mx-auto mb-11 min-h-[140px] max-w-[1300px] overflow-hidden px-3.5 sm:px-5">
+    <div id="catCardsGrid" className="mx-auto mb-11 min-h-[140px] max-w-[1300px] scroll-mt-24 overflow-hidden px-3.5 sm:px-5">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="border-l-[3px] border-brand-light pl-3 text-lg font-bold sm:text-xl text-ink">
           {lang === 'en' ? (
