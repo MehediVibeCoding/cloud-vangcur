@@ -19,6 +19,9 @@ const COPY_FILES = [
   'footer-illustration-desktop.webp',
   'footer-illustration-mobile.webp',
   'vangcur-team-avatar.png',
+  // বাংলা-ডিজিট ফন্ট: globals.css-এর url('/fonts/...') CSS ফাইলের নিজের হোস্টে (static.vangcur.com) খোঁজে,
+  // তাই ফাইলটা এখানেও থাকতে হবে — না থাকলে প্রতিটা পেজলোডে ৪০৪ (২৪ ঘন্টায় ~১৫টা) আর ফন্ট নামে না।
+  'fonts/noto-sans-bengali-digits-v1.woff2',
 ];
 
 function fail(msg) {
@@ -67,6 +70,8 @@ const headers = `/*
   Cache-Control: public, max-age=604800
 /vangcur-team-avatar.png
   Cache-Control: public, max-age=604800
+/fonts/noto-sans-bengali-digits-v1.woff2
+  Cache-Control: public, max-age=31536000, immutable
 `;
 writeFileSync(join(OUT, '_headers'), headers);
 
