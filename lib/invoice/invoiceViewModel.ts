@@ -12,7 +12,7 @@ export function buildInvoiceViewModel(order: Order): InvoiceViewModel {
   const ds = order.date
     ? new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : '';
-  const advancePaid = order.advancePaid || 200;
+  const advancePaid = order.advancePaid ?? 200;
   const balanceDue = Math.max(0, (order.total || 0) - advancePaid);
   const isFreeShipping = Number(order.shippingCost) === 0;
 

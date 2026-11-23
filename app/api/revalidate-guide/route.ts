@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { timingSafeEqual } from 'crypto';
 import { logWarn } from '@/lib/logger';
+import { purgeEdgeCache } from '@/lib/edgeCache';
 import { RESERVED_URL_PREFIXES } from '@/types/guides';
 
 // 🛡️ ফিক্স (audit P2-B11): === দিয়ে secret তুলনা করলে তাত্ত্বিকভাবে টাইমিং দিয়ে
@@ -67,5 +68,8 @@ export async function POST(req: NextRequest) {
     revalidatePath('/[...segments]', 'page');
   }
 
-  return NextResponse.json({ ok: true, revalidated: looksSafe ? path : 'all' });
+  // ISR মোছার পরে এজ ক্যাশও মুছি, নইলে লাইভ সাইটে পুরনো গাইড HTML থেকে যেতে পারে।
+  const edgePurged = await purgeEdgeCache('revalidate-guide');
+
+  return NextResponse.json({ ok: true, revalidated: looksSafe ? path : 'all', edgePurged });
 }

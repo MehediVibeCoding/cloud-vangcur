@@ -31,6 +31,7 @@ interface ClientHomeProps {
   initialHeroCards?: HeroCard[];
   initialCategory?: string;
   initialHasMore?: boolean;
+  initialTotal?: number;
   /** শুধু হোম পেজ (app/page.tsx) পাঠায় — না এলে (যেমন /category/[slug]) শোকেস সেকশন দেখায় না */
   initialShowcase?: ShowcaseConfig;
   initialGallery?: { id: number | string; image_url?: string | null; like_count?: number | string | null; created_at?: string }[] | null;
@@ -42,6 +43,7 @@ export default function ClientHome({
   initialHeroCards,
   initialCategory,
   initialHasMore,
+  initialTotal,
   initialShowcase,
   initialGallery,
 }: ClientHomeProps) {
@@ -73,7 +75,7 @@ export default function ClientHome({
       <HeroSlider initialCards={initialHeroCards} />
       <TrustStrip />
       <Categories initialCategories={initialCategories} />
-      <ProductGrid initialProducts={initialProducts} initialCategory={initialCategory} initialHasMore={initialHasMore} />
+      <ProductGrid initialProducts={initialProducts} initialCategory={initialCategory} initialHasMore={initialHasMore} initialTotal={initialTotal} />
       <ProductNotice />
       {initialShowcase?.enabled && (
         <>

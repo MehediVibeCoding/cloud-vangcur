@@ -51,6 +51,7 @@ interface ProductGridProps {
   initialProducts: Product[];
   initialCategory?: string;
   initialHasMore?: boolean;
+  initialTotal?: number;
   categoryName?: string;
 }
 
@@ -59,12 +60,12 @@ interface ProductGridProps {
 // filter/slice করত। এখন শুধু বর্তমান পেজের প্রোডাক্টগুলোই state-এ থাকে —
 // ক্যাটাগরি বদলালে বা স্ক্রল করলে সার্ভার থেকে নতুন পেজ আনা হয়
 // (fetchProductsPageAction)। প্রোডাক্ট কয়েকশো হয়ে গেলেও হোমপেজ হালকা থাকবে।
-export default function ProductGrid({ initialProducts, initialCategory, initialHasMore, categoryName }: ProductGridProps) {
+export default function ProductGrid({ initialProducts, initialCategory, initialHasMore, initialTotal, categoryName }: ProductGridProps) {
   const { t, lang } = useT();
   const startCat = initialCategory || 'all';
 
   const [items, setItems] = useState<Product[]>(initialProducts);
-  const [total, setTotal] = useState<number>(initialProducts.length);
+  const [total, setTotal] = useState<number>(initialTotal ?? initialProducts.length);
   const [hasMore, setHasMore] = useState<boolean>(!!initialHasMore);
   const [switching, setSwitching] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);

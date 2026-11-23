@@ -125,6 +125,7 @@ export default async function HomePage() {
     : [DEFAULT_CATEGORIES, DEFAULT_HERO_CARDS, DEFAULT_SHOWCASE];
   const initialProducts = productsPage.products;
   const initialHasMore = productsPage.hasMore;
+  const initialTotal = productsPage.total;
 
   // LCP preload — derived from the same card data + the same
   // optimizeCloudinaryUrl() transform HeroSlider actually renders with,
@@ -188,6 +189,7 @@ export default async function HomePage() {
         initialCategories={initialCategories}
         initialHeroCards={initialHeroCards}
         initialHasMore={initialHasMore}
+        initialTotal={initialTotal}
         initialShowcase={initialShowcase}
         initialGallery={initialGallery}
       />

@@ -5,6 +5,7 @@ import Image, { getImageProps } from 'next/image';
 import VangcurLogoMark from '@/app/components/ui/VangcurLogoMark';
 import { staticUrl } from '@/lib/staticUrl';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { DEFAULT_FOOTER } from '@/lib/footerData';
 import { sanitizeHref } from '@/lib/security';
@@ -217,8 +218,18 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
   const contact = FOOTER_CONTACT;
   const extras = FOOTER_EXTRAS;
 
-  const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-  const scrollToCategories = () => document.getElementById('catCardsGrid')?.scrollIntoView({ behavior: 'smooth' });
+  const router = useRouter();
+  // হোমপেজে থাকলে মসৃণ স্ক্রল, অন্য কোনো পেজে থাকলে হোমে নিয়ে যাওয়া
+  const goHome = () => {
+    if (window.location.pathname === '/') window.scrollTo({ top: 0, behavior: 'smooth' });
+    else router.push('/');
+  };
+  // ক্যাটাগরি সেকশন এই পেজে থাকলে (হোম/ক্যাটাগরি পেজ) সেখানে স্ক্রল, না থাকলে হোমের ক্যাটাগরি অংশে যাওয়া
+  const goToCategories = () => {
+    const el = document.getElementById('catCardsGrid');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    else router.push('/#catCardsGrid');
+  };
 
   const fbGroupLink = 'https://facebook.com/groups/vangcurgadgets';
 
@@ -430,12 +441,12 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
             </h3>
             <ul className="space-y-3 font-body text-[13.5px]">
               <li>
-                <button className={colLinkClass} onClick={scrollTop}>
+                <button className={colLinkClass} onClick={goHome}>
                   {t('হোম')}
                 </button>
               </li>
               <li>
-                <button className={colLinkClass} onClick={scrollToCategories}>
+                <button className={colLinkClass} onClick={goToCategories}>
                   {t('ক্যাটাগরি')}
                 </button>
               </li>

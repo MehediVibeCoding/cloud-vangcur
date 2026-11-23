@@ -218,6 +218,8 @@ export default function HeroSlider({ initialCards, onCategoryClick }: HeroSlider
       infiniteJumpRef.current = true;
       duoIdxRef.current = totalCards;
       setPosition(false);
+      // reflow জোর করে করানো — না হলে ব্রাউজার transition:none ও transition দুটো স্টাইল একসাথে মার্জ করে ফেলে
+      void trackRef.current?.offsetWidth;
       infiniteJumpRef.current = false;
     }
 

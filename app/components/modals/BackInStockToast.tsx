@@ -214,7 +214,12 @@ export default function BackInStockToast() {
   if (inStockItems.length === 0) return null;
 
   const handleAddSingleToCart = (item: InStockItem) => {
-    useCartStore.getState().addToCart([item], item.id, 1);
+    const res = useCartStore.getState().addToCart([item], item.id, 1);
+    if (!res.ok) {
+      // কার্ট ভর্তি বা স্টক/লিমিট — যোগ হয়নি, তাই সফলতার টোস্ট বা নোটিফিকেশন মোছা নয়
+      showToast(lang === 'en' ? "Couldn't add this item to your cart" : 'এই পণ্যটি কার্টে যোগ করা যায়নি');
+      return;
+    }
     removeStockNotification(item.key);
     showToast(t('কার্টে যোগ হয়েছে'));
 
@@ -227,18 +232,28 @@ export default function BackInStockToast() {
   };
 
   const handleAddAllToCart = () => {
+    const failed: InStockItem[] = [];
     inStockItems.forEach((item) => {
-      useCartStore.getState().addToCart([item], item.id, 1);
-      removeStockNotification(item.key);
+      const res = useCartStore.getState().addToCart([item], item.id, 1);
+      if (res.ok) removeStockNotification(item.key);
+      else failed.push(item);
     });
+    // কিছু যোগ না হলে সেগুলো তালিকায় থেকে যাবে, আর সফলতার টোস্টও দেখানো হবে না
+    if (failed.length > 0) {
+      showToast(
+        lang === 'en'
+          ? `${failed.length} item(s) could not be added to your cart`
+          : `${failed.length}টি পণ্য কার্টে যোগ করা যায়নি`
+      );
+    }
 
-    showToast(lang === 'en' ? 'All items added to cart!' : 'সকল পণ্য কার্টে যুক্ত করা হয়েছে!');
+    if (failed.length === 0) showToast(lang === 'en' ? 'All items added to cart!' : 'সকল পণ্য কার্টে যুক্ত করা হয়েছে!');
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(OPEN_CART_EVENT));
     }
 
-    setInStockItems([]);
+    setInStockItems(failed);
   };
 
   const isMultiple = inStockItems.length > 1;

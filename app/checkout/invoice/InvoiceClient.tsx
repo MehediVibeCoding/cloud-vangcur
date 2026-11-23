@@ -290,7 +290,12 @@ export default function InvoiceClient() {
     // (সেটা অন্য অনেক ফ্লো শেয়ার করে) — শুধু সরাসরি রিপ্লেস + একটা গ্লোবাল ইভেন্ট দিয়ে
     // পপআপ রিওপেন করা হচ্ছে, তাই অন্য কোনো back-navigation ফ্লো ভাঙার ঝুঁকি নেই।
     if (from === 'track-modal') {
-      const returnTo = searchParams.get('returnTo') || '/';
+      // 🛡️ Open Redirect ঠেকাতে শুধু একই সাইটের পাথ (`/...`, `//` বা `/\\` নয়) অনুমোদিত
+      const rawReturnTo = searchParams.get('returnTo') || '/';
+      const returnTo =
+        rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') && !rawReturnTo.startsWith('/\\')
+          ? rawReturnTo
+          : '/';
       router.replace(returnTo);
       if (typeof window !== 'undefined') {
         setTimeout(() => window.dispatchEvent(new CustomEvent(OPEN_TRACK_ORDER_EVENT)), 150);
