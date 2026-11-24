@@ -36,6 +36,7 @@ import { VerifiedCustomerBadge } from '@/app/components/product/VerifiedBadges';
 import Footer from '@/app/components/layout/Footer';
 import NotificationBell from '@/app/components/layout/NotificationBell';
 import AccountNavTabs, { type AccountNavTabItem } from '@/app/components/account/AccountNavTabs';
+import AccountGameCard from '@/app/components/account/AccountGameCard';
 import OrderCard from '@/app/components/orders/OrderCard';
 import SkeletonTransition from '@/app/components/ui/SkeletonTransition';
 import { CompactOrderListSkeleton } from '@/app/components/ui/Skeletons';
@@ -661,7 +662,7 @@ export default function AccountClient() {
                     </div>
                   )}
 
-                  {/* আকাশ পাড়ি দেওয়া পাখি */}
+                  {/* আকাশ পাড়ি দেওয়া পাখি */}
                   {celestial.birdsVisible && (
                     <div className="pointer-events-none absolute inset-0 overflow-hidden">
                       <svg
@@ -889,6 +890,9 @@ export default function AccountClient() {
                     </button>
                   </div>
                 </div>
+
+                {/* ৩.৫ মিনি গেম — ওয়েটিং পেজের সেই একই গেম (একই স্কোর/লিডারবোর্ড), এখানে সময়ের সীমা ছাড়া */}
+                <AccountGameCard />
 
                 {/* ৪. অসম্পূর্ণ ড্রাফট কার্ড */}
                 {drafts.length > 0 && (

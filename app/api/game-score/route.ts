@@ -30,6 +30,18 @@ async function readTop(service: ReturnType<typeof createServiceClient>, game: st
   return (data as TopRow[]).map((r) => ({ rank: Number(r.rank), name: String(r.player_name), score: Number(r.score) }));
 }
 
+// লগইন করা ইউজারের আইডি (সার্ভারে কুকি-সেশন থেকে যাচাই করা — ক্লায়েন্টের পাঠানো কোনো আইডি বিশ্বাস করা হয় না)
+async function authUserId(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    const id = data?.user?.id || '';
+    return UUID_RE.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 function tooMany(retryAfterSec: number) {
   return NextResponse.json(
     { ok: false, error: 'Too many requests' },
@@ -37,6 +49,9 @@ function tooMany(retryAfterSec: number) {
   );
 }
 
+/**
+ * GET ?game=<id>[&me=1] — টপ ৩। `me=1` দিলে এবং ইউজার লগইন থাকলে ইউজারের নিজের সেরা স্কোর ও র‍্যাংকও দেয় (অ্যাকাউন্ট পেজের গেম কার্ডের জন্য)।
+ */
 export async function GET(req: NextRequest) {
   const rl = await slidingWindowLimit(`game-lb:${getClientIp(req.headers)}`, LB_READ_LIMIT, 60);
   if (!rl.allowed) return tooMany(rl.retryAfterSec);
@@ -48,7 +63,17 @@ export async function GET(req: NextRequest) {
     const service = createServiceClient();
     const top = await readTop(service, game);
     if (!top) return NextResponse.json({ ok: false, unavailable: true }, { status: 503, headers: NO_STORE });
-    return NextResponse.json({ ok: true, top }, { headers: NO_STORE });
+
+    let me: { rank: number; best: number } | null = null;
+    if (req.nextUrl.searchParams.get('me') === '1') {
+      const uid = await authUserId();
+      if (uid) {
+        const { data } = await service.rpc('get_account_game_rank', { p_game_id: game, p_user_id: uid });
+        const r = Array.isArray(data) ? data[0] : data;
+        if (r) me = { rank: Number(r.rank) || 0, best: Number(r.best) || 0 };
+      }
+    }
+    return NextResponse.json({ ok: true, top, me }, { headers: NO_STORE });
   } catch (err) {
     logError('[GameScore] leaderboard failed:', err);
     return NextResponse.json({ ok: false, unavailable: true }, { status: 503, headers: NO_STORE });
@@ -56,16 +81,23 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST দুই ধরনের:
- *  ১. `{ action: 'start', game, orderId, phone }` — খেলা শুরুর সময় একটা "রান" খোলে (DB: `start_game_run`), `{ ok, run }` ফেরত দেয়।
- *  ২. `{ game, orderId, phone, score, run }` — খেলা শেষে স্কোর জমা (DB: `submit_game_score_v2`)।
+ * POST — দুই জায়গা থেকে খেলা যায়, দুটোই একই লিডারবোর্ডে জমে:
+ *  • ওয়েটিং পেজ (অর্ডার-ভিত্তিক, ৫ মিনিট সীমা): `{ game, orderId, phone, ... }`
+ *  • অ্যাকাউন্ট পেজ (লগইন ইউজার, সময়ের সীমা নেই): `{ source: 'account', game, ... }` — অর্ডার/ফোন লাগে না, ইউজার সার্ভারে সেশন থেকে চেনা হয়।
+ *
+ * প্রতিটাই দুই ধাপ:
+ *  ১. `{ action: 'start', ... }` — খেলা শুরুর সময় একটা "রান" খোলে, `{ ok, run }` ফেরত দেয়।
+ *  ২. `{ ..., score, run }` — খেলা শেষে স্কোর জমা।
  *
  * INTENTIONAL: স্কোর-ক্যাপ (১০০০), "রান আগে খুলতে হবে + প্রতি রান একবারই ব্যবহার + স্কোরের তুলনায় যথেষ্ট সময় পেরিয়েছে কিনা"
  * এবং প্রতি-কাস্টমার র‍্যাংক — সবই এই রুটে নয়, DB-তে। ফাংশনগুলো anon/authenticated চালাতে পারে না, শুধু service-role।
- * রুট শুধু ফোন দিয়ে অর্ডারের মালিকানা যাচাই করে। এতে ক্লায়েন্ট থেকে সরাসরি বানানো স্কোর (যেমন কনসোল থেকে ১০০০) ঢোকে না।
+ * রুট শুধু মালিকানা যাচাই করে (অর্ডারের ক্ষেত্রে ফোন, অ্যাকাউন্টের ক্ষেত্রে লগইন সেশন)।
  */
 export async function POST(req: NextRequest) {
-  let body: { action?: unknown; game?: unknown; orderId?: unknown; phone?: unknown; score?: unknown; run?: unknown } = {};
+  let body: {
+    action?: unknown; source?: unknown; game?: unknown; orderId?: unknown;
+    phone?: unknown; score?: unknown; run?: unknown;
+  } = {};
   try {
     body = await req.json();
   } catch {
@@ -73,29 +105,51 @@ export async function POST(req: NextRequest) {
   }
 
   const isStart = body.action === 'start';
+  const isAccount = body.source === 'account';
   const rl = isStart
     ? await slidingWindowLimit(`game-run:${getClientIp(req.headers)}`, RUN_START_LIMIT, 60)
     : await slidingWindowLimit(`game-score:${getClientIp(req.headers)}`, SCORE_SUBMIT_LIMIT, 60);
   if (!rl.allowed) return tooMany(rl.retryAfterSec);
 
-  const orderId = typeof body.orderId === 'string' ? body.orderId : '';
-  const phone = typeof body.phone === 'string' ? body.phone : undefined;
-  if (!isKnownGame(body.game) || !UUID_RE.test(orderId)) {
+  if (!isKnownGame(body.game)) {
     return NextResponse.json({ ok: false, error: 'Bad request' }, { status: 400 });
   }
   const game = body.game;
 
+  // কে খেলছে: অ্যাকাউন্ট → লগইন ইউজার; নয়তো → অর্ডার (ফোন দিয়ে মালিকানা যাচাই)
+  const orderIdRaw = typeof body.orderId === 'string' ? body.orderId : '';
+  const phone = typeof body.phone === 'string' ? body.phone : undefined;
+  let ownerUserId: string | null = null;
+  let verifiedOrderId = '';
+  try {
+    if (isAccount) {
+      ownerUserId = await authUserId();
+      if (!ownerUserId) {
+        return NextResponse.json({ ok: false, error: 'Login required' }, { status: 401, headers: NO_STORE });
+      }
+    } else {
+      if (!UUID_RE.test(orderIdRaw)) {
+        return NextResponse.json({ ok: false, error: 'Bad request' }, { status: 400 });
+      }
+      const supabase = await createClient();
+      const row = await fetchFullOrder(supabase, orderIdRaw, phone);
+      verifiedOrderId = String(row?.id || '');
+      if (!row || !UUID_RE.test(verifiedOrderId)) {
+        return NextResponse.json({ ok: false, error: 'Order not found' }, { status: 404, headers: NO_STORE });
+      }
+    }
+  } catch (err) {
+    logError('[GameScore] owner check error:', err);
+    return NextResponse.json({ ok: false, unavailable: true }, { status: 503, headers: NO_STORE });
+  }
+
   // ── খেলা শুরু: নতুন রান খোলো ──
   if (isStart) {
     try {
-      const supabase = await createClient();
-      const row = await fetchFullOrder(supabase, orderId, phone);
-      const verifiedId = String(row?.id || '');
-      if (!row || !UUID_RE.test(verifiedId)) {
-        return NextResponse.json({ ok: false, error: 'Order not found' }, { status: 404, headers: NO_STORE });
-      }
       const service = createServiceClient();
-      const { data, error } = await service.rpc('start_game_run', { p_game_id: game, p_order_id: verifiedId });
+      const { data, error } = isAccount
+        ? await service.rpc('start_account_game_run', { p_game_id: game, p_user_id: ownerUserId })
+        : await service.rpc('start_game_run', { p_game_id: game, p_order_id: verifiedOrderId });
       const run = typeof data === 'string' ? data : '';
       if (error || !UUID_RE.test(run)) {
         if (error) logError('[GameScore] start run failed:', error);
@@ -116,20 +170,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const supabase = await createClient();
-    const row = await fetchFullOrder(supabase, orderId, phone);
-    const verifiedId = String(row?.id || '');
-    if (!row || !UUID_RE.test(verifiedId)) {
-      return NextResponse.json({ ok: false, error: 'Order not found' }, { status: 404, headers: NO_STORE });
-    }
-
     const service = createServiceClient();
-    const { data, error } = await service.rpc('submit_game_score_v2', {
-      p_game_id: game,
-      p_order_id: verifiedId,
-      p_score: score,
-      p_run_id: run,
-    });
+    const { data, error } = isAccount
+      ? await service.rpc('submit_account_game_score', {
+        p_game_id: game, p_user_id: ownerUserId, p_score: score, p_run_id: run,
+      })
+      : await service.rpc('submit_game_score_v2', {
+        p_game_id: game, p_order_id: verifiedOrderId, p_score: score, p_run_id: run,
+      });
     const res = Array.isArray(data) ? data[0] : data;
     if (error || !res) {
       logError('[GameScore] submit failed:', error);
