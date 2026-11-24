@@ -1,15 +1,14 @@
 import type { Metadata } from 'next';
 import { cache } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import { idFromSlug, makeSlug, fetchProductById, fetchRelatedProducts } from '@/lib/productData';
+import { idFromSlug, makeSlug, fetchProductBundle, fetchRelatedProducts } from '@/lib/productData';
+import { getOrderedRowsCached } from '@/lib/productListingCache';
 import { DEFAULT_CATEGORIES, makeCatSlug } from '@/lib/categoryData';
 import { DEFAULT_SHIP_CFG } from '@/lib/checkoutData';
 import { getServerLang } from '@/lib/i18n/getServerLang';
 import { brandedTitle } from '@/lib/seoTitle';
-import { fetchProductReviews } from '@/lib/productReviewData';
-import { fetchProductQuestions } from '@/lib/productQnaData';
-import type { Product, ProductReview, ProductQuestion } from '@/types';
+import type { Product } from '@/types';
 import ProductDetailClient from './ProductDetailClient';
 
 const SITE_URL = 'https://vangcur.com';
@@ -27,23 +26,31 @@ export async function generateStaticParams() {
 }
 
 
-const getProduct = cache(async (id: string) => {
+// 🆕 এক কলে প্রোডাক্ট + অনুমোদিত রিভিউ + প্রশ্নোত্তর (lib/productData.ts → fetchProductBundle)। আগে ৫টা আলাদা
+// রাউন্ড-ট্রিপ ছিল (প্রোডাক্ট, রিভিউ-সারাংশ, রিভিউ, প্রশ্ন, উত্তর) — অথচ ডেটা প্রায় সবসময় খালি। generateMetadata ও পেজ
+// দুজনেই React `cache` দিয়ে একই ফলাফল ভাগ করে, তাই এক রেন্ডারে কোয়েরি একটাই।
+const getBundle = cache(async (id: string) => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseKey) return null;
   const supabase = createClient(supabaseUrl, supabaseKey);
-  return fetchProductById(supabase, id);
+  return fetchProductBundle(supabase, id);
 });
 
-// পুরো ক্যাটালগ নয় — শুধু এই প্রোডাক্টের রিলেটেড + কালার-সিবলিং (৫০০+ প্রোডাক্টেও পেজ হালকা থাকে)
+const getProduct = cache(async (id: string) => (await getBundle(id))?.product ?? null);
+
+// পুরো ক্যাটালগ নয় — শুধু এই প্রোডাক্টের রিলেটেড (৫টা) + কালার-সিবলিং। ক্যাটাগরির ক্রম আসে ক্যাশ-করা হালকা সারি থেকে
+// (ডাটাবেজে প্রতি রেন্ডারে পুরো-ক্যাটালগ স্ক্যান নেই); ক্যাশ ব্যর্থ হলে fetchRelatedProducts আগের সরাসরি-ডাটাবেজ পথে যায়।
 const getRelatedProducts = cache(async (product: Product) => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseKey) return [];
   const supabase = createClient(supabaseUrl, supabaseKey);
-  return fetchRelatedProducts(supabase, product);
+  const orderedRows = await getOrderedRowsCached();
+  return fetchRelatedProducts(supabase, product, 5, orderedRows);
 });
 
+// ফলব্যাক: বান্ডলে রিভিউ ৩০০-র সীমায় পৌঁছালে (বা বান্ডল-কোয়েরি ব্যর্থ হলে) সারাংশ আগের মতো আলাদা কোয়েরিতে
 const getProductReviewsSummary = cache(async (id: string) => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -68,42 +75,9 @@ const getProductReviewsSummary = cache(async (id: string) => {
   }
 });
 
-// 🆕 অনুমোদিত রিভিউ ও প্রশ্নোত্তর — সার্ভারে (ISR, ৫ মিনিট ক্যাশ) একবার এনে পেজের সাথে পাঠানো হয়,
-// যাতে প্রতিটি গেস্ট-ভিজিটরের ব্রাউজার থেকে আলাদা করে Supabase-এ কল না যায়।
-// anon ক্লায়েন্টে RLS শুধু অনুমোদিত রিভিউ দেখায় (নিজের/অ্যাডমিনের পেন্ডিং নয়), আর প্রশ্নোত্তর সবার জন্য
-// খোলা — ব্রাউজারের গেস্ট-কোয়েরির সাথে হুবহু একই ফলাফল। লগইন-করা ইউজার ও অ্যাডমিন আগের মতোই
-// ব্রাউজার থেকে সরাসরি ফ্রেশ ডেটা আনে (নিজের পেন্ডিং রিভিউ, উত্তর-দেওয়ার যোগ্যতা ইত্যাদির জন্য)।
-// কোনো কারণে ব্যর্থ হলে বা সীমায় (৩০০/১৫০) পৌঁছালে null — তখন ক্লায়েন্ট আগের পথেই নিজে আনে।
-const REVIEWS_CAP = 300;
-const QUESTIONS_CAP = 150;
-
-const getInitialReviews = cache(async (id: string): Promise<{ productId: string; reviews: ProductReview[] } | null> => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseKey) return null;
-  try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const reviews = await fetchProductReviews(supabase, id, null);
-    if (reviews.length >= REVIEWS_CAP) return null;
-    return { productId: id, reviews };
-  } catch {
-    return null;
-  }
-});
-
-const getInitialQuestions = cache(async (id: string): Promise<{ productId: string; questions: ProductQuestion[] } | null> => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseKey) return null;
-  try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const questions = await fetchProductQuestions(supabase, id);
-    if (questions.length >= QUESTIONS_CAP) return null;
-    return { productId: id, questions };
-  } catch {
-    return null;
-  }
-});
+// রিভিউ ও প্রশ্নোত্তর এখন getBundle-এর এক কলেই আসে (আগে getInitialReviews/getInitialQuestions আলাদা কল ছিল)।
+// anon ক্লায়েন্টে RLS শুধু অনুমোদিত রিভিউ দেখায়; লগইন-করা ইউজার ও অ্যাডমিন আগের মতোই ব্রাউজার থেকে সরাসরি ফ্রেশ ডেটা আনে।
+// বান্ডল ব্যর্থ হলে বা সীমায় (৩০০/১৫০) পৌঁছালে reviews/questions null — তখন ক্লায়েন্ট আগের পথেই নিজে আনে।
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -173,19 +147,34 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   if (!id) notFound();
 
-  const initialProduct = await getProduct(id);
-  if (!initialProduct) notFound();
+  const bundle = await getBundle(id);
+  if (!bundle) notFound();
+  const initialProduct = bundle.product;
 
-  const [liveReviewsSummary, relatedProducts, initialReviews, initialQuestions] = await Promise.all([
-    getProductReviewsSummary(id),
+  // 🛡️ ক্যানোনিকাল স্লাগ যাচাই: `idFromSlug` শুধু শেষের আইডি নেয়, তাই আগে `/product/যেকোনো-কিছু-5` প্রতিটাই আলাদা
+  // পেজ হয়ে ISR ক্যাশ-এন্ট্রি (KV লেখা + CPU) বানাত, আর SEO-তে ডুপ্লিকেট হতো। এখন আসল স্লাগ না মিললে ৩০৮ রিডাইরেক্ট।
+  // (makeSlug শুধু [a-z0-9-] দেয়, তাই এনকোডিং-এর ঝামেলা নেই; ইনকামিং স্লাগ সুরক্ষিতভাবে ডিকোড করে ছোট হাতের করা হয়।)
+  const canonicalSlug = `${makeSlug(initialProduct.name)}-${initialProduct.id}`;
+  let normalizedIncoming = slug;
+  try {
+    normalizedIncoming = decodeURIComponent(slug);
+  } catch {
+    // ভাঙা পার্সেন্ট-এনকোডিং — যেমন আছে তেমনই তুলনা হবে (মিলবে না, রিডাইরেক্ট হবে)
+  }
+  if (normalizedIncoming.toLowerCase() !== canonicalSlug) {
+    permanentRedirect(`/product/${canonicalSlug}`);
+  }
+
+  // সারাংশ: বান্ডলে রিভিউ থাকলে সেখান থেকেই; ৩০০-র সীমায় পৌঁছালে/বান্ডল ফলব্যাকে আগের আলাদা কোয়েরি
+  const [liveReviewsSummary, relatedProducts] = await Promise.all([
+    bundle.reviewsSummary === undefined ? getProductReviewsSummary(id) : Promise.resolve(bundle.reviewsSummary),
     getRelatedProducts(initialProduct),
-    getInitialReviews(id),
-    getInitialQuestions(id),
   ]);
+  const initialReviews = bundle.reviews ? { productId: id, reviews: bundle.reviews } : null;
+  const initialQuestions = bundle.questions ? { productId: id, questions: bundle.questions } : null;
   // ক্লায়েন্টের `prods` তালিকায় বর্তমান প্রোডাক্ট নিজেও থাকতে হয় (baseProd এখান থেকেই খোঁজা হয়)
   const initialProducts = [initialProduct, ...relatedProducts];
 
-  const canonicalSlug = `${makeSlug(initialProduct.name)}-${initialProduct.id}`;
   const validImgs = (initialProduct.imgs || []).filter(
     (img) => typeof img === 'string' && img.startsWith('http')
   );

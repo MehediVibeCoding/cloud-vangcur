@@ -5,10 +5,9 @@
 // '/install', খালি হলে সরাসরি রুটে), তাই fetchAllPublishedGuideUrls()
 // ইতিমধ্যে পূর্ণ, সঠিক পাথ রিটার্ন করে।
 import type { MetadataRoute } from 'next';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { fetchCustomProducts, productHref, prodInCat } from '@/lib/productData';
+import { createClient } from '@supabase/supabase-js';
+import { fetchSitemapRows, productHref, prodInCat, type SitemapRow } from '@/lib/productData';
 import { fetchCategories, makeCatSlug } from '@/lib/categoryData';
-import type { Product } from '@/types';
 import { fetchAllPublishedGuideUrls } from '@/lib/guidePageData';
 import { COLLECTION_IDS } from '@/lib/showcaseData';
 
@@ -16,42 +15,14 @@ const SITE_URL = 'https://vangcur.com';
 
 export const revalidate = 86400;
 
-/**
- * F7: প্রোডাক্টের আসল শেষ-কনটেন্ট-বদলের তারিখ (custom_products.updated_at — ডাটাবেজ ট্রিগার শুধু
- * আসল কনটেন্ট বদলালে সেট করে, স্টক/ক্রম/রেটিং বদলালে নয়)। কলাম না থাকলে বা কোয়েরি ব্যর্থ হলে
- * খালি ম্যাপ — তখন সাইটম্যাপে lastModified বাদ যায় (বানানো "এখন" দেওয়ার চেয়ে ভালো)।
- */
-async function fetchProductUpdatedAt(supabase: SupabaseClient): Promise<Map<string, Date>> {
-  const out = new Map<string, Date>();
-  try {
-    const PAGE = 1000;
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
-        .from('custom_products')
-        .select('id, updated_at')
-        .order('id', { ascending: true })
-        .range(from, from + PAGE - 1);
-      if (error || !data) return new Map();
-      for (const row of data as { id: number | string; updated_at: string | null }[]) {
-        const d = row.updated_at ? new Date(row.updated_at) : null;
-        if (d && !Number.isNaN(d.getTime())) out.set(String(row.id), d);
-      }
-      if (data.length < PAGE) break;
-    }
-  } catch {
-    return new Map();
-  }
-  return out;
-}
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  let products: Product[] = [];
+  let products: SitemapRow[] = [];
   let categories: { id: string; name: string }[] = [];
   let guidePages: { url: string; updated_at: string }[] = [];
-  let updatedAtById = new Map<string, Date>();
+  const updatedAtById = new Map<string, Date>();
 
   // F8: আগে ডাটাবেজ ব্যর্থ হলে ক্যাচ ব্লক চুপচাপ গিলে ফেলত, ফলে শুধু স্ট্যাটিক URL-এর ছোট
   // সাইটম্যাপ বানিয়ে সেটাই ১ ঘণ্টা ক্যাশ হতো। এখন (রানটাইমে) ব্যর্থতা বা "০টা প্রোডাক্ট" এলে
@@ -62,14 +33,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (supabaseUrl && supabaseKey) {
     try {
       const supabase = createClient(supabaseUrl, supabaseKey);
-      const [prods, cats, guides, stamps] = await Promise.all([
-        fetchCustomProducts(supabase),
+      // 🛡️ স্কেল-ফিক্স: আগে fetchCustomProducts (১৭ কলামের পুরো ক্যাটালগ, গড় ~১.২KB/সারি) + আলাদা updated_at কোয়েরি —
+      // দুটোই পুরো টেবিল পেজ ধরে পড়ত। সাইটম্যাপের লাগে শুধু id, name, cat, cats, updated_at — এখন একটাই হালকা কোয়েরি।
+      // F7: updated_at = প্রোডাক্টের আসল শেষ-কনটেন্ট-বদলের তারিখ (ডাটাবেজ ট্রিগার শুধু আসল কনটেন্ট বদলালে সেট করে,
+      // স্টক/ক্রম/রেটিং বদলালে নয়)। কোনো সারিতে না থাকলে সাইটম্যাপে lastModified বাদ যায় (বানানো "এখন"-এর চেয়ে ভালো)।
+      const [prods, cats, guides] = await Promise.all([
+        fetchSitemapRows(supabase),
         fetchCategories(supabase),
         fetchAllPublishedGuideUrls(supabase),
-        fetchProductUpdatedAt(supabase),
       ]);
       products = prods;
-      updatedAtById = stamps;
+      for (const row of prods) {
+        const d = row.updated_at ? new Date(row.updated_at) : null;
+        if (d && !Number.isNaN(d.getTime())) updatedAtById.set(String(row.id), d);
+      }
       // F4: শুধু অন্তত ১টা প্রোডাক্টওয়ালা ক্যাটাগরি সাইটম্যাপে (খালি পেজ ক্রল-বাজেট নষ্ট করে ও
       // "থিন পেজ" সংকেত দেয়)। নতুন প্রোডাক্ট যোগ হলে ক্যাটাগরি নিজে থেকেই ফিরে আসবে।
       categories = cats.filter((c) => c.id !== 'all' && prods.some((p) => prodInCat(p, c.id)));
