@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Product, CartItem } from '@/types';
+import type { Product, CartItem, ProductReview, ProductQuestion } from '@/types';
 import { logWarn, logError } from './logger';
 import { useCartStore, cartTotal } from './store/cartStore';
 import { OPEN_ORDER_LIMIT_EVENT, OPEN_BULK_ORDER_EVENT, OPEN_QUICK_CART_MODAL_EVENT } from './uiEvents';
@@ -188,6 +188,94 @@ export async function fetchCustomProducts(supabase: SupabaseClient): Promise<Pro
 }
 
 /**
+ * সার্ভার-সাইড ক্যাটালগ ইনডেক্স (lib/catalogIndex.ts) বানানোর জন্য: GRID_COLS-এর চেয়ে হালকা কোয়েরি।
+ * ইনডেক্সে প্রতি প্রোডাক্টের শুধু প্রথম ছবি লাগে (বাকি সব ছবি toIndexProduct-এ ফেলে দেওয়া হয়), তাই `imgs->0` দিয়ে
+ * ডাটাবেজেই প্রথমটা কেটে আনা হয় (মাপা: গড় ২২৯B imgs → ৯৩B), আর কালার-ভ্যারিয়েন্ট কলাম (ইনডেক্সে অব্যবহৃত) বাদ।
+ * ⚠️ `desc_text` ইচ্ছাকৃতভাবে আনা হয় না — আগের GRID_COLS-ও আনত না, আর গড় ১,৬৩০B/সারি বাড়ত। আচরণ অপরিবর্তিত।
+ * ব্যর্থ হলে আগের মতোই [] (fetchCustomProducts-এর মতো ২ বার চেষ্টা)।
+ */
+const INDEX_COLS = 'id,cat,cats,name,name_bn,price,old,stock,badge,warranty,rating,specs,brand,img0:imgs->0';
+
+export async function fetchCatalogIndexRows(supabase: SupabaseClient): Promise<Product[]> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const rows: RawCustomProduct[] = [];
+      let from = 0;
+      for (;;) {
+        const signal = getTimeoutSignal(QUERY_TIMEOUT_MS);
+        const { data, error } = await supabase
+          .from('custom_products')
+          .select(INDEX_COLS)
+          .order('sort_order', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + SELECT_PAGE_SIZE - 1)
+          .abortSignal(optionalSignal(signal));
+        if (error) {
+          logWarn('[Vangcur] catalog index fetch error (attempt ' + attempt + '):', error.message, '| code:', error.code);
+          if (isPermissionError(error)) return [];
+          throw new Error(error.message);
+        }
+        if (!data || !data.length) break;
+        for (const r of data as unknown as (RawCustomProduct & { img0?: string | null })[]) {
+          const { img0, ...rest } = r;
+          rows.push({ ...rest, imgs: typeof img0 === 'string' && img0 ? [img0] : [] });
+        }
+        if (data.length < SELECT_PAGE_SIZE) break;
+        from += SELECT_PAGE_SIZE;
+      }
+      return rows.map(mapCustomProduct);
+    } catch (e) {
+      logWarn('[Vangcur] catalog index exception (attempt ' + attempt + '):', e);
+      if (attempt < 2) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
+  }
+  return [];
+}
+
+/** সাইটম্যাপের জন্য শুধু যে কলামগুলো সত্যিই লাগে (id, name, cat, cats, updated_at) — পুরো GRID_COLS নয় */
+export interface SitemapRow {
+  id: number | string;
+  name: string;
+  cat: string;
+  cats: string[];
+  updated_at: string | null;
+}
+
+/**
+ * app/sitemap.ts-এর জন্য: প্রোডাক্ট-URL, ক্যাটাগরি-ফিল্টার ও lastModified — এই একটাই কোয়েরিতে (আগে
+ * fetchCustomProducts + আলাদা updated_at কোয়েরি, দুটোই পুরো টেবিল পেজ ধরে ধরে পড়ত)।
+ * cat/cats ডিফল্ট mapCustomProduct-এর হুবহু একই, যাতে prodInCat-এর ফলাফল না বদলায়।
+ * ব্যর্থ হলে throw করে (সাইটম্যাপ নিজেই "আংশিক/খালি সাইটম্যাপ ক্যাশে বসবে না" নীতিতে এটা ধরে)।
+ */
+export async function fetchSitemapRows(supabase: SupabaseClient): Promise<SitemapRow[]> {
+  const out: SitemapRow[] = [];
+  let from = 0;
+  for (;;) {
+    const signal = getTimeoutSignal(QUERY_TIMEOUT_MS);
+    const { data, error } = await supabase
+      .from('custom_products')
+      .select('id,name,cat,cats,updated_at')
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + SELECT_PAGE_SIZE - 1)
+      .abortSignal(optionalSignal(signal));
+    if (error || !data) throw new Error(error?.message || 'sitemap rows fetch failed');
+    for (const r of data as unknown as { id: number | string; name: string | null; cat: string | null; cats: string[] | null; updated_at: string | null }[]) {
+      out.push({
+        id: r.id,
+        name: r.name || '',
+        cat: r.cat || 'rgb',
+        cats: r.cats || [r.cat || 'rgb'],
+        updated_at: r.updated_at,
+      });
+    }
+    if (data.length < SELECT_PAGE_SIZE) break;
+    from += SELECT_PAGE_SIZE;
+  }
+  return out;
+}
+
+/**
  * ব্রাউজার-সাইডে সার্চ/কার্ট/কুইক-অর্ডারের জন্য হালকা ক্যাটালগ ইনডেক্স (CDN-ক্যাশ করা,
  * `/api/search-index`)। ব্যর্থ হলে আগের মতো সরাসরি Supabase থেকে ফলব্যাক — কিছু ভাঙে না।
  */
@@ -356,13 +444,20 @@ export async function fetchProductsPage(
 export async function fetchRelatedProducts(
   supabase: SupabaseClient,
   product: Pick<Product, 'id' | 'cat' | 'colorGroupId'>,
-  relatedLimit = 8,
+  // UI মাত্র ৪টা রিলেটেড দেখায় (ProductDetailClient `.slice(0, 4)`); ৫টা আনা হয় যাতে লাইভ-স্টকে একটা শেষে সরে গেলেও ৪টা পূরণ থাকে।
+  // আগে ৮টা আনা হতো — প্রতিটা বাড়তি প্রোডাক্ট HTML ও RSC পেলোডে দুবার করে যেত।
+  relatedLimit = 5,
+  // ক্যাশ-করা হালকা সারি (lib/productListingCache.ts → getOrderedRowsCached) দিলে ডাটাবেজে আর পুরো-ক্যাটালগ স্ক্যান হয় না।
+  // না দিলে (বা null হলে) আগের মতোই ডাটাবেজ থেকে।
+  orderedRows?: OrderedIdRow[] | null,
 ): Promise<Product[]> {
   try {
     const currentId = String(product.id);
     const catId = String(product.cat || '').trim().toLowerCase() || 'all';
 
-    const orderedIds = await fetchOrderedFilteredIds(supabase, catId);
+    const orderedIds = orderedRows
+      ? orderedIdsForCategory(orderedRows, catId)
+      : await fetchOrderedFilteredIds(supabase, catId);
     const relatedIds = orderedIds.filter((id) => String(id) !== currentId).slice(0, relatedLimit);
 
     const [relatedRows, siblingRows] = await Promise.all([
@@ -454,6 +549,98 @@ export async function fetchProductById(supabase: SupabaseClient, id: number | st
   } catch (e) {
     logWarn('[Vangcur] fetchProductById exception:', e);
     return null;
+  }
+}
+
+// প্রোডাক্ট পেজের রিভিউ/প্রশ্নোত্তর সীমা — page.tsx-এ এই সীমায় পৌঁছালে সার্ভার-সিড বাদ, ক্লায়েন্ট নিজে আনে (আগের নিয়মই)
+export const PRODUCT_REVIEWS_CAP = 300;
+export const PRODUCT_QUESTIONS_CAP = 150;
+
+const BUNDLE_REVIEW_COLS =
+  'id, product_id, user_id, user_name, rating, review_text, image_url, like_count, is_verified_buyer, is_approved, is_rejected, rejection_reason, created_at';
+const BUNDLE_QUESTION_COLS = 'id, product_id, user_id, user_name, question, created_at';
+const BUNDLE_ANSWER_COLS = 'id, question_id, user_id, author_name, is_admin, answer, created_at';
+
+export interface ProductBundle {
+  product: Product;
+  /** অনুমোদিত রিভিউ (anon RLS যা দেখায়); সীমায় (৩০০) পৌঁছালে null → ক্লায়েন্ট নিজে আনবে */
+  reviews: ProductReview[] | null;
+  /** প্রশ্ন + উত্তর; সীমায় (১৫০) পৌঁছালে null → ক্লায়েন্ট নিজে আনবে */
+  questions: ProductQuestion[] | null;
+  /** reviews থাকলে তা থেকে গণনা-করা সারাংশ (রিভিউ না থাকলে null); reviews null হলে undefined → কলার আলাদা কোয়েরি চালাবে */
+  reviewsSummary: { ratingValue: number; reviewCount: number } | null | undefined;
+}
+
+/**
+ * প্রোডাক্ট পেজের জন্য এক কলে: প্রোডাক্টের পুরো ডিটেইল + অনুমোদিত রিভিউ + প্রশ্ন ও উত্তর।
+ * আগে এটা ছিল ৫টা আলাদা রাউন্ড-ট্রিপ (প্রোডাক্ট, রিভিউ-সারাংশ, রিভিউ, প্রশ্ন, উত্তর) — `product_reviews` ও
+ * `product_questions`-এর `product_id` সরাসরি `custom_products(id)`-এর FK (ডাটাবেজে যাচাই-করা), তাই PostgREST
+ * এম্বেড কাজ করে। anon ক্লায়েন্টে RLS এম্বেড-করা সারিতেও প্রযোজ্য: রিভিউ শুধু `is_approved AND NOT is_rejected`,
+ * ফলাফল আগের আলাদা কোয়েরির সাথে হুবহু এক। ক্রম ও সীমাও আগের মতো (রিভিউ ৩০০, প্রশ্ন ১৫০ — নতুন-আগে;
+ * উত্তর পুরনো-আগে)।
+ * কোনো কারণে এম্বেড-কোয়েরি ব্যর্থ হলে আগের fetchProductById-তে ফিরে যায় (reviews/questions null → ক্লায়েন্ট নিজে আনে)।
+ */
+export async function fetchProductBundle(
+  supabase: SupabaseClient,
+  id: number | string,
+): Promise<ProductBundle | null> {
+  try {
+    const signal = getTimeoutSignal(QUERY_TIMEOUT_MS);
+    const { data, error } = await supabase
+      .from('custom_products')
+      .select(
+        `${DETAIL_COLS}, product_reviews(${BUNDLE_REVIEW_COLS}), product_questions(${BUNDLE_QUESTION_COLS}, product_question_answers(${BUNDLE_ANSWER_COLS}))`,
+      )
+      .eq('id', id)
+      .order('created_at', { referencedTable: 'product_reviews', ascending: false })
+      .limit(PRODUCT_REVIEWS_CAP, { referencedTable: 'product_reviews' })
+      .order('created_at', { referencedTable: 'product_questions', ascending: false })
+      .limit(PRODUCT_QUESTIONS_CAP, { referencedTable: 'product_questions' })
+      .order('created_at', { referencedTable: 'product_questions.product_question_answers', ascending: true })
+      .abortSignal(optionalSignal(signal))
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+
+    const raw = data as unknown as RawCustomProduct & {
+      product_reviews?: ProductReview[] | null;
+      product_questions?: (Omit<ProductQuestion, 'answers'> & { product_question_answers?: ProductQuestion['answers'] | null })[] | null;
+    };
+    const product = mapCustomProduct(raw);
+
+    const rawReviews = Array.isArray(raw.product_reviews) ? raw.product_reviews : [];
+    const reviews = rawReviews.length >= PRODUCT_REVIEWS_CAP ? null : rawReviews;
+
+    const rawQuestions = Array.isArray(raw.product_questions) ? raw.product_questions : [];
+    const questions =
+      rawQuestions.length >= PRODUCT_QUESTIONS_CAP
+        ? null
+        : rawQuestions.map(({ product_question_answers, ...q }) => ({
+            ...q,
+            answers: product_question_answers || [],
+          })) as ProductQuestion[];
+
+    let reviewsSummary: ProductBundle['reviewsSummary'];
+    if (reviews === null) {
+      reviewsSummary = undefined;
+    } else {
+      const approved = reviews.filter((r) => r.is_approved === true);
+      reviewsSummary = approved.length
+        ? {
+            ratingValue: Number(
+              (approved.reduce((s, r) => s + (Number(r.rating) || 5), 0) / approved.length).toFixed(1),
+            ),
+            reviewCount: approved.length,
+          }
+        : null;
+    }
+
+    return { product, reviews, questions, reviewsSummary };
+  } catch (e) {
+    logWarn('[Vangcur] fetchProductBundle exception — fetchProductById-তে ফলব্যাক:', e);
+    const product = await fetchProductById(supabase, id);
+    return product ? { product, reviews: null, questions: null, reviewsSummary: undefined } : null;
   }
 }
 
@@ -651,7 +838,9 @@ export function findProdBySlug(prods: Product[], slug: string): Product | null {
 export function idFromSlug(slug: string): string | null {
   if (!slug) return null;
   const s = String(slug);
-  if (/^\d+$/.test(s)) return s;
-  const m = s.match(/-(\d+)$/);
-  return m ? m[1] : s;
+  // আইডি `custom_products.id` (bigint)। শেষে সংখ্যা না থাকলে (আগে পুরো স্লাগটাই আইডি ধরে ডাটাবেজে `eq` চালাত,
+  // আর bigint কলামে টেক্সট দিলে কোয়েরি ত্রুটি দিত) এখন null → কলার notFound() দেয়। ≤১৮ ডিজিট: bigint ওভারফ্লো ঠেকাতে।
+  if (/^\d{1,18}$/.test(s)) return s;
+  const m = s.match(/-(\d{1,18})$/);
+  return m ? m[1] : null;
 }

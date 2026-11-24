@@ -65,6 +65,7 @@ const KNOWN_API_ROOTS = new Set([
 const STATIC_ONLY_ROOTS = new Set(['.well-known', 'games', 'fonts', 'brands', 'email']);
 const KNOWN_ROOT_FILES = new Set(['/robots.txt', '/sitemap.xml', '/manifest.webmanifest', '/llms.txt']);
 const INDEXNOW_KEY_FILE_REGEX = /^\/[a-f0-9]{32}\.txt$/i;
+const PRODUCT_SLUG_REGEX = /\d{1,18}$/; // ≤১৮ ডিজিট = lib/productData.ts-এর idFromSlug-এর সাথে মিল (bigint ওভারফ্লো ঠেকাতে)
 const GUIDE_SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
 const GUIDE_PREFIX_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // দেখতে গাইড-স্লাগের মতো হলেও স্ক্যানারের চেনা প্রোব (/admin/api-tokens, /settings/api-keys, /server-status, /wp-json...)।
@@ -81,6 +82,11 @@ function isJunkPath(pathname: string): boolean {
   const second = segs[1] ?? '';
   if (root === 'api') return !(second !== '' && KNOWN_API_ROOTS.has(second));
   if (STATIC_ONLY_ROOTS.has(root)) return true;
+  // 🛡️ প্রোডাক্ট URL (২০২৬-১১): আসল আকৃতি শুধু /product/<slug>, যেখানে slug শেষে আইডি-সংখ্যা (`নাম-৫` বা `5`)।
+  // শেষে সংখ্যা নেই, বা বাড়তি সেগমেন্ট থাকলে (/product/foo, /product/a/b) পেজ-রেন্ডার/DB/ISR-ক্যাশ ছোঁয়ার আগেই ৪০৪ —
+  // নইলে প্রতিটা আজেবাজে URL একটা করে ৪০৪ রেন্ডার ও ক্যাশ-এন্ট্রি বানাত। (শেষে সংখ্যাওয়ালা ভুল-নামের URL এখানে ছাড়
+  // পায়; সেগুলো page.tsx-এ আসল স্লাগে ৩০৮ রিডাইরেক্ট হয়, কারণ আসল নাম জানতে ডাটাবেজ লাগে।)
+  if (root === 'product') return segs.length !== 2 || second.length > 200 || !PRODUCT_SLUG_REGEX.test(second);
   if (KNOWN_ROUTE_ROOTS.has(root)) return false;
   if (segs.length === 1) return !GUIDE_SLUG_REGEX.test(root) || JUNK_SLUG_REGEX.test(root);
   if (segs.length === 2) {

@@ -6,7 +6,7 @@
 
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
-import { fetchCustomProducts } from '@/lib/productData';
+import { fetchCatalogIndexRows } from '@/lib/productData';
 import { fetchCategories } from '@/lib/categoryData';
 import type { Category, Product } from '@/types';
 
@@ -16,7 +16,8 @@ export const getCachedCatalogIndex = unstable_cache(
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !key) return [];
     const supabase = createClient(url, key);
-    const all = await fetchCustomProducts(supabase);
+    // হালকা কোয়েরি: প্রথম ছবি `imgs->0` দিয়ে ডাটাবেজেই কেটে আনা, অব্যবহৃত কলাম বাদ (fetchCatalogIndexRows দেখুন)
+    const all = await fetchCatalogIndexRows(supabase);
     return all.map(toIndexProduct);
   },
   // 🆕 v3: ইনডেক্সে `brand` যোগ (সার্চ-ম্যাচিং ও ব্র্যান্ড-ফিল্টারের জন্য) — কী বদলানোয় brand-হীন পুরনো ক্যাশ আর ব্যবহার হবে না
