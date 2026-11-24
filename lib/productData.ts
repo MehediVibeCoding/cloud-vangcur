@@ -434,19 +434,44 @@ export async function fetchProductsPage(
   }
 }
 
+/** রিলেটেডের সংখ্যা: ক্যাটাগরির সাজানো ক্রমে বর্তমান প্রোডাক্টের ঠিক পরের এতগুলো (শেষে পৌঁছালে শুরু থেকে ঘুরে) */
+export const RELATED_NEIGHBOUR_COUNT = 4;
+
+/**
+ * "আশেপাশের" নিয়ম (পিউর ফাংশন): সাজানো আইডি-তালিকায় `currentId`-এর পরের `count`টা, শেষ ছাড়ালে শুরু থেকে ঘুরে।
+ * ফলে প্রতিটা প্রোডাক্ট ঠিক `count`টা প্রোডাক্ট-পেজে রিলেটেড হয় — তাই কোনো প্রোডাক্ট বদলালে পার্জ করতে হয় শুধু
+ * তার আগের `count`টা পেজ (lib/catalogPurge.ts)। `currentId` তালিকায় না থাকলে (পুরনো ক্যাশ/অন্য ক্যাটাগরি) শুরু থেকে `count`টা।
+ */
+export function nextNeighbourIds(
+  orderedIds: (number | string)[],
+  currentId: number | string,
+  count: number = RELATED_NEIGHBOUR_COUNT,
+): (number | string)[] {
+  const cur = String(currentId);
+  const others = orderedIds.filter((id) => String(id) !== cur);
+  if (!others.length || count <= 0) return [];
+  const idx = orderedIds.findIndex((id) => String(id) === cur);
+  if (idx === -1) return others.slice(0, count);
+  const n = orderedIds.length;
+  const out: (number | string)[] = [];
+  for (let step = 1; step < n && out.length < count; step++) {
+    out.push(orderedIds[(idx + step) % n]);
+  }
+  return out;
+}
+
 /**
  * প্রোডাক্ট পেজের জন্য ছোট সাবসেট: একই ক্যাটাগরির রিলেটেড প্রোডাক্ট + একই color_group_id-র
  * কালার-সিবলিং। আগে পেজ পুরো ক্যাটালগ (fetchCustomProducts) এনে ক্লায়েন্টে পাঠাত — ৫০০
  * প্রোডাক্টে প্রতিটা প্রোডাক্ট-পেজের HTML ৭০০ KB+ হয়ে যেত এবং ক্লায়েন্ট প্রতি ৩০ সেকেন্ডে
  * ৫০০ আইডির `.in()` কোয়েরি চালাত। এখন ক্রম আগের মতোই (অ্যাডমিনের কাস্টম অর্ডার, স্টক-আউট
- * শেষে) — fetchOrderedFilteredIds একই ফাংশন — শুধু সংখ্যা সীমিত।
+ * শেষে) — fetchOrderedFilteredIds একই ফাংশন — আর রিলেটেড = ক্রমে ঠিক পরের ৪টা (nextNeighbourIds)।
  */
 export async function fetchRelatedProducts(
   supabase: SupabaseClient,
   product: Pick<Product, 'id' | 'cat' | 'colorGroupId'>,
-  // UI মাত্র ৪টা রিলেটেড দেখায় (ProductDetailClient `.slice(0, 4)`); ৫টা আনা হয় যাতে লাইভ-স্টকে একটা শেষে সরে গেলেও ৪টা পূরণ থাকে।
-  // আগে ৮টা আনা হতো — প্রতিটা বাড়তি প্রোডাক্ট HTML ও RSC পেলোডে দুবার করে যেত।
-  relatedLimit = 5,
+  // UI মাত্র ৪টা রিলেটেড দেখায় (ProductDetailClient `.slice(0, 4)`) — তাই ঠিক ৪টাই আশেপাশের নিয়মে আনা হয়।
+  relatedLimit = RELATED_NEIGHBOUR_COUNT,
   // ক্যাশ-করা হালকা সারি (lib/productListingCache.ts → getOrderedRowsCached) দিলে ডাটাবেজে আর পুরো-ক্যাটালগ স্ক্যান হয় না।
   // না দিলে (বা null হলে) আগের মতোই ডাটাবেজ থেকে।
   orderedRows?: OrderedIdRow[] | null,
@@ -458,7 +483,7 @@ export async function fetchRelatedProducts(
     const orderedIds = orderedRows
       ? orderedIdsForCategory(orderedRows, catId)
       : await fetchOrderedFilteredIds(supabase, catId);
-    const relatedIds = orderedIds.filter((id) => String(id) !== currentId).slice(0, relatedLimit);
+    const relatedIds = nextNeighbourIds(orderedIds, currentId, relatedLimit);
 
     const [relatedRows, siblingRows] = await Promise.all([
       relatedIds.length ? fetchProductsByIds(supabase, relatedIds) : Promise.resolve([] as Product[]),
@@ -822,6 +847,11 @@ export function makeSlug(str: string): string {
 
 export function productHref(prod: { id: number | string; name: string }): string {
   return `/product/${makeSlug(prod.name)}-${prod.id}`;
+}
+
+/** ক্যানোনিকাল প্রোডাক্ট-স্লাগ `<নাম>-<id>` — productHref, প্রোডাক্ট পেজের রিডিরেক্ট ও পার্জ-রুট সবাই এটাই ব্যবহার করে */
+export function productSlug(name: string | null | undefined, id: number | string): string {
+  return `${makeSlug(name || '')}-${id}`;
 }
 
 export function findProdBySlug(prods: Product[], slug: string): Product | null {

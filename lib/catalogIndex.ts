@@ -22,7 +22,7 @@ export const getCachedCatalogIndex = unstable_cache(
   },
   // 🆕 v3: ইনডেক্সে `brand` যোগ (সার্চ-ম্যাচিং ও ব্র্যান্ড-ফিল্টারের জন্য) — কী বদলানোয় brand-হীন পুরনো ক্যাশ আর ব্যবহার হবে না
   ['catalog-index-v3'],
-  { revalidate: 86400, tags: ['catalog'] },
+  { revalidate: 86400, tags: ['catalog', 'search'] },
 );
 
 // ইনডেক্সের একেকটা প্রোডাক্টে শুধু সেই ফিল্ডগুলোই রাখা হয় যা এর ব্যবহারকারীরা সত্যিই পড়ে:
@@ -69,5 +69,5 @@ export const getCachedCategories = unstable_cache(
     return fetchCategories(createClient(url, key));
   },
   ['catalog-categories-v1'],
-  { revalidate: 86400, tags: ['catalog'] },
+  { revalidate: 86400, tags: ['catalog', 'cats'] },
 );

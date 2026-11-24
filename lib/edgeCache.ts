@@ -8,7 +8,9 @@ import { logWarn } from '@/lib/logger';
 
 // ctx.cache (Workers Caching) এর ন্যূনতম টাইপ — প্রজেক্টে workers-types নেই, তাই এখানেই সংজ্ঞা।
 type WorkerCachePurger = {
-  purge: (opts: { purgeEverything: true }) => Promise<{ success: boolean; errors?: unknown }>;
+  purge: (
+    opts: { purgeEverything: true } | { pathPrefixes: string[] },
+  ) => Promise<{ success: boolean; errors?: unknown }>;
 };
 
 export async function purgeEdgeCache(logPrefix: string): Promise<boolean> {
@@ -26,6 +28,31 @@ export async function purgeEdgeCache(logPrefix: string): Promise<boolean> {
     return result.success;
   } catch (err) {
     logWarn(`[${logPrefix}] এজ ক্যাশ পার্জে এরর`, { err: String(err) });
+    return false;
+  }
+}
+
+/**
+ * শুধু নির্দিষ্ট পাথগুলোর এজ-ক্যাশ মোছে (Workers Cache `pathPrefixes`) — বাকি পেজের ক্যাশ অক্ষত।
+ * ⚠️ `pathPrefixes` প্রিফিক্স-মিল: `/product/foo-5` মুছলে `/product/foo-55`-এর মতো একই-প্রিফিক্স পাথও যায়
+ * (শুধু বাড়তি মোছা, ভুল নয়)। ব্যর্থ হলে false — কলার তখন পুরো-পার্জে ফিরে যায়, যাতে পুরনো পেজ আটকে না থাকে।
+ */
+export async function purgeEdgeCachePaths(logPrefix: string, pathPrefixes: string[]): Promise<boolean> {
+  if (!pathPrefixes.length) return true;
+  try {
+    const { ctx } = await getCloudflareContext({ async: true });
+    const cache = (ctx as unknown as { cache?: WorkerCachePurger }).cache;
+    if (!cache) {
+      logWarn(`[${logPrefix}] ctx.cache পাওয়া যায়নি — এজ ক্যাশ মোছা হয়নি`);
+      return false;
+    }
+    const result = await cache.purge({ pathPrefixes });
+    if (!result.success) {
+      logWarn(`[${logPrefix}] এজ ক্যাশ পাথ-পার্জ ব্যর্থ`, { errors: result.errors });
+    }
+    return result.success;
+  } catch (err) {
+    logWarn(`[${logPrefix}] এজ ক্যাশ পাথ-পার্জে এরর`, { err: String(err) });
     return false;
   }
 }

@@ -653,7 +653,10 @@ export default function ProductDetailClient({
         const timeout = setTimeout(() => ctl.abort(), 6000);
         // 🛡️ `ids` ছাড়া একটাই URL — সব প্রোডাক্ট পেজ এজ-ক্যাশের একটাই এন্ট্রি ভাগ করে (দেখুন app/api/live-products/route.ts)।
         // নিচের liveById.has ফিল্টার শুধু এই পেজের প্রোডাক্টগুলোই রাখে, বাকি আইটেম উপেক্ষা হয়।
-        const res = await fetch('/api/live-products', { signal: ctl.signal });
+        // 🆕 নিজের ক্যাটাগরির তালিকাই (`?cat=`) — পুরো ক্যাটালগ নয়; রিলেটেড সবই একই ক্যাটাগরির। ক্যাটাগরি না জানা থাকলে আগের মতো সব।
+        const liveCat = String(initialProduct?.cat || '').trim().toLowerCase();
+        const liveUrl = /^[a-z0-9_-]{1,40}$/.test(liveCat) ? `/api/live-products?cat=${liveCat}` : '/api/live-products';
+        const res = await fetch(liveUrl, { signal: ctl.signal });
         clearTimeout(timeout);
         if (res.ok) {
           const json = (await res.json()) as {
@@ -663,10 +666,13 @@ export default function ProductDetailClient({
           if (cancelled) return;
           if (Array.isArray(json.items) && typeof json.total === 'number' && json.total > 0) {
             const liveById = new Map(json.items.map((i) => [String(i.id), i]));
+            // ⚠️ আগে এখানে `.filter(liveById.has)` ছিল (মুছে ফেলা প্রোডাক্ট সরাতে)। এখন তালিকা শুধু নিজের ক্যাটাগরির, তাই
+            // অন্য ক্যাটাগরির কালার-সিবলিং এতে থাকে না — ফিল্টার রাখলে তারা উধাও হতো। না-পাওয়া প্রোডাক্ট যেমন ছিল তেমন থাকে;
+            // মুছে ফেলা প্রোডাক্ট অ্যাডমিনের পার্জে (প্রতিবেশী পেজ নতুন করে) সরে যায়।
             setProds((prev) => keepIfSame(prev, prev
-              .filter((p) => liveById.has(String(p.id)))
               .map((p) => {
-                const live = liveById.get(String(p.id))!;
+                const live = liveById.get(String(p.id));
+                if (!live) return p;
                 if (p.price === live.price && p.old === live.old && p.stock === live.stock && p.badge === live.badge) return p;
                 return { ...p, price: live.price, old: live.old, stock: live.stock, badge: live.badge };
               })));
