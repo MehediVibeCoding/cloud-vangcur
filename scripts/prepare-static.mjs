@@ -55,6 +55,15 @@ for (const f of COPY_FILES) {
   cpSync(from, join(OUT, f));
 }
 
+// 🔖 build-id.json: StaleTabReload (bfcache-এ ফেরা ট্যাব পুরনো ডেপ্লয়ের কিনা) এটা পড়ে। আগে /api/build-id (মূল Worker-এর Next রুট,
+// প্রতিবার Worker জাগত); এখন এই স্ট্যাটিক হোস্ট থেকে — Worker-কোড নেই, রিকোয়েস্ট ফ্রি। আইডি next.config.js-এর NEXT_PUBLIC_BUILD_ID-র
+// একই উৎস থেকে (একই বিল্ডে একই মান)। খালি হলে {"id":""} — ক্লায়েন্ট তখন কিছুই করে না (আগের /api/build-id-র মতোই)।
+// ⚠️ হোস্ট ফাইলটা মূল সাইটের আগে ডেপ্লয় হয় (static:deploy আগে চলে), তাই ডেপ্লয়ের কয়েক সেকেন্ড-মিনিটের ফাঁকে একটা ট্যাব আগেভাগে
+//    রিলোড হতে পারে — রিলোডে পুরনো মূল সাইটই আসে, ক্ষতি নেই; একবারের বেশি লুপ হয় না (শুধু bfcache-restore-এ চেক)।
+const buildId =
+  process.env.WORKERS_CI_COMMIT_SHA || process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || '';
+writeFileSync(join(OUT, 'build-id.json'), JSON.stringify({ id: buildId }));
+
 // CORS: ফন্ট (woff2) আলাদা হোস্ট থেকে নামলে ব্রাউজার CORS হেডার চায়। ফাইলগুলো সবই পাবলিক।
 // ক্যাশ: `_next/static`-এর নামে হ্যাশ আছে → ১ বছর immutable (public/_headers-এর নিয়মই)।
 // লোগো/ব্র্যান্ড/ফুটার ছবির নামে ভার্সন নেই → ৭ দিন (আগের মতোই; বদলাতে হলে নতুন নামে আপলোড করুন)।
@@ -72,6 +81,8 @@ const headers = `/*
   Cache-Control: public, max-age=604800
 /fonts/noto-sans-bengali-digits-v1.woff2
   Cache-Control: public, max-age=31536000, immutable
+/build-id.json
+  Cache-Control: no-store
 `;
 writeFileSync(join(OUT, '_headers'), headers);
 
