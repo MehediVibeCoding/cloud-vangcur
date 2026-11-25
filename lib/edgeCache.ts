@@ -13,6 +13,28 @@ type WorkerCachePurger = {
   ) => Promise<{ success: boolean; errors?: unknown }>;
 };
 
+/**
+ * `vangcur-live` Worker-এর (workers/live/, `/api/live-products`) এজ-ক্যাশ মোছে — Service Binding RPC (`LIVE_WORKER.purge()`)।
+ * অ্যাডমিনের দাম/স্টক/ব্যাজ বদলে ('live' ট্যাগ) এটা ডাকা হয়, যাতে ৫ মিনিট অপেক্ষা ছাড়াই নতুন মান দেখা যায়।
+ * ব্যর্থ হলে/binding না থাকলে (লোকাল dev) রিকোয়েস্ট ভাঙে না, শুধু false — তখনো ক্যাশ সর্বোচ্চ ৫ মিনিটে নিজে ঠিক হয়।
+ */
+export async function purgeLiveWorkerCache(logPrefix: string): Promise<boolean> {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const live = (env as unknown as { LIVE_WORKER?: { purge?: () => Promise<{ ok?: boolean }> } }).LIVE_WORKER;
+    if (!live || typeof live.purge !== 'function') {
+      logWarn(`[${logPrefix}] LIVE_WORKER binding পাওয়া যায়নি — লাইভ-ক্যাশ মোছা হয়নি`);
+      return false;
+    }
+    const out = await live.purge();
+    if (!out?.ok) logWarn(`[${logPrefix}] লাইভ-ক্যাশ পার্জ ব্যর্থ`, { out });
+    return !!out?.ok;
+  } catch (err) {
+    logWarn(`[${logPrefix}] লাইভ-ক্যাশ পার্জে এরর`, { err: String(err) });
+    return false;
+  }
+}
+
 export async function purgeEdgeCache(logPrefix: string): Promise<boolean> {
   try {
     const { ctx } = await getCloudflareContext({ async: true });

@@ -44,24 +44,45 @@ export function normalizeCat(category: string | null | undefined): string {
   return String(category || '').trim().toLowerCase() || 'all';
 }
 
-const getCachedOrderedRows = unstable_cache(
-  async (): Promise<OrderedIdRow[]> => {
-    const supabase = anonClient();
-    if (!supabase) throw new Error('supabase env missing');
-    const rows = await fetchOrderedRows(supabase);
-    if (!rows) throw new Error('ordered rows fetch failed'); // ব্যর্থতা ক্যাশে বসবে না
-    return rows;
-  },
-  ['vc-ordered-rows-v1'],
-  { revalidate: 86400, tags: ['catalog', 'list'] },
-);
+async function loadOrderedRowsOrThrow(): Promise<OrderedIdRow[]> {
+  const supabase = anonClient();
+  if (!supabase) throw new Error('supabase env missing');
+  const rows = await fetchOrderedRows(supabase);
+  if (!rows) throw new Error('ordered rows fetch failed'); // ব্যর্থতা ক্যাশে বসবে না
+  return rows;
+}
+
+// ক) তালিকা-পেজের (হোম/প্রোডাক্টস/ক্যাটাগরি) সারি — ট্যাগ `list`। দাম/ব্যাজ/স্টক-০-পেরোনো ইত্যাদিতে মোছা হয়।
+const getCachedOrderedRows = unstable_cache(loadOrderedRowsOrThrow, ['vc-ordered-rows-v1'], {
+  revalidate: 86400,
+  tags: ['catalog', 'list'],
+});
+
+// খ) শুধু প্রোডাক্ট-পেজের রিলেটেড-হিসাবের সারি — আলাদা কী ও আলাদা ট্যাগ (`prodrows`)।
+// ⚠️ কেন আলাদা: Next ক্যাশ-পড়া পেজে ওই ক্যাশের ট্যাগ জুড়ে দেয়। প্রোডাক্ট পেজ ক) পড়লে সব প্রোডাক্ট পেজে `list` ট্যাগ বসত,
+// আর দাম/ব্যাজ বদলে revalidateTag('list') সব প্রোডাক্ট পেজ মুছে দিত (সূক্ষ্ম পার্জের উদ্দেশ্য নষ্ট)। এখন প্রোডাক্ট পেজ পায়
+// শুধু `catalog` (পুরো-পার্জে) ও `prodrows` — যা মোছা হয় শুধু ক্রম/ক্যাটাগরি/সদস্য-তালিকা সত্যিই বদলালে (revalidate-catalog দেখুন)।
+const getCachedOrderedRowsForProductPages = unstable_cache(loadOrderedRowsOrThrow, ['vc-ordered-rows-pp-v1'], {
+  revalidate: 86400,
+  tags: ['catalog', 'prodrows'],
+});
 
 /**
  * প্রোডাক্ট পেজের রিলেটেড-হিসাবের জন্য: ক্যাশ-করা হালকা সারি (id, cat, cats, stock), sort_order অনুযায়ী।
  * আগে প্রতিটা প্রোডাক্ট-পেজ রেন্ডারে ডাটাবেজ থেকে পুরো ক্যাটালগের এই সারি স্ক্যান হতো (১,০০০ প্রোডাক্টে ~৭০KB পার্স);
- * এখন একই ক্যাশ (/products ও হোমের সাথে ভাগ করা) থেকে। ব্যর্থ হলে null — কলার তখন আগের সরাসরি-ডাটাবেজ পথে যায়।
+ * এখন ক্যাশ থেকে (তালিকা-পেজের ক্যাশ থেকে আলাদা — ওপরের খ) দেখুন)। ব্যর্থ হলে null — কলার তখন আগের সরাসরি-ডাটাবেজ পথে যায়।
+ * ⚠️ এখানে স্টক-০-এ ক্রম বদলানো সর্বোচ্চ ২৪ ঘণ্টা দেরিতে (রিলেটেড ৪টা কার্ডের ক্রম); তালিকা-পেজে তা দ্রুত (getListingOrderedRowsCached)।
  */
 export async function getOrderedRowsCached(): Promise<OrderedIdRow[] | null> {
+  try {
+    return await getCachedOrderedRowsForProductPages();
+  } catch {
+    return null;
+  }
+}
+
+/** তালিকা-পেজের ক্যাশ-করা সারি (ক) — revalidate-catalog স্টক ০-সীমা পেরোল কিনা মেলাতে এটা পড়ে */
+export async function getListingOrderedRowsCached(): Promise<OrderedIdRow[] | null> {
   try {
     return await getCachedOrderedRows();
   } catch {
