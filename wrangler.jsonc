@@ -44,6 +44,13 @@
     {
       "binding": "WORKER_SELF_REFERENCE",
       "service": "cloud-vangcur"
+    },
+    // 🏷️ দাম/স্টকের লাইভ-এন্ডপয়েন্ট (`/api/live-products`) এখন আলাদা ছোট Worker `vangcur-live` চালায় (workers/live/)।
+    // অ্যাডমিন বদলালে lib/edgeCache.ts-এর purgeLiveWorkerCache() এই binding দিয়ে ওর ক্যাশ মোছে (RPC `purge()` —
+    // পাবলিক URL নয়)। Worker না থাকলে/ব্যর্থ হলে কিছু ভাঙে না: ক্যাশ ৫ মিনিটে নিজে ঠিক হয়।
+    {
+      "binding": "LIVE_WORKER",
+      "service": "vangcur-live"
     }
   ],
   // 🛠️ এই vars গুলো শুধুই রানটাইমে (সার্ভার সাইড: middleware.ts, server.ts,
