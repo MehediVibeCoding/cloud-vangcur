@@ -6,7 +6,8 @@
 // দুই ধরনের কল:
 //  • বডি ছাড়া / অচেনা বডি → আগের মতো পুরো পার্জ (পুরনো অ্যাডমিন ও যেকোনো সন্দেহে নিরাপদ ডিফল্ট)।
 //  • `{ productId, changeType, previousName? }` বা `{ changes: [...] }` → শুধু যা বদলেছে (lib/catalogPurge.ts-এর ছক)।
-//    changeType: price | badge | stock | content | display (নাম/ছবি/রেটিং) | created | deleted।
+//    changeType: price | badge | stock | stockorder | content | display (নাম/ছবি/রেটিং) | created | deleted।
+//    (stock বদলালে সাইট নিজে দেখে স্টক ০ ↔ >০ পেরোল কিনা; পেরোলে তালিকার ক্রম তাড়াতাড়ি তাজা — `stockorder`।)
 //    ছোট-পার্জে কোনো ব্যর্থতা হলে স্বয়ংক্রিয়ভাবে পুরো পার্জে ফিরে যায় — পুরনো পেজ আটকে থাকার ঝুঁকি নেই।
 //
 // অ্যাডমিনের জন্য নতুন কোনো env লাগে না — আগের revalidate-guide এন্ডপয়েন্টের একই গোপন চাবি
@@ -17,15 +18,17 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { logWarn } from '@/lib/logger';
-import { purgeEdgeCache, purgeEdgeCachePaths } from '@/lib/edgeCache';
+import { purgeEdgeCache, purgeEdgeCachePaths, purgeLiveWorkerCache } from '@/lib/edgeCache';
 import { fetchOrderedRows } from '@/lib/productData';
-import { getOrderedRowsCached } from '@/lib/productListingCache';
+import { getListingOrderedRowsCached, getOrderedRowsCached } from '@/lib/productListingCache';
 import {
   LISTING_PATHS,
   mergeEffects,
+  orderStructureChanged,
   parsePurgeBody,
   predecessorIds,
   productPagePath,
+  stockOrderCrossings,
   type PurgeChange,
 } from '@/lib/catalogPurge';
 
@@ -57,22 +60,41 @@ async function fullPurge() {
 
   // ISR মোছার পরে এজ ক্যাশ মুছি, যাতে পরের ভিজিট নতুন পেজ বানায়।
   const edgePurged = await purgeEdgeCache('revalidate-catalog');
-  return NextResponse.json({ ok: true, mode: 'full', edgePurged });
+  // আলাদা `vangcur-live` Worker-এর (দাম/স্টকের) ক্যাশও মুছি
+  const livePurged = await purgeLiveWorkerCache('revalidate-catalog');
+  return NextResponse.json({ ok: true, mode: 'full', edgePurged, livePurged });
 }
 
 /**
  * শুধু বদলানো জিনিস মোছে। কোনো ধাপে এরর হলে throw করে — কলার তখন fullPurge() চালায়।
  *
- * 🔎 প্রোডাক্ট-পেজ মোছা revalidatePath(ক্যানোনিকাল স্লাগ) দিয়ে — পেজে-ট্যাগ-বসানোর (`p:<id>`) বদলে, কারণ: (১) প্রোডাক্ট পেজ
- * ট্যাগ পায় শুধু unstable_cache/fetch-ট্যাগ থেকে, যা OpenNext-এ ইনহেরিট হয় কিনা এখানে যাচাই করা যায়নি; (২) প্রতি প্রোডাক্টে
+ * 🔎 প্রোডাক্ট-পেজ মোছা revalidatePath(ক্যানোনিকাল স্লাগ) দিয়ে — পেজে-ট্যাগ-বসানোর (`p:<id>`) বদলে, কারণ: প্রতি প্রোডাক্টে
  * বাড়তি unstable_cache মানে বাড়তি KV/R2 লেখা। revalidatePath ডকুমেন্টেড ও নির্ভরযোগ্য।
+ *
+ * 🏷️ ট্যাগ-ফাঁদ ঠিক: Next ক্যাশ-পড়া পেজে ওই ক্যাশের ট্যাগ জুড়ে দেয়। তাই প্রোডাক্ট পেজ এখন আলাদা সারি-ক্যাশ পড়ে
+ * (lib/productListingCache.ts — ট্যাগ `catalog` + `prodrows`), `list` ট্যাগওয়ালা তালিকা-ক্যাশ নয়। ফলে দাম/ব্যাজ/স্টক বদলে
+ * `list` মুছলে প্রোডাক্ট পেজগুলো মোছে না। `prodrows` মোছা হয় শুধু যখন সারির কাঠামো (আইডি-ক্রম/ক্যাটাগরি/সদস্য) সত্যিই বদলায়
+ * (নতুন/মোছা প্রোডাক্ট, ক্রম/ক্যাটাগরি বদল) — তখন সব প্রোডাক্ট পেজ নতুন করে বানানোই ঠিক, কারণ রিলেটেড-তালিকা বদলেছে।
  */
 async function finePurge(changes: PurgeChange[]) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error('supabase env missing');
   const supabase = createClient(url, key);
-  const eff = mergeEffects(changes);
+
+  // ০) স্টক ০ ↔ >০ পেরোল কিনা (তখন তালিকার ক্রম বদলায়, তালিকা-সারি তাড়াতাড়ি তাজা করতে হবে)। অবশ্যই ট্যাগ মোছার আগে —
+  // তালিকা-ক্যাশের পুরনো ছবির সাথে ডাটাবেজের এখনকার স্টক মেলাতে হয়। ডাটাবেজ-এরর হলে throw → পুরো-পার্জ (নিরাপদ)।
+  let allChanges = changes;
+  const stockIds = [...new Set(changes.filter((c) => c.changeType === 'stock').map((c) => c.productId))];
+  if (stockIds.length) {
+    const [listingBefore, stockRes] = await Promise.all([
+      getListingOrderedRowsCached(),
+      supabase.from('custom_products').select('id,stock').in('id', stockIds),
+    ]);
+    if (stockRes.error || !stockRes.data) throw new Error(`stock lookup failed: ${stockRes.error?.message ?? 'no data'}`);
+    allChanges = [...changes, ...stockOrderCrossings(listingBefore, stockRes.data as { id: number | string; stock: unknown }[], stockIds)];
+  }
+  const eff = mergeEffects(allChanges);
 
   // ১) ক্রম-বদলের আগের ছবি (প্রতিবেশী বের করতে): ক্যাশ-করা সারি এখনো পুরনো থাকতেই পড়ি
   const rowsBefore = eff.needsNeighbours ? await getOrderedRowsCached() : null;
@@ -84,6 +106,14 @@ async function finePurge(changes: PurgeChange[]) {
   // ৩) বদলের পরের ছবি — সরাসরি ডাটাবেজ থেকে (ক্যাশ নয়), যাতে নতুন/মুছে-ফেলা প্রোডাক্টের অবস্থান নির্ভুল থাকে
   const rowsAfter = eff.needsNeighbours ? await fetchOrderedRows(supabase) : null;
   if (eff.needsNeighbours && !rowsAfter) throw new Error('ordered rows fetch failed'); // প্রতিবেশী না জেনে আংশিক মোছা চলবে না
+
+  // প্রোডাক্ট-পেজের সারি-ক্যাশ (`prodrows`): আইডি-ক্রম/ক্যাটাগরি/সদস্য সত্যিই বদলালে মোছা (সব প্রোডাক্ট পেজ তা পড়ে, তাই তারা নতুন
+  // করে বানাবে); শুধু নাম/ছবি/দাম বদলালে মোছা হয় না — তখন শুধু নির্দিষ্ট পেজ (নিচে)। rowsBefore না থাকলে (ক্যাশ-এরর) নিরাপদে মোছা।
+  let rowsTagPurged = false;
+  if (eff.needsNeighbours && orderStructureChanged(rowsBefore, rowsAfter)) {
+    revalidateTag('prodrows', { expire: 0 });
+    rowsTagPurged = true;
+  }
 
   // ৪) কোন কোন প্রোডাক্ট-পেজ মুছতে হবে
   const pageIds = new Set<string>(eff.selfIds);
@@ -146,7 +176,7 @@ async function finePurge(changes: PurgeChange[]) {
 
   // ৫) এজ-ক্যাশ: তালিকা-পেজ বদলালে (হোম '/' প্রিফিক্স = সব) পুরোটাই; নইলে শুধু ওই পাথগুলো, ব্যর্থ হলে পুরোটা
   let edgePurged: boolean;
-  if (eff.listing || needPattern) {
+  if (eff.listing || needPattern || rowsTagPurged) {
     edgePurged = await purgeEdgeCache('revalidate-catalog');
   } else {
     const prefixes = [...paths];
@@ -155,13 +185,18 @@ async function finePurge(changes: PurgeChange[]) {
     edgePurged = (await purgeEdgeCachePaths('revalidate-catalog', prefixes)) || (await purgeEdgeCache('revalidate-catalog'));
   }
 
+  // ৬) আলাদা `vangcur-live` Worker-এর ক্যাশ (দাম/স্টক/ব্যাজ) — 'live' ট্যাগ থাকলে
+  const livePurged = eff.tags.includes('live') ? await purgeLiveWorkerCache('revalidate-catalog') : null;
+
   return NextResponse.json({
     ok: true,
     mode: 'fine',
     edgePurged,
+    livePurged,
     changes: changes.length,
     tags: eff.tags,
-    productPages: needPattern ? 'all' : paths.size,
+    productPages: needPattern || rowsTagPurged ? 'all' : paths.size,
+    rowsTagPurged,
   });
 }
 

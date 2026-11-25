@@ -1,0 +1,19 @@
+{
+  // 🏷️ vangcur-live — `/api/live-products` চালানোর আলাদা ছোট Worker (বিস্তারিত: README.md)।
+  // ⚠️ এটা মূল সাইটের Workers Builds-এর অংশ নয় — আলাদা ডিপ্লয় (README-র "ডিপ্লয়" অংশ)।
+  "name": "vangcur-live",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  // ⚡ Workers Caching: Cache-Control: s-maxage দেখে Cloudflare নিজেই ক্যাশ রাখে; হিটে Worker জাগে না।
+  "cache": { "enabled": true },
+  // মূল সাইটের `vangcur.com/api/live-products` শুধু এই Worker চালায়। Route মুছলে আবার মূল Worker-এর পুরনো রুট কাজ করে।
+  "routes": [{ "pattern": "vangcur.com/api/live-products*", "zone_name": "vangcur.com" }],
+  // এই দুটো পাবলিক (anon key ব্রাউজারেও যায়; মূল wrangler.jsonc-এও কমিট করা)। কোনো সিক্রেট এই Worker-এ নেই।
+  "vars": {
+    "SUPABASE_URL": "https://dlzgfgcqabsawhmekcbg.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsemdmZ2NxYWJzYXdobWVrY2JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3MTE5MDgsImV4cCI6MjEwMTI4NzkwOH0.KkiQ_6EJuHntEMtVZvaYW1P6JL3DLyBC2zi4Fbgwe0g"
+  }
+}

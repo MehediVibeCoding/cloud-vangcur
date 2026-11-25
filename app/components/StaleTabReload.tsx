@@ -42,7 +42,11 @@ export default function StaleTabReload() {
       try {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 4000);
-        const res = await fetch('/api/build-id', { cache: 'no-store', signal: ctrl.signal });
+        // স্ট্যাটিক হোস্ট থেকে (Worker জাগে না, ফ্রি) — হোস্ট না থাকলে (dev / STATIC_ORIGIN=off) আগের /api/build-id রুট
+        const buildIdUrl = process.env.NEXT_PUBLIC_STATIC_ORIGIN
+          ? `${process.env.NEXT_PUBLIC_STATIC_ORIGIN}/build-id.json`
+          : '/api/build-id';
+        const res = await fetch(buildIdUrl, { cache: 'no-store', signal: ctrl.signal });
         clearTimeout(timer);
         if (!res.ok) return;
         const data = (await res.json()) as { id?: string };

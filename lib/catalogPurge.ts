@@ -7,7 +7,9 @@
 
 import { orderedIdsForCategory, productSlug, RELATED_NEIGHBOUR_COUNT, type OrderedIdRow } from '@/lib/productData';
 
-export const CHANGE_TYPES = ['price', 'badge', 'stock', 'content', 'display', 'created', 'deleted'] as const;
+// 'stockorder' = স্টক ০ ↔ >০ পেরোল (তালিকার ক্রম বদলায়)। revalidate-catalog নিজে 'stock' বদল থেকে এটা বের করে (stockOrderCrossings);
+// অ্যাডমিন সরাসরিও পাঠাতে পারে।
+export const CHANGE_TYPES = ['price', 'badge', 'stock', 'stockorder', 'content', 'display', 'created', 'deleted'] as const;
 export type ChangeType = (typeof CHANGE_TYPES)[number];
 
 export interface PurgeChange {
@@ -70,13 +72,14 @@ interface Effects {
   neighbours: boolean;
 }
 
-// স্টক: শুধু `live` — পেজের স্টক /api/live-products থেকে ১০ মিনিটে তাজা হয় (অনুমোদিত নকশা)।
-// ⚠️ জানা সীমা: স্টক ০ হলে প্রোডাক্টটা তালিকা/রিলেটেডের ক্রমে শেষে সরে; সেই ক্রম ২৪ ঘণ্টার ক্যাশ-সারি থেকে আসে,
-// তাই ক্রমের এই বদল ২৪ ঘণ্টা পর্যন্ত দেরিতে দেখা যেতে পারে।
+// স্টক: শুধু `live` — পেজের স্টক /api/live-products থেকে (আলাদা `vangcur-live` Worker) তাজা হয় (অনুমোদিত নকশা)।
+// স্টক ০ ↔ >০ পেরোলে প্রোডাক্টটা তালিকার ক্রমে শেষে সরে/ফেরে — তখন `stockorder` (revalidate-catalog নিজে বের করে):
+// তালিকা-সারি ('list') ও তালিকা-পেজ তাড়াতাড়ি তাজা। প্রোডাক্ট-পেজের রিলেটেড ৪টা কার্ডের ক্রম (আলাদা ক্যাশ) ২৪ ঘণ্টা পর্যন্ত দেরিতে।
 const EFFECTS: Record<ChangeType, Effects> = {
   price: { tags: ['live', 'list', 'search'], listing: true, sitemap: false, self: true, neighbours: false },
   badge: { tags: ['live', 'list', 'search'], listing: true, sitemap: false, self: true, neighbours: false },
   stock: { tags: ['live'], listing: false, sitemap: false, self: false, neighbours: false },
+  stockorder: { tags: ['live', 'list'], listing: true, sitemap: false, self: false, neighbours: false },
   content: { tags: [], listing: false, sitemap: false, self: true, neighbours: false },
   display: { tags: ['list', 'search'], listing: true, sitemap: false, self: true, neighbours: true },
   created: { tags: ['live', 'list', 'search'], listing: true, sitemap: true, self: true, neighbours: true },
@@ -173,3 +176,44 @@ export const LISTING_PATHS: ReadonlyArray<readonly [string, 'page' | undefined]>
   ['/category/[slug]', 'page'],
   ['/collection/[slug]', 'page'],
 ];
+
+/**
+ * `stock` বদলে স্টক ০ ↔ >০ পেরোল কিনা। `before` = তালিকা-পেজের ক্যাশ-করা সারি (বদলের আগের অবস্থা), `after` = ডাটাবেজের এখনকার স্টক।
+ * শুধু পেরোলেই তালিকার ক্রম বদলায় (৫→৪-এ নয়), তাই শুধু তখনই `stockorder` বদল ফেরে। `before` না থাকলে/প্রোডাক্ট তাতে না থাকলে
+ * নিরাপদে "পেরিয়েছে" ধরা হয়। (ক্রমের নিয়ম orderedIdsForCategory-র সাথে মেলানো: `stock <= 0` = শেষে)
+ */
+export function stockOrderCrossings(
+  before: OrderedIdRow[] | null | undefined,
+  after: ReadonlyArray<{ id: number | string; stock: unknown }>,
+  ids: readonly string[],
+): PurgeChange[] {
+  const wanted = new Set(ids);
+  const beforeById = new Map<string, OrderedIdRow>();
+  for (const r of before || []) beforeById.set(String(r.id), r);
+  const out: PurgeChange[] = [];
+  for (const r of after) {
+    const id = String(r.id);
+    if (!wanted.has(id)) continue;
+    const b = beforeById.get(id);
+    const afterOut = Number(r.stock) <= 0;
+    if (!b || (Number(b.stock) <= 0) !== afterOut) out.push({ productId: id, changeType: 'stockorder' });
+  }
+  return out;
+}
+
+/**
+ * প্রোডাক্ট-পেজের রিলেটেড-ক্রমের কাঠামো সত্যিই বদলেছে কিনা (আইডির ক্রম, cat, cats) — স্টক বাদ। `a` না থাকলে "বদলেছে" ধরা হয়।
+ * বদলালে revalidate-catalog `prodrows` ট্যাগ মোছে (সব প্রোডাক্ট পেজ নতুন করে বানায়); না বদলালে শুধু নির্দিষ্ট পেজ।
+ */
+export function orderStructureChanged(a: OrderedIdRow[] | null | undefined, b: OrderedIdRow[] | null | undefined): boolean {
+  if (!a || !b) return true;
+  if (a.length !== b.length) return true;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (String(x.id) !== String(y.id)) return true;
+    if (String(x.cat ?? '') !== String(y.cat ?? '')) return true;
+    if (JSON.stringify(x.cats ?? null) !== JSON.stringify(y.cats ?? null)) return true;
+  }
+  return false;
+}
