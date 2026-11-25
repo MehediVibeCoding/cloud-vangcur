@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { cache } from 'react';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import { idFromSlug, makeSlug, fetchProductBundle, fetchRelatedProducts } from '@/lib/productData';
+import { idFromSlug, productSlug, fetchProductBundle, fetchRelatedProducts, RELATED_NEIGHBOUR_COUNT } from '@/lib/productData';
 import { getOrderedRowsCached } from '@/lib/productListingCache';
 import { DEFAULT_CATEGORIES, makeCatSlug } from '@/lib/categoryData';
 import { DEFAULT_SHIP_CFG } from '@/lib/checkoutData';
@@ -19,10 +19,28 @@ const SITE_URL = 'https://vangcur.com';
 // ⚠️ Next.js এর সেগমেন্ট কনফিগ — অবশ্যই সরাসরি সংখ্যা (৭২০০) লিখতে হবে, গাণিতিক এক্সপ্রেশন নয়।
 export const revalidate = 86400;
 
-// ⚡ খালি generateStaticParams: বিল্ডের সময় কিছু প্রি-রেন্ডার হয় না, কিন্তু প্রথম ভিজিটে পেজ
-// বানিয়ে CDN-এ ক্যাশ হয় এবং `revalidate` অনুযায়ী ব্যাকগ্রাউন্ডে নবায়ন হয় (on-demand ISR)।
+// ⚡ বিল্ডে শুধু জনপ্রিয় ~৬০টা প্রোডাক্ট প্রি-রেন্ডার (অ্যাডমিনের সাজানো ক্রমের প্রথম ৬০ — হোম/ক্যাটাগরির সামনের সারির
+// প্রোডাক্ট, যেগুলোতে ভিজিট সবচেয়ে বেশি), বাকিগুলো প্রথম ভিজিটে বানিয়ে CDN-এ ক্যাশ হয় ও `revalidate` অনুযায়ী নবায়ন হয়
+// (dynamicParams ডিফল্ট true, তাই তালিকার বাইরের পেজও কাজ করে)। বিল্ডে ডাটাবেজ না পেলে/ব্যর্থ হলে [] — বিল্ড কখনো ভাঙে না।
+// ৬০টা কেন: প্রতিটা প্রি-রেন্ডার বিল্ডে ২টা কোয়েরি + ISR-ক্যাশে ১টা লেখা; ১,০০০টা করলে ডিপ্লয়ই ধীর ও লেখা-সীমা-ঘেঁষা হতো।
+const PRERENDER_COUNT = 60;
 export async function generateStaticParams() {
-  return [];
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) return [];
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data, error } = await supabase
+      .from('custom_products')
+      .select('id,name')
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(PRERENDER_COUNT);
+    if (error || !data) return [];
+    return (data as { id: number | string; name: string | null }[]).map((r) => ({ slug: productSlug(r.name, r.id) }));
+  } catch {
+    return [];
+  }
 }
 
 
@@ -47,7 +65,7 @@ const getRelatedProducts = cache(async (product: Product) => {
   if (!supabaseUrl || !supabaseKey) return [];
   const supabase = createClient(supabaseUrl, supabaseKey);
   const orderedRows = await getOrderedRowsCached();
-  return fetchRelatedProducts(supabase, product, 5, orderedRows);
+  return fetchRelatedProducts(supabase, product, RELATED_NEIGHBOUR_COUNT, orderedRows);
 });
 
 // ফলব্যাক: বান্ডলে রিভিউ ৩০০-র সীমায় পৌঁছালে (বা বান্ডল-কোয়েরি ব্যর্থ হলে) সারাংশ আগের মতো আলাদা কোয়েরিতে
@@ -110,7 +128,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const description = p.metaDescription || autoDescription;
   const ogDescription = p.ogDescription || description;
 
-  const canonicalSlug = `${makeSlug(p.name)}-${p.id}`;
+  const canonicalSlug = productSlug(p.name, p.id);
 
   // OG ছবি: Worker-এ ছবি আঁকার বদলে প্রোডাক্টের নিজের প্রথম ছবির সরাসরি URL (CPU খরচ নেই)
   const ogImg = (p.imgs || []).find((img) => typeof img === 'string' && img.startsWith('http'));
@@ -154,7 +172,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   // 🛡️ ক্যানোনিকাল স্লাগ যাচাই: `idFromSlug` শুধু শেষের আইডি নেয়, তাই আগে `/product/যেকোনো-কিছু-5` প্রতিটাই আলাদা
   // পেজ হয়ে ISR ক্যাশ-এন্ট্রি (KV লেখা + CPU) বানাত, আর SEO-তে ডুপ্লিকেট হতো। এখন আসল স্লাগ না মিললে ৩০৮ রিডাইরেক্ট।
   // (makeSlug শুধু [a-z0-9-] দেয়, তাই এনকোডিং-এর ঝামেলা নেই; ইনকামিং স্লাগ সুরক্ষিতভাবে ডিকোড করে ছোট হাতের করা হয়।)
-  const canonicalSlug = `${makeSlug(initialProduct.name)}-${initialProduct.id}`;
+  const canonicalSlug = productSlug(initialProduct.name, initialProduct.id);
   let normalizedIncoming = slug;
   try {
     normalizedIncoming = decodeURIComponent(slug);

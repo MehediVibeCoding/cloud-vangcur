@@ -53,7 +53,7 @@ const getCachedOrderedRows = unstable_cache(
     return rows;
   },
   ['vc-ordered-rows-v1'],
-  { revalidate: 86400, tags: ['catalog'] },
+  { revalidate: 86400, tags: ['catalog', 'list'] },
 );
 
 /**
@@ -94,7 +94,7 @@ const getCachedProductsPage = unstable_cache(
     return fetchProductsPageFromIds(supabase, ids, offset, limit, true);
   },
   ['vc-products-page-v1'],
-  { revalidate: 86400, tags: ['catalog'] },
+  { revalidate: 86400, tags: ['catalog', 'list'] },
 );
 
 export interface ProductsListingData {
