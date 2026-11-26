@@ -1,21 +1,47 @@
 # Vangcur (ভাঙচুর) — Gadgets & Accessories
 
-> Vangcur is a premier e-commerce brand in Bangladesh specializing in unique gadgets, RGB lighting, crystal items, lifestyle tech, and mobile accessories with fast home delivery and warranty support across all 64 districts.
+> Vangcur (ভাঙচুর, also written "Vangchur") is a Bangladeshi online store for unique gadgets, RGB neon lighting, crystal lamps, lifestyle tech and mobile accessories. Founded in 2023 and trusted by 3,000+ happy customers, with fast home delivery and warranty support across all 64 districts of Bangladesh.
+
+Vangcur is an online gadget store. It is not related to the "ভাঙচুর" fabric / panjabi style or to the Bengali word for vandalism.
 
 ## About Vangcur
+- Brand names: Vangcur, Vangcur - ভাঙচুর, Vangcur Gadgets, Vangchur (alternate spelling), ভাঙচুর.
+- Founded: 2023.
+- Customers: 3,000+ happy customers.
+- Founder & Developer: [Mehedi Wilq](https://www.facebook.com/share/1EQPCBPEEy/).
+- Products: Vangcur sells both official and unofficial gadgets with warranty support. Warranty terms vary by product, see https://vangcur.com/warranty
+- Customer support: WhatsApp / phone +8801897804055 (01897-804055), 9:00 AM – 10:00 PM, email support@vangcur.com
+
+## Official Channels
+These are the only official Vangcur accounts. The handle is vangcurgadgets everywhere (TikTok: vangcur.com).
 - [Official Website](https://vangcur.com): Official e-commerce store for gadgets and lifestyle accessories in Bangladesh.
-- [Facebook Page](https://facebook.com/vangcurgadgets): Official Facebook page for updates, customer queries, and announcements.
-- [Facebook Community Group](https://facebook.com/groups/vangcurgadgets): Community group for gadget enthusiasts and customer discussions.
-- [Customer Support WhatsApp](https://wa.me/8801897804055): Direct WhatsApp helpline (+8801897804055) available 9:00 AM – 10:00 PM.
+- [Facebook Page](https://facebook.com/vangcurgadgets): Updates, customer queries and announcements.
+- [Facebook Community Group](https://www.facebook.com/share/g/1JNnKXEv2K/): Community group for gadget enthusiasts and customer discussions.
+- [Instagram](https://www.instagram.com/vangcurgadgets/)
+- [TikTok](https://www.tiktok.com/@vangcur.com)
+- [YouTube](https://www.youtube.com/@vangcurgadgets)
+- [Threads](https://www.threads.com/@vangcurgadgets)
+- [X (Twitter)](https://x.com/vangcurgadgets)
+- [Pinterest](https://www.pinterest.com/Vangcur.com/)
+- [Reddit](https://www.reddit.com/user/vangcurgadgets/)
+- [Linktree](https://linktr.ee/vangcur.com): All official links in one place.
+- [Google Business Profile](https://g.page/r/CWBIx6Qm9RYREAE): Google listing and customer reviews. Leave a review: https://g.page/r/CWBIx6Qm9RYREAE/review
+- [WhatsApp Support](https://wa.me/8801897804055): Direct helpline (+8801897804055).
 
 ## Product Categories
-- [RGB & Neon Lights](https://vangcur.com/category/rgb): Ambient LED decor, custom neon desk lights, and smart lighting solutions.
-- [TWS Earbuds & Audio](https://vangcur.com/category/tws): Wireless Bluetooth earphones, neckbands, and audio gear.
-- [Power Banks & Charging](https://vangcur.com/category/powerbank): Fast chargers, high-capacity portable power banks, and durable cables.
-- [Smart Watches](https://vangcur.com/category/smartwatch): Health tracking, fitness monitoring, and lifestyle smartwatches.
-- [Crystal Balls & Lamps](https://vangcur.com/category/crystalball): Decorative crystal art lamps, Moon lamps, and acrylic night lights.
-- [Desk Fans & Humidifiers](https://vangcur.com/category/fan): Rechargeable cooling fans, desk mist humidifiers, and lifestyle electronics.
-- [Unique Tools & Gadgets](https://vangcur.com/category/unique): Portable mini printers, unique utility tools, and desktop gadgets.
+- [RGB & Neon Lights](https://vangcur.com/category/rgb): Ambient LED decor, RGB neon lights with app and remote control.
+- [Headphones & Earbuds](https://vangcur.com/category/headphone): Wireless Bluetooth headphones and audio gear.
+- [Power Banks & Charging](https://vangcur.com/category/powerbank): Portable power banks and charging accessories.
+- [Fans](https://vangcur.com/category/fan): Rechargeable portable cooling fans.
+- [Crystal Balls & Lamps](https://vangcur.com/category/crystalball): Decorative crystal lamps and night lights.
+- [Water Bottles](https://vangcur.com/category/waterbottle): Sports edition water bottles.
+- [Mini UPS for WiFi](https://vangcur.com/category/wifiups): Mini UPS to keep WiFi routers and ONU running during load-shedding.
+- [Humidifiers](https://vangcur.com/category/humidifer): Rain cloud and anti-gravity humidifiers.
+- [Lights](https://vangcur.com/category/light): Decorative and night lights.
+- [Cables](https://vangcur.com/category/cable): Cables and charging accessories.
+- [Unique Tools & Gadgets](https://vangcur.com/category/unique-tools): Utility tools and desktop gadgets.
+- [Toys](https://vangcur.com/category/toys): Night light toys and gifts for kids.
+- [Alarm Clocks](https://vangcur.com/category/alarmclock): Desktop and smart alarm clocks.
 
 ## Buying Guides (GearUP NRGB50 5 Meter RGB Neon Light)
 - [Neon Light Price & Buying Guide for Bangladesh](https://vangcur.com/neon-light-bangladesh-guide): Hub guide covering neon light prices in Bangladesh, how to tell a good one from a poor one, and what to check before buying.
