@@ -181,6 +181,9 @@ async function finePurge(changes: PurgeChange[]) {
   } else {
     const prefixes = [...paths];
     if (eff.tags.includes('live')) prefixes.push('/api/live-products');
+    // সার্চ-ইনডেক্সের এজ-TTL ১ ঘণ্টা — 'search' ট্যাগ থাকলে এজ কপিও মোছা, নইলে দাম বদলে পুরনো ইনডেক্স ১ ঘণ্টা আটকে থাকত
+    // (এখন 'search'-ট্যাগওয়ালা সব বদলেই listing=true, তাই আসলে পুরো-পার্জ হয়; ভবিষ্যতের জন্য সুরক্ষা)
+    if (eff.tags.includes('search')) prefixes.push('/api/search-index');
     if (eff.sitemap) prefixes.push('/sitemap.xml');
     edgePurged = (await purgeEdgeCachePaths('revalidate-catalog', prefixes)) || (await purgeEdgeCache('revalidate-catalog'));
   }

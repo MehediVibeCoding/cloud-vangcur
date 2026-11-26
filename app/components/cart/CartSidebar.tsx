@@ -347,7 +347,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     setCouponLoading(false);
 
     if (!res.ok || !res.coupon) {
-      const errMsg = res.error || (lang === 'en' ? 'Invalid coupon code' : 'কুপন কোডটি সঠিক নয়');
+      const errMsg = res.error || (lang === 'en' ? 'Invalid coupon code' : 'কুপন কোডটি সঠিক নয়');
       if (res.transient) {
         // রেট-লিমিট/নেটওয়ার্ক/সার্ভার সমস্যা — কোডটা ভুল প্রমাণিত হয়নি, তাই বাটন "প্রয়োগ"ই থাকে
         setCouponError(errMsg);
@@ -364,7 +364,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     setCouponCode('');
     setCouponError('');
     setFailedCoupon(null);
-    showToast(lang === 'en' ? `Coupon "${res.coupon.code}" applied successfully!` : `কুপন "${res.coupon.code}" সফলভাবে যুক্ত হয়েছে!`);
+    showToast(lang === 'en' ? `Coupon "${res.coupon.code}" applied successfully!` : `কুপন "${res.coupon.code}" সফলভাবে যুক্ত হয়েছে!`);
     return true;
   };
 
@@ -372,7 +372,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     removeAppliedCoupon();
     setAppliedCoupon(null);
     setCouponError('');
-    showToast(lang === 'en' ? 'Coupon removed' : 'কুপন সরানো হয়েছে');
+    showToast(lang === 'en' ? 'Coupon removed' : 'কুপন সরানো হয়েছে');
   };
 
   const finalTotal = Math.max(0, subtotal - discountAmount);
@@ -613,7 +613,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                         <div className="font-body text-[12px] font-medium text-emerald-700">
                           {appliedCoupon.freeShipping
                             ? (lang === 'en' ? 'Free Delivery Applied' : 'ফ্রি ডেলিভারি প্রযোজ্য')
-                            : `${lang === 'en' ? 'Discount:' : 'ছাড়:'} -৳${discountAmount.toLocaleString('en-US')}`}
+                            : `${lang === 'en' ? 'Discount:' : 'ছাড়:'} -৳${discountAmount.toLocaleString('en-US')}`}
                         </div>
                       </div>
                     </div>
@@ -680,7 +680,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                             ? (lang === 'en' ? 'Applying...' : 'যাচাই...')
                             : isFailedCouponShown
                             ? (lang === 'en' ? 'Clear' : 'মুছুন')
-                            : (lang === 'en' ? 'Apply' : 'প্রয়োগ')}
+                            : (lang === 'en' ? 'Apply' : 'প্রয়োগ')}
                         </button>
                       </div>
                       {shownCouponError && (
