@@ -80,12 +80,12 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 .lb{display:none;flex-direction:column;gap:5px;margin-top:10px;text-align:left}
 .lb.on{display:flex}
 .lb .row{display:flex;align-items:center;gap:9px;padding:6px 12px;border-radius:14px;background:#fff;border:1px solid rgba(68,167,252,.3);font-weight:800;font-size:13px;color:#334155}
-.lb .row.me{border-color:#F5B301;background:#FFF8DC}
+.lb .row.me,.lb .row.lead{border-color:#F5B301;background:#FFF8DC}
 .lb .mk{width:22px;text-align:center;font-size:16px;line-height:1}
 .lb .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb .sc{font-variant-numeric:tabular-nums;color:#0058C7}
 .lbme{display:none;margin-top:10px;font-weight:800;font-size:13px;color:#0058C7}
-.lbme.on{display:block}.lbme.wr{color:#B7791F}
+.lbme.on{display:block}.lbme.wr{color:#B7791F}.lbme.err{color:#B91C1C}
 .card.hasLb .big{font-size:52px;margin-bottom:6px}
 .card.hasLb .btn{margin-top:12px}
 @media (prefers-reduced-motion:reduce){.card,.card *,.btn::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
@@ -131,11 +131,14 @@ html,body{overflow:hidden;background:var(--bg)}body{display:block}
 (()=>{
 const $=i=>document.getElementById(i);
 const app=$('app'),cv=$('cv'),ctx=cv.getContext('2d'),fx=$('fx'),fctx=fx.getContext('2d'),gl=$('gl'),cf=$('cf'),cctx=cf.getContext('2d');
-const KEY='vc_stack_hs',BASE=3,BH=1.5,PH=.45,RANGE=3,TOL=.08,S=1;
-let best=0;try{best=+localStorage.getItem(KEY)||0}catch(e){}
+const BASE=3,BH=1.5,PH=.45,RANGE=3,TOL=.08,S=1;
+// "আপনার সেরা" শুধু সার্ভারের (ডাটাবেজের) সংখ্যা: -1 = এখনো জানা নেই। ডিভাইসে কোনো স্কোর সেভ করা হয় না।
+let myBest=-1;
 // 🏆 লিডারবোর্ড অবস্থা: lbTop = সার্ভারের টপ ৩ (null মানে এখনো আসেনি/আনা যায়নি), myRes = আমার শেষ স্কোর জমার ফলাফল।
 // recKind/recRef = গেম শেষে "নতুন রেকর্ড" কোন ধরনের ('world' = সবার সেরা ছাড়ালাম, 'local' = সার্ভার ছাড়া শুধু নিজের সেরা) ও কোন স্কোর ছাড়ালাম।
 let lbTop=null,myRes=null,recKind='',recRef=0;
+// স্কোর জমার অবস্থা: ''|'sending'|'done'|'rejected'|'fail'; retry = কতবার আবার চেষ্টা হয়েছে; pendingScore = জমা দেওয়ার স্কোর
+let subState='',retry=0,pendingScore=0;
 let W=0,HT=0,T=0,cam=0,camY=1.9,camT=1.9,AC,MG,PY=30,GO=59,muted=false,renderer,SC=null,LITE=false;
 try{renderer=new THREE.WebGLRenderer({antialias:(devicePixelRatio||1)<2,alpha:true,powerPreference:'high-performance'})}catch(e){app.insertAdjacentHTML('beforeend','<div class="ov"><div class="card"><p style="margin:0 0 4px;font-weight:700">এই ডিভাইসে WebGL সাপোর্ট করছে না।</p><button class="btn" onclick="try{parent.postMessage({type:\'vc-game-close\'},location.origin)}catch(e){}">ওয়েটিং পেজে ফিরে যান</button></div></div>');return}
 renderer.setClearColor(0,0);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -385,10 +388,10 @@ function snd(f,d,type,v){if(muted)return;try{AC=AC||new(window.AudioContext||web
 // 🏆 উপরের হলুদ ট্রফির সংখ্যা: সার্ভার থেকে টপ ৩ এলে সবার ১ নম্বরের স্কোর (খেলতে খেলতে আমার স্কোর তাকে ছাড়ালে আমার স্কোর);
 // সার্ভারের উত্তর না এলে/অফলাইনে আগের মতো ডিভাইসের নিজের সেরা স্কোর।
 function worldBest(){return lbTop&&lbTop.length?(lbTop[0].score|0):0}
-function shownBest(){return lbTop?Math.max(worldBest(),score):best}
+function shownBest(){return lbTop?Math.max(worldBest(),score):'–'}
 function hud(){const e=$('score');e.textContent=score;$('bestN').textContent=shownBest();e.animate&&e.animate([{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:200})}
 // প্রতিবার খেলা শুরুতে: নতুন করে লিডারবোর্ড চাওয়া (অন্যদের নতুন স্কোর ধরতে) + সার্ভারে নতুন "রান" খোলা (স্কোর জমার জন্য দরকার)
-function start(){if(!muted)ambient();stopConf();reset();st='playing';overShown=false;$('ovOver').classList.add('hide');showHint();
+function start(){if(!muted)ambient();stopConf();reset();st='playing';overShown=false;subState='';retry=0;pendingScore=0;$('ovOver').classList.add('hide');showHint();
   if(ONLINE){post({type:'vc-game-lb-request'});post({type:'vc-game-start'})}
   renderLb()}
 let hintOn=false;
@@ -412,7 +415,7 @@ function pop(t){const p=$('pop');p.textContent=t;p.className='';void p.offsetWid
 const EN=new URLSearchParams(location.search).get('lang')==='en';
 const MS=EN?{10:'Earbud level 🎧',25:'Smartwatch level ⌚',50:'Drone level 🚁',75:'Rocket level 🚀',100:'Satellite level 🛰️',150:'Moon level 🌕',200:'Mars level 🪐'}:{10:'ইয়ারবাড লেভেল 🎧',25:'স্মার্টওয়াচ লেভেল ⌚',50:'ড্রোন লেভেল 🚁',75:'রকেট লেভেল 🚀',100:'স্যাটেলাইট লেভেল 🛰️',150:'চাঁদ লেভেল 🌕',200:'মঙ্গল লেভেল 🪐'};
 function msText(s){if(MS[s])return MS[s];if(s>200&&s%50===0){const q=s/50-3;return EN?'Galaxy level x'+q+' ✨':'গ্যালাক্সি লেভেল x'+q+' ✨'}return ''}
-const TX=EN?{hint:'Tap the screen to drop the block',over:'Game over',rec:'New record!',yours:'Your score',best:'Your best: ',again:'Play again',back:'Back to waiting page',first:'Your first record!',beat:'You beat your previous best of ',beatWorld:'You beat the top score of ',firstWorld:'You set the first record!',pbNew:'A new personal best!',fs:'Fullscreen',snd:'Sound',cls:'Close'}
+const TX=EN?{hint:'Tap the screen to drop the block',over:'Game over',rec:'New record!',yours:'Your score',best:'Your best: ',again:'Play again',back:'Back to waiting page',first:'Your first record!',beat:'You beat your previous best of ',beatWorld:'You beat the leader\'s score of ',firstWorld:'You set the first record!',pbNew:'A new personal best!',fs:'Fullscreen',snd:'Sound',cls:'Close'}
   :{hint:'ব্লক ফেলতে স্ক্রিনে ট্যাপ করুন',over:'খেলা শেষ',rec:'নতুন রেকর্ড!',yours:'আপনার স্কোর',best:'আপনার সেরা: ',again:'আবার খেলুন',back:'ওয়েটিং পেজে ফিরে যান',first:'এটাই আপনার প্রথম রেকর্ড!',beat:'আপনি আগের সেরা স্কোর ছাড়িয়ে গেছেন: ',beatWorld:'আপনি সবার সেরা স্কোর ছাড়িয়ে গেছেন: ',firstWorld:'আপনিই প্রথম রেকর্ডধারী!',pbNew:'আপনার নিজের নতুন সেরা স্কোর!',fs:'ফুল স্ক্রিন',snd:'সাউন্ড',cls:'বন্ধ করুন'};
 if(EN){document.documentElement.lang='en';document.title='Vangcur Stack Tower'}
 $('hint').textContent=TX.hint;$('oLbl').textContent=TX.yours;$('bAgain').textContent=TX.again;$('bBack').textContent=TX.back;
@@ -461,24 +464,31 @@ function place(){
   else{const p=debris[debris.length-1].g.position;spark(p.x,p.y+BH/2,p.z,10,'#8fb3e0',2);thud();noise(.18,.03)}
   {const sc=score,mt=msText(sc);if(mt)setTimeout(()=>{if(st!=='playing')return;pop(mt);snd(sc>=75?1568:1175,.3,'sine',.1);noise(.18,.022);if(sc>=75){const g3=$('glow');g3.classList.add('on');setTimeout(()=>g3.classList.remove('on'),260)}},450)}
   spawn();hud()}
-function showOver(){if(st!=='over'||overShown)return;
-  // "নতুন রেকর্ড" সোনালি সেলিব্রেশন শুধু তখনই যখন সবার সেরা স্কোর (recKind) ছাড়ালাম; শুধু নিজের সেরা হলে ছোট নীল লাইন (pb)
-  const rec=recKind!==''&&score>0,pb=!rec&&score>prevBest&&score>0,card=$('card');
-  card.classList.remove('rec','pb');void card.offsetWidth; // অ্যানিমেশন প্রতিবার নতুন করে চালু
+// ওভার-কার্ডের রেকর্ড/ব্যক্তিগত-সেরা অংশ আঁকে। সার্ভারের উত্তর পরে এলে আবার ডাকা হয় (নিশ্চিত/বাতিল)। নতুন করে রেকর্ড হলে true ফেরত দেয়।
+function paintOver(){
+  const rec=recKind!==''&&score>0,pb=!rec&&prevBest>=0&&score>prevBest&&score>0,card=$('card');
+  const was=card.classList.contains('rec');
   card.classList.toggle('rec',rec);card.classList.toggle('pb',pb);
   $('oTitle').textContent=rec?TX.rec:TX.over;
-  $('fBest').textContent=TX.best+best;
-  $('fRec').textContent=rec?(recRef>0?(recKind==='world'?TX.beatWorld:TX.beat)+recRef:(recKind==='world'?TX.firstWorld:TX.first)):(pb?TX.pbNew:'');
+  $('fRec').textContent=rec?(recRef>0?TX.beatWorld+recRef:(recRef===0?TX.firstWorld:'')):(pb?TX.pbNew:'');
+  return rec&&!was;
+}
+function showOver(){if(st!=='over'||overShown)return;
+  // "নতুন রেকর্ড" সোনালি সেলিব্রেশন শুধু তখনই যখন সবার সেরা স্কোর (recKind) ছাড়ালাম; শুধু নিজের সেরা হলে ছোট নীল লাইন (pb)
+  const card=$('card');
+  card.classList.remove('rec','pb');void card.offsetWidth; // অ্যানিমেশন প্রতিবার নতুন করে চালু
+  const rec=paintOver();
+  renderLb();
   $('ovOver').classList.remove('hide');overShown=true;overAt=performance.now();
   if(rec){countUp($('fScore'),score,900);celebrate();fanfare()}else $('fScore').textContent=score}
 function gameOver(){
-  st='over';shake=.3;prevBest=best;
-  // রেকর্ডের হিসাব স্কোর সেভ করার আগেই: সার্ভারের টপ ৩ থাকলে সবার ১ নম্বরের সাথে তুলনা, না থাকলে নিজের আগের সেরার সাথে
+  st='over';shake=.3;prevBest=myBest;
+  // ব্রাউজারের তুলনা (দ্রুত দেখানোর জন্য): সার্ভারের লিডারের স্কোর ছাড়ালে "নতুন রেকর্ড"। চূড়ান্ত নিশ্চিত করে সার্ভার (নিচের vc-game-result)
   if(lbTop){recRef=worldBest();recKind=score>recRef?'world':''}
-  else{recRef=prevBest;recKind=score>prevBest?'local':''}
-  if(score>best){best=score;try{localStorage.setItem(KEY,best)}catch(e){}}
+  else{recRef=-1;recKind=''}
   hud();navigator.vibrate&&navigator.vibrate(40);
-  myRes=null;renderLb();if(ONLINE&&score>0)post({type:'vc-game-score',score});
+  myRes=null;retry=0;pendingScore=score;subState=(ONLINE&&score>0)?'sending':'';
+  renderLb();if(ONLINE&&score>0)post({type:'vc-game-score',score});
   pendingOver=true;
 }
 function act(){
@@ -558,34 +568,65 @@ const ONLINE=parent!==window;
 const BNUM=n=>EN?String(n):String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[d]);
 const ORD_BN={1:'১ম',2:'২য়',3:'৩য়',4:'৪র্থ',5:'৫ম',6:'৬ষ্ঠ',7:'৭ম',8:'৮ম',9:'৯ম',10:'১০ম'};
 function ord(n){if(EN){const v=n%100,x=['th','st','nd','rd'];return n+(x[(v-20)%10]||x[v]||x[0])}return ORD_BN[n]||BNUM(n)+'তম'}
-const LT=EN?{you:'You are ',wr:'New record! You are now #1 overall'}:{you:'আপনি ',wr:'নতুন রেকর্ড! আপনিই এখন সবার ১ম'};
+const LT=EN?{leader:'Leader: ',youLead:'You are the leader',wr:'New record! You are now #1 overall',sending:'Saving score…',fail:'Could not reach the server — score not saved',rejected:'This score was not accepted'}
+  :{leader:'লিডার: ',youLead:'আপনিই এখন লিডার',wr:'নতুন রেকর্ড! আপনিই এখন সবার ১ম',sending:'স্কোর জমা হচ্ছে…',fail:'সার্ভারে সংযোগ হয়নি — স্কোর জমা হয়নি',rejected:'এই স্কোর জমা নেওয়া হয়নি'};
 function post(m){try{parent.postMessage(m,location.origin)}catch(e){}}
 function renderLb(){
-  const box=$('lbBox'),me=$('lbMe'),rd=$('lbReady'),has=!!(lbTop&&lbTop.length),medals=['🥇','🥈','🥉'];
+  const box=$('lbBox'),me=$('lbMe'),rd=$('lbReady');
+  const lead=lbTop&&lbTop.length?lbTop[0]:null,has=!!lead;
+  const iAmLead=!!(myRes&&myRes.accepted&&myRes.rank===1);
   box.textContent='';rd.textContent='';
-  if(has)lbTop.forEach(r=>{
-    const row=document.createElement('div');row.className='row'+(myRes&&myRes.accepted&&r.rank===myRes.rank?' me':'');
-    const mk=document.createElement('span');mk.className='mk';mk.textContent=medals[r.rank-1]||BNUM(r.rank);
-    const n=document.createElement('span');n.className='nm';n.textContent=r.name;
-    const sc=document.createElement('span');sc.className='sc';sc.textContent=BNUM(r.score);
+  // লিডারবোর্ডে শুধু ১ নম্বর (ট্রফিধারী) — ২/৩ নম্বর নেই। নিজের সেরা আলাদা চিপে (\"আপনার সেরা\"), তাই লিডারের সাথে গুলিয়ে যায় না।
+  if(has){
+    const row=document.createElement('div');row.className='row lead';
+    const mk=document.createElement('span');mk.className='mk';mk.textContent='🏆';
+    const n=document.createElement('span');n.className='nm';n.textContent=iAmLead?LT.youLead:LT.leader+lead.name;
+    const sc=document.createElement('span');sc.className='sc';sc.textContent=BNUM(lead.score);
     row.append(mk,n,sc);box.appendChild(row);
-    const it=document.createElement('span');it.className='it';it.textContent=(medals[r.rank-1]||'')+' '+r.name+' '+BNUM(r.score);rd.appendChild(it);
-  });
-  box.classList.toggle('on',has);$('card').classList.toggle('hasLb',has);
-  // গেম শুরুর হিন্ট ("ব্লক ফেলতে ট্যাপ করুন") যতক্ষণ দেখা যাচ্ছে, ততক্ষণ টপ ৩ ছোট পিল হিসেবে দেখায়; প্রথম ট্যাপে লুকায়
-  rd.classList.toggle('hide',!(has&&hintOn));
-  me.textContent='';me.className='lbme';
-  if(myRes&&myRes.accepted&&myRes.rank>0){
-    if(myRes.worldRecord){me.textContent=LT.wr;me.className='lbme on wr'}
-    else{me.textContent=LT.you+ord(myRes.rank);me.className='lbme on'}
+    const it=document.createElement('span');it.className='it';it.textContent='🏆 '+LT.leader+lead.name+' '+BNUM(lead.score);rd.appendChild(it);
   }
+  box.classList.toggle('on',has);$('card').classList.toggle('hasLb',has);
+  // গেম শুরুর হিন্ট (\"ব্লক ফেলতে ট্যাপ করুন\") যতক্ষণ দেখা যাচ্ছে, ততক্ষণ লিডার ছোট পিল হিসেবে দেখায়; প্রথম ট্যাপে লুকায়
+  rd.classList.toggle('hide',!(has&&hintOn));
+  $('fBest').textContent=TX.best+(myBest>=0?myBest:(subState==='sending'?'…':'–'));
+  me.textContent='';me.className='lbme';
+  if(subState==='sending'){me.textContent=LT.sending;me.className='lbme on'}
+  else if(subState==='fail'){me.textContent=LT.fail;me.className='lbme on err'}
+  else if(subState==='rejected'){me.textContent=LT.rejected;me.className='lbme on err'}
+  else if(myRes&&myRes.accepted&&myRes.worldRecord){me.textContent=LT.wr;me.className='lbme on wr'}
   $('bestN').textContent=shownBest();
+}
+// সার্ভারের উত্তর আসার পর কার্ডের রেকর্ড-অংশ নতুন করে আঁকা (ব্রাউজারের আন্দাজ ভুল হলে নামিয়ে দেয়, ঠিক হলে সেলিব্রেশন)
+function reconcile(){
+  if(!overShown)return;
+  const up=paintOver();
+  if(up){countUp($('fScore'),score,900);celebrate();fanfare()}
 }
 addEventListener('message',e=>{
   if(e.origin!==location.origin||e.source!==parent)return;
   const d=e.data||{};
-  if(d.type==='vc-game-lb'&&d.ok&&Array.isArray(d.top)){lbTop=d.top.slice(0,3);renderLb()}
-  else if(d.type==='vc-game-result'&&d.ok){if(Array.isArray(d.top))lbTop=d.top.slice(0,3);myRes=d;renderLb()}
+  if(d.type==='vc-game-lb'&&d.ok&&Array.isArray(d.top)){
+    lbTop=d.top.slice(0,1);
+    if(d.me&&d.me.best>0)myBest=d.me.best; // নিজের সেরা: ডাটাবেজ থেকে
+    renderLb();
+  }else if(d.type==='vc-game-result'){
+    if(st!=='over')return;
+    if(d.ok){
+      const oldTop=lbTop?worldBest():-1;
+      if(Array.isArray(d.top))lbTop=d.top.slice(0,1);
+      myRes=d;
+      if(d.accepted){
+        subState='done';
+        if(typeof d.best==='number'&&d.best>0)myBest=d.best;
+        if(d.worldRecord){if(recKind===''){recKind='world';recRef=oldTop}}else recKind='';
+      }else{subState='rejected';recKind=''}
+      renderLb();reconcile();
+    }else if(retry<3){
+      // সার্ভারে পৌঁছায়নি — একই স্কোর একই রান দিয়ে আবার পাঠাই (রান ৩০ মিনিট/২ ঘণ্টা বৈধ)
+      retry++;
+      setTimeout(()=>{if(st==='over'&&subState==='sending')post({type:'vc-game-score',score:pendingScore,retry:true})},1500*retry);
+    }else{subState='fail';renderLb()}
+  }
 });
 $('bAgain').addEventListener('click',start);
 const closeGame=()=>{try{parent.postMessage({type:'vc-game-close'},location.origin)}catch(e){}};
@@ -624,6 +665,6 @@ cf.style.display='none';
 if(LOW)setQuality(1);
 // ট্যাব ব্যাকগ্রাউন্ডে গেলে অডিও থামে (ব্যাটারি/CPU বাঁচে), ফিরলে চালু
 document.addEventListener('visibilitychange',()=>{try{if(!AC)return;if(document.hidden)AC.suspend();else if(!muted)AC.resume()}catch(e){}});
-start();requestAnimationFrame(frame); // সরাসরি খেলা শুরু — কোনো "খেলা শুরু করুন" স্ক্রিন নেই
+start();requestAnimationFrame(frame); // সরাসরি খেলা শুরুতে — কোনো "খেলা শুরু করুন" স্ক্রিন নেই
 })();
 </script></body></html>

@@ -532,6 +532,17 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
         {/* বটম কপিরাইট বার */}
         <div className="mx-auto mt-8 max-w-[1300px] border-t border-blue-200/80 pt-6 text-center font-body text-xs font-semibold text-slate-600">
           {t(extras.copy)}
+          <div className="mt-2">
+            Owned and Developed by{' '}
+            <a
+              href="https://www.facebook.com/share/1KaujBArJg/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-blue-600 hover:underline"
+            >
+              Mehedi Wilq
+            </a>
+          </div>
         </div>
       </div>
     </footer>

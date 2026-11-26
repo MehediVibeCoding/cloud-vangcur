@@ -79,6 +79,8 @@ export default function WaitingGame({ variant, active }: Props) {
   // বর্তমান খেলার "রান" আইডি (সার্ভার খেলা শুরুতে দেয়; স্কোর জমার সময় লাগে)। Promise, কারণ খুব দ্রুত শেষ হওয়া খেলায়
   // স্কোর পাঠানোর সময় রান-রিকোয়েস্ট এখনো ফিরে নাও আসতে পারে — তখন অপেক্ষা করা হয়।
   const runRef = useRef<Promise<string | null> | null>(null);
+  // স্কোর জমা ব্যর্থ হলে একই রান দিয়ে আবার চেষ্টার জন্য শেষ রানটা মনে রাখি
+  const lastRunRef = useRef<string | null>(null);
 
   useEffect(() => {
     // ব্যাচ ১৫: অর্ডার পেন্ডিং কিন্তু এই ডিভাইসে `vc_pending_ts` নেই (অন্য ডিভাইসে খোলা / লোকাল স্টোরেজ মোছা)
@@ -177,7 +179,7 @@ export default function WaitingGame({ variant, active }: Props) {
     const onMessage = async (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       if (e.source !== iframeRef.current?.contentWindow) return;
-      const data = e.data as { type?: string; score?: unknown } | null;
+      const data = e.data as { type?: string; score?: unknown; retry?: unknown } | null;
       if (data?.type === 'vc-game-close') {
         closeAll();
         return;
@@ -194,6 +196,7 @@ export default function WaitingGame({ variant, active }: Props) {
       }
       if (data?.type === 'vc-game-start') {
         // নতুন খেলা শুরু → সার্ভারে একটা রান খোলো। অর্ডার না থাকলে রান নেই (স্কোরও জমা হবে না)।
+        lastRunRef.current = null;
         const pending = readPendingOrder();
         if (!pending) {
           runRef.current = Promise.resolve(null);
@@ -220,7 +223,9 @@ export default function WaitingGame({ variant, active }: Props) {
         const pending = readPendingOrder();
         const runPromise = runRef.current;
         runRef.current = null; // প্রতিটা রান একবারই ব্যবহার হয়
-        const run = runPromise ? await runPromise : null;
+        let run = runPromise ? await runPromise : null;
+        if (run) lastRunRef.current = run;
+        else if (data.retry === true) run = lastRunRef.current; // পুনরায় চেষ্টা: আগের রানটাই
         if (!pending || !run) {
           reply({ type: 'vc-game-result', ok: false });
           return;
@@ -244,6 +249,7 @@ export default function WaitingGame({ variant, active }: Props) {
     return () => {
       window.removeEventListener('message', onMessage);
       runRef.current = null;
+      lastRunRef.current = null;
     };
   }, [phase, game, closeAll]);
 
