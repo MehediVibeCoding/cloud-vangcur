@@ -166,11 +166,8 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'verifying' | 'success'>('idle');
 
-  // 🛡️ রিকোয়েস্ট-সেভিং: আগে ড্রয়ার বন্ধ থাকলেও (প্রতি পেজ-লোডে) /checkout ও / প্রিফেচ হতো।
-  // এখন শুধু ড্রয়ার খুললে /checkout (চেকআউট বাটনের জন্য); `/` এর প্রিফেচ বাদ।
-  useEffect(() => {
-    if (isOpen) router.prefetch('/checkout');
-  }, [router, isOpen]);
+  // 🛡️ রিকোয়েস্ট-সেভিং: এখানে আর /checkout প্রিফেচ নেই — ওটা শুধু Navbar-এ, কার্টে পণ্য থাকলে, একবারই
+  // (lib/checkoutPrefetch.ts)।
 
   useEffect(() => {
     setAppliedCoupon(getAppliedCoupon());

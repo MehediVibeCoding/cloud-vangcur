@@ -602,9 +602,8 @@ export default function ProductDetailClient({
     !!initialProduct || (initialProducts && initialProducts.length > 0)
   );
 
-  // 🛡️ রিকোয়েস্ট-সেভিং (২০২৬-১১): পেজ লোডে /checkout ও / প্রিফেচ বাদ। প্রতিটা প্রোডাক্ট-ভিজিটে ৫টা Worker-রিকোয়েস্ট
-  // যেত (টেস্টে ~১০০–২৫৭ ms CPU)। এখন /checkout প্রিফেচ হয় শুধু (ক) "অর্ডার করুন" বাটনে hover/touch-এ (নিচে),
-  // (খ) কার্টে পণ্য যোগ হলে (Navbar.tsx) আর (গ) কার্ট-ড্রয়ার খুললে (CartSidebar.tsx)। '/' প্রিফেচ পুরোপুরি বাদ।
+  // 🛡️ রিকোয়েস্ট-সেভিং (২০২৬-১১): এই পেজ থেকে কোনো প্রিফেচ নেই। /checkout প্রিফেচ হয় শুধু Navbar.tsx-এ —
+  // কার্টে পণ্য থাকলে, ব্রাউজার-সেশনে একবারই (lib/checkoutPrefetch.ts)। বাটনে hover/touch-এ আর নয়।
 
   useEffect(() => {
     let cancelled = false;
@@ -1545,8 +1544,6 @@ export default function ProductDetailClient({
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                  onMouseEnter={() => router.prefetch('/checkout')}
-                  onTouchStart={() => router.prefetch('/checkout')}
                   className="shimmer-sheen flex w-full items-center justify-center gap-2 rounded-[14px] border-none bg-gradient-to-r from-info to-brand-light py-3.5 font-body text-sm font-bold text-white shadow-sh2 transition-[filter] duration-brand hover:brightness-[1.03] outline-none focus:outline-none focus:ring-0 active:outline-none [-webkit-tap-highlight-color:transparent]"
                   onClick={orderNow}
                 >
@@ -1818,8 +1815,6 @@ export default function ProductDetailClient({
                   type="button"
                   whileTap={{ scale: 0.95 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                  onMouseEnter={() => router.prefetch('/checkout')}
-                  onTouchStart={() => router.prefetch('/checkout')}
                   className="shimmer-sheen inline-flex h-[42px] min-h-[42px] box-border items-center justify-center gap-1.5 rounded-[12px] border-none bg-gradient-to-r from-info to-brand-light px-4 text-[13px] font-bold text-white shadow-sh1 transition-[filter] duration-brand hover:brightness-[1.03] outline-none focus:outline-none focus:ring-0 active:outline-none [-webkit-tap-highlight-color:transparent]"
                   onClick={orderNow}
                 >

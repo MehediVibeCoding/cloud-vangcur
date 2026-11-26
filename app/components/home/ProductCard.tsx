@@ -126,14 +126,25 @@ export default function ProductCard({ prod: p, isFirst, index = 0, lazyImage = f
   const [cartPop, setCartPop] = useState<number | null>(null);
   const cartPopSeedRef = useRef(0);
   const cartPopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 🛡️ রিকোয়েস্ট-সেভিং ইন্টেন্ট-প্রিফেচ: মাউস শুধু পাশ দিয়ে গেলে বা আঙুল স্ক্রল করতে কার্ড ছুঁলে
-  // প্রিফেচ হবে না; কয়েক মিলিসেকেন্ড ধরে থাকলে তবেই এই একটা কার্ডের পেজ প্রিফেচ হয়।
+  // 🛡️ রিকোয়েস্ট-সেভিং: হোভার/ট্যাপে প্রিফেচ নেই। শুধু আঙুল ~৫০০ms স্থির ধরে রাখলে (লং-প্রেস)
+  // এই একটা কার্ডের পেজ প্রিফেচ হয়; আঙুল ১০px-এর বেশি নড়লে (স্ক্রল) বা ছেড়ে দিলে বাতিল।
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const intentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelIntentPrefetch = () => {
     if (intentTimerRef.current) {
       clearTimeout(intentTimerRef.current);
       intentTimerRef.current = null;
     }
+  };
+  const onCardTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = t ? { x: t.clientX, y: t.clientY } : null;
+    scheduleIntentPrefetch(500);
+  };
+  const onCardTouchMove = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    const s0 = touchStartRef.current;
+    if (!t || !s0 || Math.hypot(t.clientX - s0.x, t.clientY - s0.y) > 10) cancelIntentPrefetch();
   };
   const scheduleIntentPrefetch = (delayMs: number) => {
     cancelIntentPrefetch();
@@ -248,10 +259,8 @@ export default function ProductCard({ prod: p, isFirst, index = 0, lazyImage = f
     <div
       data-pid={p.id}
       onClickCapture={handleProductNavCapture}
-      onMouseEnter={() => scheduleIntentPrefetch(120)}
-      onMouseLeave={cancelIntentPrefetch}
-      onTouchStart={() => scheduleIntentPrefetch(70)}
-      onTouchMove={cancelIntentPrefetch}
+      onTouchStart={onCardTouchStart}
+      onTouchMove={onCardTouchMove}
       onTouchEnd={cancelIntentPrefetch}
       onTouchCancel={cancelIntentPrefetch}
       className={`card-hover-glow group rounded-[18px] bg-white p-1 shadow-[0_4px_14px_rgba(0,88,199,.12)] [contain:content] ${cvAuto ? '[content-visibility:auto] [contain-intrinsic-size:auto_300px]' : ''} ${isAnimatingTransform ? 'transform-gpu' : ''}`}
