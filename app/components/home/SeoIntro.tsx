@@ -49,6 +49,14 @@ export default function SeoIntro() {
         across all 64 districts of Bangladesh and genuine replacement
         warranties on every order.
       </p>
+      <p>
+        ২০২৩ সাল থেকে শুরু হওয়া আমাদের পথচলায় এখন পর্যন্ত ৩,০০০+ হ্যাপি
+        কাস্টমার Vangcur-এর উপর আস্থা রেখেছেন।
+      </p>
+      <p>
+        Since 2023, over 3,000 happy customers have trusted Vangcur for their
+        gadgets and lifestyle needs.
+      </p>
     </div>
   );
 }

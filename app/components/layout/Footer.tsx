@@ -538,7 +538,7 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
               href="https://www.facebook.com/share/1KaujBArJg/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-bold text-blue-600 hover:underline"
+              className="font-bold text-brand-light hover:underline"
             >
               Mehedi Wilq
             </a>
