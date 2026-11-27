@@ -1,0 +1,23 @@
+{
+  // 🧰 vangcur-api — ছোট, হালকা API-গুলোর আলাদা Worker (বিস্তারিত: README.md)।
+  // কেন: মূল Worker (Next.js/OpenNext) প্রায় ১৩ MB — কোল্ড-স্টার্টে ১০০–৪০০ ms CPU লাগে। এই Worker কয়েক KB, কোল্ড-স্টার্ট নগণ্য।
+  // ⚠️ এটা মূল সাইটের Workers Builds-এর অংশ নয় — আলাদা ডিপ্লয় (README-র "ডিপ্লয়" অংশ)।
+  // ⚠️ ইচ্ছাকৃতভাবে `routes` এখানে নেই: ডিপ্লয় করলেই যেন লাইভ রিকোয়েস্ট এই Worker-এ না আসে (সিক্রেট বসানোর আগে
+  //    order-email ভাঙত)। প্রতিটা রুট README-র ধাপ অনুযায়ী আলাদা আলাদা Route দিয়ে চালু করুন; Route মুছলেই পুরনো রুটে ফেরত।
+  "name": "vangcur-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  // ⚡ Workers Caching: /api/search-index-এর `s-maxage` দেখে Cloudflare নিজেই ক্যাশ রাখে; হিটে এই কোড চলেই না।
+  "cache": { "enabled": true },
+  // শুধু পাবলিক মান (anon key ব্রাউজারেও যায়; মূল wrangler.jsonc-এও কমিট করা)।
+  // সিক্রেট (কমিট করবেন না — `npx wrangler secret put <NAME>`): WEBHOOK_SECRET, BREVO_API_KEY,
+  //   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, RECOVERY_HUB_BASE_URL, RECOVERY_HUB_INGEST_KEY, RECOVERY_HUB_HMAC_SECRET
+  // ঐচ্ছিক ভ্যার (ডিফল্ট কোডে আছে): BREVO_INVOICE_SENDER, BREVO_SUPPORT_SENDER
+  "vars": {
+    "SUPABASE_URL": "https://dlzgfgcqabsawhmekcbg.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsemdmZ2NxYWJzYXdobWVrY2JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3MTE5MDgsImV4cCI6MjEwMTI4NzkwOH0.KkiQ_6EJuHntEMtVZvaYW1P6JL3DLyBC2zi4Fbgwe0g"
+  }
+}
