@@ -39,7 +39,7 @@ export default function HomeJsonLd() {
         founder: {
           '@type': 'Person',
           name: 'Mehedi Wilq',
-          sameAs: ['https://www.facebook.com/share/1EQPCBPEEy/'],
+          sameAs: ['https://www.facebook.com/share/1KaujBArJg/'],
         },
         sameAs,
         contactPoint: [

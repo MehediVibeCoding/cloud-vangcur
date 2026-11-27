@@ -1,4 +1,4 @@
-import { DM_Sans, Hind_Siliguri } from 'next/font/google';
+import { DM_Sans, Hind_Siliguri, Dancing_Script } from 'next/font/google';
 
 // 🐢 পারফরম্যান্স ফিক্স (audit): Playfair Display এখানে লোড হতো কিন্তু
 // `font-display` ক্লাসটা পুরো রিপোতে (grep করে যাচাই) কোথাও ব্যবহারই হতো না —
@@ -27,4 +27,16 @@ export const hindSiliguri = Hind_Siliguri({
   weight: ['400', '500', '600', '700'],
   variable: '--font-bengali',
   display: 'swap',
+});
+
+// ✍️ শুধু ফুটারের "Owner & Developer — Mehedi Wilq" ক্রেডিট লাইনের জন্য হাতে-লেখা স্টাইলের ফন্ট।
+// `preload: false` — প্রতি পেজে কোনো preload ট্যাগ যোগ হয় না (উপরের কমেন্টের মতো অপ্রয়োজনীয় প্রিলোড নয়);
+// ফুটারের টেক্সট রেন্ডার হওয়ার সময়ই ফন্টফাইল (latin, ~২০-৩০KB) নামে। ফুটার লেজি-মাউন্ট হয় বলে
+// হোমপেজের লোডিং/LCP-তে কোনো প্রভাব নেই। ফন্ট self-hosted (build-time download), তাই CSP-তে পরিবর্তন লাগে না।
+export const dancingScript = Dancing_Script({
+  subsets: ['latin'],
+  weight: ['600'],
+  display: 'swap',
+  preload: false,
+  fallback: ['cursive'],
 });

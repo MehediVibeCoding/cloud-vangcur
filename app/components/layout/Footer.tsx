@@ -10,6 +10,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { DEFAULT_FOOTER } from '@/lib/footerData';
 import { sanitizeHref } from '@/lib/security';
 import { useT } from '@/lib/i18n/useT';
+import { dancingScript } from '@/app/fonts';
 import type { FooterContact, FooterExtras, FooterLogo } from '@/types';
 
 function computeLogo(raw: FooterLogo | null | undefined): FooterLogo {
@@ -231,7 +232,7 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
     else router.push('/#catCardsGrid');
   };
 
-  const fbGroupLink = 'https://facebook.com/groups/vangcurgadgets';
+  const fbGroupLink = 'https://www.facebook.com/share/g/1JNnKXEv2K/';
 
   return (
     <footer className="relative mt-12 overflow-hidden">
@@ -532,13 +533,13 @@ function FooterContent({ hotImage = false }: { hotImage?: boolean }) {
         {/* বটম কপিরাইট বার */}
         <div className="mx-auto mt-8 max-w-[1300px] border-t border-blue-200/80 pt-6 text-center font-body text-xs font-semibold text-slate-600">
           {t(extras.copy)}
-          <div className="mt-2">
-            Owned and Developed by{' '}
+          <div className={`${dancingScript.className} mt-3 text-[19px] font-semibold leading-snug text-slate-600 sm:text-[21px]`}>
+            Owner &amp; Developer —{' '}
             <a
               href="https://www.facebook.com/share/1KaujBArJg/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-bold text-brand-light hover:underline"
+              className="text-brand-light hover:underline"
             >
               Mehedi Wilq
             </a>
