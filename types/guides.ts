@@ -244,10 +244,13 @@ export interface GuidePageTemplate {
  *  route-এর নাম বসানো যাবে না — নাহলে সেই রুটের সাথে সংঘর্ষ হতে পারে। গাইড পেজগুলো
  *  এখন root-level ক্যাচ-অল দিয়ে সার্ভ হয় (কোনো ভাগাভাগি "/guides" ছাতা নেই), তাই
  *  এই লিস্টে Vangcur-এর প্রতিটা প্রকৃত top-level রুট থাকা জরুরি। নতুন static রুট
- *  যোগ হলে এই লিস্টেও যোগ করে দিতে হবে (Vangcur ও Mehediadmin দুই জায়গাতেই)। */
+ *  যোগ হলে এই লিস্টেও যোগ করে দিতে হবে (Vangcur ও Mehediadmin দুই জায়গাতেই)।
+ *
+ *  🛒 ফিক্স: `products` ও `collection` রুট দুটো আগে এই লিস্টে ছিল না, ফলে GlobalOverlays
+ *  এগুলোকে গাইড পেজ ভেবে ফ্লোটিং কার্ট আইকন লুকিয়ে ফেলত। */
 export const RESERVED_URL_PREFIXES = [
-  'account', 'api', 'category', 'checkout', 'guide', 'guides', 'offers',
-  'product', 'reset-password', 'search', 'track-order',
+  'account', 'api', 'category', 'checkout', 'collection', 'guide', 'guides', 'offers',
+  'product', 'products', 'reset-password', 'search', 'track-order',
   'privacy-policy', 'refund-policy', 'shipping', 'terms',
 ];
 
