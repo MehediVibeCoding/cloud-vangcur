@@ -1784,9 +1784,12 @@ export default function ProductDetailClient({
             <div className="line-clamp-2 font-body text-[12px] font-semibold leading-tight text-ink">
               {prod.name}
             </div>
-            <div className="mt-0.5 font-body text-[14.5px] font-extrabold text-brand-light">
-              ৳{(prod.price * (sold ? 1 : qty)).toLocaleString('en-US')} - {sold ? 1 : qty} {lang === 'en' ? 'Pcs' : 'পিছ'}
-            </div>
+            {/* স্টক শেষ হলে (sold) শুধু নাম দেখায় — দাম ও পিছের পরিমাণ লুকানো থাকে। স্টকে ফিরলে আগের মতোই দেখাবে। */}
+            {!sold && (
+              <div className="mt-0.5 font-body text-[14.5px] font-extrabold text-brand-light">
+                ৳{(prod.price * qty).toLocaleString('en-US')} - {qty} {lang === 'en' ? 'Pcs' : 'পিছ'}
+              </div>
+            )}
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
