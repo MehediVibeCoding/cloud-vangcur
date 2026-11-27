@@ -35,6 +35,28 @@ export async function purgeLiveWorkerCache(logPrefix: string): Promise<boolean> 
   }
 }
 
+/**
+ * `vangcur-api` Worker-এর (workers/api/, `/api/search-index` ইত্যাদি) এজ-ক্যাশ মোছে — Service Binding RPC (`API_WORKER.purge()`)।
+ * অ্যাডমিন প্রোডাক্ট বদলালে ('search' ট্যাগ / পুরো-পার্জ) ডাকা হয়, যাতে সার্চ-ইনডেক্স ১ ঘণ্টা অপেক্ষা ছাড়াই নতুন হয়।
+ * ব্যর্থ হলে/binding না থাকলে (লোকাল dev) রিকোয়েস্ট ভাঙে না, শুধু false — তখনো ক্যাশ সর্বোচ্চ ১ ঘণ্টায় নিজে ঠিক হয়।
+ */
+export async function purgeApiWorkerCache(logPrefix: string): Promise<boolean> {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const api = (env as unknown as { API_WORKER?: { purge?: () => Promise<{ ok?: boolean }> } }).API_WORKER;
+    if (!api || typeof api.purge !== 'function') {
+      logWarn(`[${logPrefix}] API_WORKER binding পাওয়া যায়নি — সার্চ-ইনডেক্সের ক্যাশ মোছা হয়নি`);
+      return false;
+    }
+    const out = await api.purge();
+    if (!out?.ok) logWarn(`[${logPrefix}] API-Worker ক্যাশ পার্জ ব্যর্থ`, { out });
+    return !!out?.ok;
+  } catch (err) {
+    logWarn(`[${logPrefix}] API-Worker ক্যাশ পার্জে এরর`, { err: String(err) });
+    return false;
+  }
+}
+
 export async function purgeEdgeCache(logPrefix: string): Promise<boolean> {
   try {
     const { ctx } = await getCloudflareContext({ async: true });
@@ -47,6 +69,10 @@ export async function purgeEdgeCache(logPrefix: string): Promise<boolean> {
     if (!result.success) {
       logWarn(`[${logPrefix}] এজ ক্যাশ পার্জ ব্যর্থ`, { errors: result.errors });
     }
+    // `vangcur-api`-র /api/search-index আলাদা Worker-ক্যাশে — পুরো-পার্জে (এবং 'search'-ট্যাগওয়ালা সব বদলে, যেগুলো এখন সবসময়
+    // এই পথেই আসে) ওটাও মুছি। ব্যর্থ হলে মূল ফলাফল বদলায় না (ওটার ক্যাশ ১ ঘণ্টায় নিজে ঠিক হয়)। revalidate-guide-ও এটা ডাকে —
+    // তখন বাড়তি পার্জ নিরীহ (শুধু একটা Supabase কোয়েরি)।
+    await purgeApiWorkerCache(logPrefix);
     return result.success;
   } catch (err) {
     logWarn(`[${logPrefix}] এজ ক্যাশ পার্জে এরর`, { err: String(err) });
@@ -72,6 +98,8 @@ export async function purgeEdgeCachePaths(logPrefix: string, pathPrefixes: strin
     if (!result.success) {
       logWarn(`[${logPrefix}] এজ ক্যাশ পাথ-পার্জ ব্যর্থ`, { errors: result.errors });
     }
+    // /api/search-index এখন `vangcur-api` Worker-এর ক্যাশে — ওই পাথ চাওয়া হলে ওটাও মুছি
+    if (pathPrefixes.some((p) => p.startsWith('/api/search-index'))) await purgeApiWorkerCache(logPrefix);
     return result.success;
   } catch (err) {
     logWarn(`[${logPrefix}] এজ ক্যাশ পাথ-পার্জে এরর`, { err: String(err) });
