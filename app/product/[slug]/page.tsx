@@ -222,23 +222,36 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         name: 'Vangcur',
       },
       // 🆕 সাইটের বর্তমান ডেলিভারি চার্জ (checkoutData.ts-এর DEFAULT_SHIP_CFG) থেকে — ঢাকা/বাইরে দুই রেট
+      // deliveryTime: /shipping পেজ অনুযায়ী — পেমেন্ট যাচাইয়ের পর ২৪ কার্যঘণ্টার মধ্যে কুরিয়ারে হস্তান্তর (০–১ দিন),
+      // তারপর ঢাকায় ১–২ কার্যদিবস, ঢাকার বাইরে ২–৪ কার্যদিবস।
       shippingDetails: [
         {
           '@type': 'OfferShippingDetails',
           shippingRate: { '@type': 'MonetaryAmount', value: DEFAULT_SHIP_CFG.dhaka, currency: 'BDT' },
           shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'BD', addressRegion: 'Dhaka' },
+          deliveryTime: {
+            '@type': 'ShippingDeliveryTime',
+            handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
+            transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 2, unitCode: 'DAY' },
+          },
         },
         {
           '@type': 'OfferShippingDetails',
           shippingRate: { '@type': 'MonetaryAmount', value: DEFAULT_SHIP_CFG.out, currency: 'BDT' },
           shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'BD' },
+          deliveryTime: {
+            '@type': 'ShippingDeliveryTime',
+            handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
+            transitTime: { '@type': 'QuantitativeValue', minValue: 2, maxValue: 4, unitCode: 'DAY' },
+          },
         },
       ],
-      // 🆕 /refund-policy পেজ অনুযায়ী
+      // মন পরিবর্তন/পছন্দ না হওয়ার কারণে কোনো রিটার্ন নেওয়া হয় না (/refund-policy পেজ অনুযায়ী) —
+      // ওয়ারেন্টি/রিপ্লেসমেন্ট প্রোডাক্টভেদে আলাদা এবং প্রোডাক্ট ডিটেইলসে আছে, তাই এটা রিটার্ন পলিসি নয়।
       hasMerchantReturnPolicy: {
         '@type': 'MerchantReturnPolicy',
         applicableCountry: 'BD',
-        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
         merchantReturnLink: `${SITE_URL}/refund-policy`,
       },
     },
