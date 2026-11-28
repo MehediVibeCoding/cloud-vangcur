@@ -51,6 +51,13 @@
     {
       "binding": "LIVE_WORKER",
       "service": "vangcur-live"
+    },
+    // 🧰 ছোট API-গুলোর Worker `vangcur-api` (workers/api/ — order-email, lead, device-id, search-index)।
+    // অ্যাডমিন প্রোডাক্ট বদলালে lib/edgeCache.ts-এর purgeApiWorkerCache() এই binding দিয়ে ওর /api/search-index ক্যাশ মোছে।
+    // ⚠️ ডিপ্লয়ের ক্রম: আগে `vangcur-api` ডিপ্লয় (workers/api/README.md), তারপর মূল সাইট — নইলে "service not found" এরর।
+    {
+      "binding": "API_WORKER",
+      "service": "vangcur-api"
     }
   ],
   // 🛠️ এই vars গুলো শুধুই রানটাইমে (সার্ভার সাইড: middleware.ts, server.ts,
