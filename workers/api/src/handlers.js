@@ -418,6 +418,250 @@ async function searchIndex(request, env) {
   return json({ products: loaded.products }, 200, cc);
 }
 
+// ───── Supabase REST সহায়ক (PostgREST) ─────
+async function sbRpc(env, name, args, key) {
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify(args),
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, data };
+  } catch {
+    return { ok: false, data: null };
+  }
+}
+
+// ───── /api/bkash-webhook (বিকাশ SMS ফরওয়ার্ডার → inbox + অটো-ম্যাচ + Telegram) ─────
+// ⚠️ SUPABASE_SERVICE_ROLE_KEY লাগে (সিক্রেট)। আচরণ app/api/bkash-webhook/route.ts-এর হুবহু; আসল ম্যাচিং-সুরক্ষা DB-র `match_bkash_payment`-এ।
+const TRXID_WINDOW_MS = 10 * 60 * 60 * 1000;
+const LAST4_WINDOW_MS = 6 * 60 * 60 * 1000;
+const escHtml = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+async function sendTelegramAutoConfirm(env, info) {
+  const token = env.TELEGRAM_BOT_TOKEN;
+  const chatId = env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  const e = escHtml;
+  const tag = info.method === 'auto_trxid' ? 'Tnx Confirm' : 'LD Confirm';
+  const dueCod = Math.max(0, (info.total || 0) - info.advanceRequired);
+  const fmt = (n) => `৳${Number(n || 0).toLocaleString('en-US')}`;
+  const message = `<b>অটো কনফার্ম (${e(tag)})</b>\n` +
+    `<b>অর্ডার নং:</b> ${e(info.orderNum)}\n` +
+    `<b>কাস্টমার:</b> ${e(info.name)} (<code>${e(info.phone)}</code>)\n` +
+    `<b>প্রেরক:</b> <code>${e(info.sender)}</code>\n` +
+    `${info.trxId ? `<b>TrxID:</b> <code>${e(info.trxId)}</code>\n` : ''}` +
+    `<b>পেয়েছি:</b> ${fmt(info.receivedAmount)} (প্রয়োজন ${fmt(info.advanceRequired)})\n` +
+    `${info.overpaid > 0 ? `<b>এক্সট্রা পাঠিয়েছে:</b> ${fmt(info.overpaid)}\n` : ''}` +
+    `<b>বাকি (COD):</b> ${fmt(dueCod)}`;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML' }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) console.warn('[Telegram] auto-confirm sendMessage failed:', res.status, '| order:', info.orderNum);
+  } catch (err) {
+    console.warn('[Telegram] auto-confirm notification error:', String(err), '| order:', info.orderNum);
+  }
+}
+
+async function bkashWebhook(request, env) {
+  if (request.method !== 'POST') return json({ ok: false, error: 'Method not allowed' }, 405, NO_STORE, { allow: 'POST' });
+  if (!(await safeEqual(request.headers.get('x-bkash-secret'), env.BKASH_WEBHOOK_SECRET))) {
+    return json({ ok: false, error: 'Unauthorized' }, 401);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ ok: false, error: 'Bad request' }, 400);
+  }
+  body = body && typeof body === 'object' ? body : {};
+
+  const rawText = String(body.text ?? '').trim().slice(0, 1000);
+  const fromSender = String(body.from ?? '').trim();
+  if (!fromSender.toLowerCase().includes('bkash') || !/received\s+Tk/i.test(rawText)) return json({ ok: true, ignored: true });
+
+  const amountMatch = rawText.match(/received\s+Tk\s*([\d,]+(?:\.\d+)?)/i);
+  const senderMatch = rawText.match(/from\s*(01\d{9})/i);
+  const trxMatch = rawText.match(/TrxID\s*:?\s*([A-Z0-9]{8,14})/i);
+  if (!amountMatch || !senderMatch) return json({ ok: true, ignored: true });
+
+  const maxAmount = Number(env.BKASH_MAX_AMOUNT) || 6000;
+  const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
+  const senderNumber = senderMatch[1];
+  const senderLast4 = senderNumber.slice(-4);
+  const trxId = trxMatch ? trxMatch[1].toUpperCase() : null;
+  if (!Number.isFinite(amount) || amount <= 0 || amount > maxAmount) return json({ ok: true, ignored: true });
+
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.SUPABASE_URL || !key) {
+    console.error('[bkash-webhook] SUPABASE_SERVICE_ROLE_KEY সেট করা নেই');
+    return json({ ok: false }, 500);
+  }
+  const H = { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' };
+  try {
+    const ins = await fetch(`${env.SUPABASE_URL}/rest/v1/bkash_inbox`, {
+      method: 'POST',
+      headers: { ...H, prefer: 'return=minimal' },
+      body: JSON.stringify({ trx_id: trxId, sender_number: senderNumber, sender_last4: senderLast4, amount, raw_sms: rawText, is_used: false }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!ins.ok) {
+      const err = await ins.json().catch(() => ({}));
+      // একই TrxID আবার এলে (ফোন রিট্রাই) নিরাপদে বাদ; অন্য এরর হলে 500, যাতে SMS ফরওয়ার্ডার পরে আবার পাঠায়
+      if (err && err.code === '23505') return json({ ok: true, duplicate: true });
+      console.error('[bkash-webhook] inbox insert failed:', err && err.message);
+      return json({ ok: false }, 500);
+    }
+
+    const sinceTrx = new Date(Date.now() - TRXID_WINDOW_MS).toISOString();
+    const sinceLast4 = new Date(Date.now() - LAST4_WINDOW_MS).toISOString();
+    const cols = 'id, order_num, customer_name, customer_phone, total, advance_paid, created_at';
+    const pending = async (extra) => {
+      const qs = new URLSearchParams({ select: cols, status: 'eq.pending', payment_verified: 'eq.false', ...extra });
+      try {
+        const r = await fetch(`${env.SUPABASE_URL}/rest/v1/orders?${qs}`, { headers: H, signal: AbortSignal.timeout(5000) });
+        const d = await r.json().catch(() => null);
+        return r.ok && Array.isArray(d) ? d : [];
+      } catch {
+        return [];
+      }
+    };
+    const candidates = [];
+    if (trxId) candidates.push(...(await pending({ payment_txn: `ilike.${trxId}`, created_at: `gte.${sinceTrx}` })));
+    candidates.push(...(await pending({ payment_last4: `eq.${senderLast4}`, created_at: `gte.${sinceLast4}` })));
+
+    const seen = new Set();
+    const ordered = candidates
+      .filter((o) => (seen.has(String(o.id)) ? false : (seen.add(String(o.id)), true)))
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+
+    for (const order of ordered) {
+      const { ok, data: res } = await sbRpc(env, 'match_bkash_payment', { p_order_id: order.id }, key);
+      if (!ok) {
+        console.warn('[bkash-webhook] match rpc error:', JSON.stringify(res).slice(0, 200));
+        continue;
+      }
+      if (res && res.success) {
+        await sendTelegramAutoConfirm(env, {
+          orderNum: String(order.order_num),
+          name: String(order.customer_name ?? ''),
+          phone: String(order.customer_phone ?? ''),
+          method: res.method,
+          receivedAmount: Number(res.amount) || amount,
+          advanceRequired: Number(order.advance_paid) || 0,
+          overpaid: Number(res.overpaid) || 0,
+          sender: String(res.sender ?? senderNumber),
+          trxId: res.trx_id ?? trxId,
+          total: Number(order.total) || 0,
+        });
+        break; // একটা পেমেন্ট শুধু একটা অর্ডারে লাগে
+      }
+    }
+    return json({ ok: true, recorded: true });
+  } catch (err) {
+    console.error('[bkash-webhook] unexpected error:', String(err));
+    return json({ ok: false }, 500);
+  }
+}
+
+// ───── /api/game-score (লিডারবোর্ড) ─────
+// দ্রুত পথ এখানে: (ক) টপ-৩ পড়া, (খ) অর্ডার-ভিত্তিক খেলা যেখানে `phone` আছে ও `get_guest_order` ফোন মেলায়।
+// বাকি সব (লগইন-সেশন লাগে এমন: `source:'account'`, `me=1`; ফোন নেই; ফোন না মিললে) মূল Worker-এ ছেড়ে দিই (Service Binding MAIN_WORKER) —
+// কারণ কুকি-সেশন/টোকেন-রিফ্রেশ/RLS-মালিকানার যুক্তি Next.js-এর `@supabase/ssr`-এ থাকে, এখানে নকল করলে ঝুঁকি। ফলে আচরণ আগের মতোই।
+const GAME_IDS = ['stack-tower']; // lib/games.ts-এর GAMES-এর সাথে test.mjs মেলায়
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isKnownGame = (id) => typeof id === 'string' && GAME_IDS.includes(id);
+
+function delegateToMain(env, request, rawBody) {
+  if (!env.MAIN_WORKER) return json({ ok: false, unavailable: true }, 503);
+  const init = { method: request.method, headers: request.headers };
+  if (rawBody !== undefined) init.body = rawBody;
+  return env.MAIN_WORKER.fetch(new Request(request.url, init));
+}
+
+function tooMany(retryAfterSec) {
+  return json({ ok: false, error: 'Too many requests' }, 429, NO_STORE, { 'retry-after': String(retryAfterSec) });
+}
+
+async function readTop(env, game) {
+  const { ok, data } = await sbRpc(env, 'get_leaderboard', { p_game_id: game, p_limit: 3 }, env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!ok || !Array.isArray(data)) return null;
+  return data.map((r) => ({ rank: Number(r.rank), name: String(r.player_name), score: Number(r.score) }));
+}
+
+async function gameScore(request, env) {
+  const ip = getClientIp(request.headers);
+  const url = new URL(request.url);
+
+  if (request.method === 'GET') {
+    if (url.searchParams.get('me') === '1') return delegateToMain(env, request); // লগইন-সেশন লাগে
+    const rl = await slidingWindowLimit(env, `game-lb:${ip}`, 120, 60);
+    if (!rl.allowed) return tooMany(rl.retryAfterSec);
+    const game = url.searchParams.get('game');
+    if (!isKnownGame(game)) return json({ ok: false, error: 'Unknown game' }, 400);
+    const top = await readTop(env, game);
+    if (!top) return json({ ok: false, unavailable: true }, 503, NO_STORE);
+    return json({ ok: true, top, me: null }, 200, NO_STORE);
+  }
+  if (request.method !== 'POST') return json({ ok: false, error: 'Method not allowed' }, 405, NO_STORE, { allow: 'GET, POST' });
+
+  const raw = await request.text();
+  let body;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return json({ ok: false, error: 'Bad request' }, 400);
+  }
+  body = body && typeof body === 'object' ? body : {};
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  if (body.source === 'account' || !phone) return delegateToMain(env, request, raw); // লগইন-সেশন/RLS-নির্ভর পথ
+
+  const isStart = body.action === 'start';
+  const rl = isStart
+    ? await slidingWindowLimit(env, `game-run:${ip}`, 60, 60)
+    : await slidingWindowLimit(env, `game-score:${ip}`, 40, 60);
+  if (!rl.allowed) return tooMany(rl.retryAfterSec);
+  if (!isKnownGame(body.game)) return json({ ok: false, error: 'Bad request' }, 400);
+  const game = body.game;
+
+  const orderIdRaw = typeof body.orderId === 'string' ? body.orderId : '';
+  if (!UUID_RE.test(orderIdRaw)) return json({ ok: false, error: 'Bad request' }, 400);
+  const own = await sbRpc(env, 'get_guest_order', { p_id: orderIdRaw, p_phone: phone }, env.SUPABASE_ANON_KEY);
+  const row = own.ok && Array.isArray(own.data) ? own.data[0] : null;
+  const verifiedOrderId = String(row?.id || '');
+  if (!row || !UUID_RE.test(verifiedOrderId)) return delegateToMain(env, request, raw); // ফোন না মিললে মূল Worker (লগইন-মালিকানা হতে পারে)
+
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (isStart) {
+    const { ok, data } = await sbRpc(env, 'start_game_run', { p_game_id: game, p_order_id: verifiedOrderId }, key);
+    const run = typeof data === 'string' ? data : '';
+    if (!ok || !UUID_RE.test(run)) {
+      if (!ok) console.error('[GameScore] start run failed:', JSON.stringify(data).slice(0, 200));
+      return json({ ok: false, unavailable: true }, 503, NO_STORE);
+    }
+    return json({ ok: true, run }, 200, NO_STORE);
+  }
+
+  const score = typeof body.score === 'number' ? Math.floor(body.score) : NaN;
+  const run = typeof body.run === 'string' ? body.run : '';
+  if (!Number.isFinite(score) || score < 1 || !UUID_RE.test(run)) return json({ ok: false, error: 'Bad request' }, 400);
+
+  const sub = await sbRpc(env, 'submit_game_score_v2', { p_game_id: game, p_order_id: verifiedOrderId, p_score: score, p_run_id: run }, key);
+  const res = Array.isArray(sub.data) ? sub.data[0] : sub.data;
+  if (!sub.ok || !res) {
+    console.error('[GameScore] submit failed:', JSON.stringify(sub.data).slice(0, 200));
+    return json({ ok: false, unavailable: true }, 503, NO_STORE);
+  }
+  const top = await readTop(env, game);
+  return json({ ok: true, accepted: !!res.accepted, rank: Number(res.rank) || 0, best: Number(res.best) || 0, worldRecord: !!res.is_world_record, top: top || [] }, 200, NO_STORE);
+}
+
 export async function handle(request, env, ctx) {
   const { pathname } = new URL(request.url);
   const path = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
@@ -430,6 +674,10 @@ export async function handle(request, env, ctx) {
       return deviceId(request);
     case '/api/search-index':
       return searchIndex(request, env);
+    case '/api/bkash-webhook':
+      return bkashWebhook(request, env);
+    case '/api/game-score':
+      return gameScore(request, env);
     default:
       return json({ ok: false, error: 'Not found' }, 404);
   }
